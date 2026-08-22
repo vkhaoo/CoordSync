@@ -240,3 +240,35 @@ input:focus { outline: 2px solid var(--ambra); outline-offset: 0; border-color: 
 .barra-destra { display: flex; align-items: center; gap: 0.9rem; }
 .mio-ruolo { color: #cfd6dd; font-size: 0.82rem; text-transform: capitalize; }
 .stato-select:disabled { cursor: default; opacity: 0.85; }
+
+/* ---- Navigazione tra viste ---- */
+.barra-sinistra { display: flex; align-items: center; gap: 1.5rem; }
+.nav-viste { display: flex; gap: 0.3rem; }
+.nav-viste button {
+  background: transparent; border: none; color: #aab4bf;
+  padding: 0.35rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;
+}
+.nav-viste button:hover { color: #fff; }
+.nav-viste button.nav-attiva { background: rgba(255,255,255,0.12); color: #fff; }
+
+/* ---- Pannello gestione utenti ---- */
+.corpo-singolo { flex: 1; padding: 1.5rem; }
+.gestione-utenti { max-width: 760px; }
+.form-utente {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem;
+  align-items: center;
+}
+.form-utente input, .form-utente select {
+  padding: 0.5rem 0.6rem; border: 1px solid #cfd6dd; border-radius: 4px; font-size: 0.9rem;
+}
+.form-utente input { flex: 1; min-width: 140px; }
+
+.tabella-utenti { width: 100%; border-collapse: collapse; }
+.tabella-utenti th, .tabella-utenti td {
+  text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid #e0e5ea; font-size: 0.9rem;
+}
+.tabella-utenti th {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tenue);
+}
+.tabella-utenti select { padding: 0.35rem 0.5rem; border: 1px solid #cfd6dd; border-radius: 4px; }
+.ruolo-mio { color: var(--tenue); font-style: italic; }

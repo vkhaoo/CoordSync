@@ -59,6 +59,8 @@ export const api = {
   commenti:     (lavoroId) => richiesta("GET", `/lavori/${lavoroId}/commenti`),
   aggiungiCommento: (lavoroId, dati) => richiesta("POST", `/lavori/${lavoroId}/commenti`, dati),
   utenti:       () => richiesta("GET", "/utenti"),
+  creaUtente:   (dati) => richiesta("POST", "/utenti", dati),
+  cambiaRuolo:  (utenteId, ruolo) => richiesta("PATCH", `/utenti/${utenteId}/ruolo`, { ruolo }),
   assegna:      (lavoroId, utenteId) => richiesta("POST", `/lavori/${lavoroId}/assegnati`, { utente_id: utenteId }),
   rimuoviAssegnato: (lavoroId, utenteId) => richiesta("DELETE", `/lavori/${lavoroId}/assegnati/${utenteId}`),
 };

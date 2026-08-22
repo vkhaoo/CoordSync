@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api } from "./api.js";
 import Lavoro from "./Lavoro.jsx";
+import GestioneUtenti from "./GestioneUtenti.jsx";
 
 const PRIORITA = ["bassa", "normale", "alta", "urgente"];
 const ETICHETTA_PRIORITA = {
@@ -24,6 +25,7 @@ export default function Dashboard({ onLogout }) {
   const [lavori, setLavori] = useState([]);
   const [utenti, setUtenti] = useState([]);   // colleghi dell'azienda (per l'assegnazione)
   const [io, setIo] = useState(null);         // l'utente loggato (per sapere il mio ruolo)
+  const [vista, setVista] = useState("lavori");  // "lavori" oppure "utenti"
   const [errore, setErrore] = useState(null);
   const [caricando, setCaricando] = useState(true);
 
@@ -110,11 +112,22 @@ export default function Dashboard({ onLogout }) {
   const progettoCorrente = progetti.find((p) => p.id === selezionato);
   // Chi può creare progetti/lavori e assegnare: admin e caposquadra.
   const puoCreare = io && (io.ruolo === "admin" || io.ruolo === "caposquadra");
+  const sonoAdmin = io && io.ruolo === "admin";
 
   return (
     <div className="app">
       <header className="barra">
-        <span className="marchio">CoordSync</span>
+        <div className="barra-sinistra">
+          <span className="marchio">CoordSync</span>
+          <nav className="nav-viste">
+            <button className={vista === "lavori" ? "nav-attiva" : ""}
+                    onClick={() => setVista("lavori")}>Lavori</button>
+            {sonoAdmin && (
+              <button className={vista === "utenti" ? "nav-attiva" : ""}
+                      onClick={() => setVista("utenti")}>Utenti</button>
+            )}
+          </nav>
+        </div>
         <div className="barra-destra">
           {io && <span className="mio-ruolo">{io.nome} · {io.ruolo}</span>}
           <button className="esci" onClick={onLogout}>Esci</button>
@@ -123,6 +136,11 @@ export default function Dashboard({ onLogout }) {
 
       {errore && <p className="errore" style={{ padding: "0 1rem" }}>{errore}</p>}
 
+      {vista === "utenti" && sonoAdmin ? (
+        <div className="corpo-singolo">
+          <GestioneUtenti io={io} />
+        </div>
+      ) : (
       <div className="corpo">
         <aside className="colonna-progetti">
           <h2 className="titolo-colonna">Progetti</h2>
@@ -195,6 +213,7 @@ export default function Dashboard({ onLogout }) {
           )}
         </main>
       </div>
+      )}
     </div>
   );
 }
