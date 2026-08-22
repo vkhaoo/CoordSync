@@ -26,4 +26,5 @@ class UtenteRead(UtenteBase):
     id: int
     organizzazione_id: int
     ruolo: RuoloUtente
+    email_verificata: bool
     model_config = ConfigDict(from_attributes=True)

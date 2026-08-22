@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # Formato: indirizzi separati da virgola.
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
+    # Indirizzo pubblico di questo backend (per costruire i link nelle email).
+    # In produzione: l'URL del backend su Render.
+    base_url: str = "http://127.0.0.1:8000"
+
     @property
     def lista_cors(self) -> list[str]:
         """Trasforma la stringa 'a,b,c' nella lista ['a','b','c']."""

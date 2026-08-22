@@ -1,7 +1,7 @@
 """Modello Utente: tu e i colleghi."""
 import enum
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SAEnum, Boolean
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -24,6 +24,9 @@ class Utente(Base):
 
     # Ruolo dell'utente nella sua azienda. Default: operatore (il meno privilegiato).
     ruolo = Column(SAEnum(RuoloUtente), default=RuoloUtente.operatore, nullable=False)
+
+    # Email verificata tramite link inviato via email. Default: non verificata.
+    email_verificata = Column(Boolean, default=False, nullable=False)
 
     # Ogni utente appartiene a un'organizzazione (il "tenant").
     organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
