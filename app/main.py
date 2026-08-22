@@ -19,9 +19,10 @@ from app.routers import utenti
 from app.routers import commenti
 from app.routers import assegnazioni
 
-# Crea le tabelle se non esistono. In produzione si useranno le "migrazioni"
-# (Alembic), ma per iniziare questo va benissimo.
-Base.metadata.create_all(bind=engine)
+# Lo schema del database e' gestito dalle MIGRAZIONI Alembic
+# (comando: alembic upgrade head), non piu' creato "al volo" qui.
+# Questo tiene locale e produzione allineati e permette di evolvere le tabelle
+# senza perdere i dati.
 
 app = FastAPI(title="CoordSync", version="0.1.0")
 
