@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.organizzazione import Organizzazione
-from app.models.utente import Utente
+from app.models.utente import Utente, RuoloUtente
 from app.security import verifica_password, crea_token, hash_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -47,7 +47,7 @@ def register(dati: RegisterRichiesta, db: Session = Depends(get_db)):
         nome=dati.nome,
         email=dati.email,
         password_hash=hash_password(dati.password),
-        is_admin=True,
+        ruolo=RuoloUtente.admin,
         organizzazione_id=org.id,
     )
     db.add(admin)

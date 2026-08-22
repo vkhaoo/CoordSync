@@ -7,6 +7,8 @@ EmailStr valida che l'email abbia un formato plausibile.
 """
 from pydantic import BaseModel, ConfigDict, EmailStr
 
+from app.models.utente import RuoloUtente
+
 
 class UtenteBase(BaseModel):
     nome: str
@@ -15,11 +17,12 @@ class UtenteBase(BaseModel):
 
 class UtenteCreate(UtenteBase):
     password: str   # salvata come impronta (hash), mai in chiaro
+    ruolo: RuoloUtente = RuoloUtente.operatore   # l'admin sceglie il ruolo (default: operatore)
     # organizzazione_id NON serve piu': ereditata da chi crea l'utente
 
 
 class UtenteRead(UtenteBase):
     id: int
     organizzazione_id: int
-    is_admin: bool
+    ruolo: RuoloUtente
     model_config = ConfigDict(from_attributes=True)

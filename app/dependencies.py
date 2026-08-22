@@ -33,3 +33,16 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Utente non trovato")
 
     return utente
+
+
+def richiedi_ruolo(*ruoli_ammessi):
+    """
+    Crea una dependency che lascia passare SOLO gli utenti con uno dei ruoli
+    indicati. Uso: Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra)).
+    Evita di riscrivere lo stesso controllo in ogni endpoint.
+    """
+    def controllo(current: Utente = Depends(get_current_user)) -> Utente:
+        if current.ruolo not in ruoli_ammessi:
+            raise HTTPException(status_code=403, detail="Permesso negato per il tuo ruolo")
+        return current
+    return controllo

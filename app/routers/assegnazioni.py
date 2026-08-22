@@ -14,7 +14,8 @@ from app.models.lavoro import Lavoro
 from app.models.progetto import Progetto
 from app.models.utente import Utente
 from app.schemas.lavoro import LavoroRead
-from app.dependencies import get_current_user
+from app.models.utente import RuoloUtente
+from app.dependencies import get_current_user, richiedi_ruolo
 
 router = APIRouter(prefix="/lavori/{lavoro_id}/assegnati", tags=["assegnazioni"])
 
@@ -34,7 +35,7 @@ def _lavoro_mio(db, lavoro_id, current):
 
 @router.post("", response_model=LavoroRead, status_code=201)
 def assegna(lavoro_id: int, dati: AssegnaRichiesta, db: Session = Depends(get_db),
-            current: Utente = Depends(get_current_user)):
+            current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
     lavoro = _lavoro_mio(db, lavoro_id, current)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
@@ -59,7 +60,7 @@ def assegna(lavoro_id: int, dati: AssegnaRichiesta, db: Session = Depends(get_db
 
 @router.delete("/{utente_id}", response_model=LavoroRead)
 def rimuovi(lavoro_id: int, utente_id: int, db: Session = Depends(get_db),
-            current: Utente = Depends(get_current_user)):
+            current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
     lavoro = _lavoro_mio(db, lavoro_id, current)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")

@@ -6,7 +6,8 @@ from app.database import get_db
 from app.models.progetto import Progetto
 from app.models.utente import Utente
 from app.schemas.progetto import ProgettoCreate, ProgettoRead
-from app.dependencies import get_current_user
+from app.models.utente import RuoloUtente
+from app.dependencies import get_current_user, richiedi_ruolo
 
 router = APIRouter(prefix="/progetti", tags=["progetti"])
 
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/progetti", tags=["progetti"])
 def crea_progetto(
     dati: ProgettoCreate,
     db: Session = Depends(get_db),
-    current: Utente = Depends(get_current_user),
+    current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra)),
 ):
     # L'organizzazione la prende dall'utente loggato, NON dal client.
     progetto = Progetto(

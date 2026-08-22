@@ -1,8 +1,17 @@
 """Modello Utente: tu e i colleghi."""
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+import enum
+
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+
+
+class RuoloUtente(str, enum.Enum):
+    """I tre ruoli. admin > caposquadra > operatore per quello che possono fare."""
+    admin = "admin"              # gestisce tutto, inclusi utenti e ruoli
+    caposquadra = "caposquadra"  # crea progetti/lavori, assegna, cambia stati
+    operatore = "operatore"      # esegue: aggiorna solo i lavori a lui assegnati
 
 
 class Utente(Base):
@@ -13,9 +22,8 @@ class Utente(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=True)
 
-    # is_admin: il primo utente di un'azienda (chi la registra) e' admin.
-    # Solo un admin puo' aggiungere altri utenti alla propria azienda.
-    is_admin = Column(Boolean, default=False, nullable=False)
+    # Ruolo dell'utente nella sua azienda. Default: operatore (il meno privilegiato).
+    ruolo = Column(SAEnum(RuoloUtente), default=RuoloUtente.operatore, nullable=False)
 
     # Ogni utente appartiene a un'organizzazione (il "tenant").
     organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
