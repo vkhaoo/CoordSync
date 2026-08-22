@@ -19,11 +19,11 @@ from app.config import settings
 logger = logging.getLogger("coordsync.email")
 
 
-def invia_email(destinatario: str, oggetto: str, corpo: str) -> None:
+def invia_email(destinatario: str, oggetto: str, corpo: str, corpo_html: str | None = None) -> None:
     if settings.brevo_api_key and settings.mittente_email:
-        _invia_via_brevo_api(destinatario, oggetto, corpo)
+        _invia_via_brevo_api(destinatario, oggetto, corpo, corpo_html)
     elif settings.smtp_host:
-        _invia_via_smtp(destinatario, oggetto, corpo)
+        _invia_via_smtp(destinatario, oggetto, corpo, corpo_html)
     else:
         _stampa_nei_log(destinatario, oggetto, corpo)
 
@@ -36,7 +36,7 @@ def _stampa_nei_log(destinatario, oggetto, corpo):
     )
 
 
-def _invia_via_brevo_api(destinatario, oggetto, corpo):
+def _invia_via_brevo_api(destinatario, oggetto, corpo, corpo_html=None):
     """Spedisce con una chiamata HTTP all'API di Brevo (porta 443, mai bloccata)."""
     payload = {
         "sender": {"name": settings.mittente_nome, "email": settings.mittente_email},
@@ -44,6 +44,8 @@ def _invia_via_brevo_api(destinatario, oggetto, corpo):
         "subject": oggetto,
         "textContent": corpo,
     }
+    if corpo_html:
+        payload["htmlContent"] = corpo_html
     richiesta = urllib.request.Request(
         "https://api.brevo.com/v3/smtp/email",
         data=json.dumps(payload).encode("utf-8"),
@@ -66,13 +68,15 @@ def _invia_via_brevo_api(destinatario, oggetto, corpo):
         logger.error(f"Invio email fallito (Brevo API) verso {destinatario}: {e}")
 
 
-def _invia_via_smtp(destinatario, oggetto, corpo):
+def _invia_via_smtp(destinatario, oggetto, corpo, corpo_html=None):
     """Spedisce via SMTP (dove le porte non sono bloccate)."""
     msg = EmailMessage()
     msg["From"] = f"{settings.mittente_nome} <{settings.mittente_email}>"
     msg["To"] = destinatario
     msg["Subject"] = oggetto
     msg.set_content(corpo)
+    if corpo_html:
+        msg.add_alternative(corpo_html, subtype="html")   # versione ricca
     try:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:
             server.starttls()

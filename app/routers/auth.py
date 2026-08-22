@@ -22,6 +22,10 @@ from app.security import (
 from app.schemas.validators import PasswordStr
 from app.dependencies import get_current_user
 from app.notifiche import invia_email
+from app.email_templates import (
+    verifica_email as email_verifica_template,
+    reset_password as email_reset_template,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,11 +37,8 @@ def _invia_verifica(utente: Utente) -> None:
     token = crea_token_scopo(utente.id, SCOPO_VERIFICA, durata_minuti=60 * 24)
     # Il link punta a questo backend; l'utente ci clicca e l'email risulta verificata.
     link = f"{settings.base_url}/auth/verifica-email?token={token}"
-    invia_email(
-        destinatario=utente.email,
-        oggetto="Conferma la tua email - CoordSync",
-        corpo=f"Ciao {utente.nome},\nconferma la tua email cliccando qui:\n{link}\n\nIl link scade tra 24 ore.",
-    )
+    oggetto, testo, html = email_verifica_template(utente.nome, link)
+    invia_email(destinatario=utente.email, oggetto=oggetto, corpo=testo, corpo_html=html)
 
 
 # ---------- REGISTRAZIONE ----------
@@ -160,11 +161,8 @@ def richiedi_reset(dati: RichiediResetRichiesta, db: Session = Depends(get_db)):
         token = crea_token_scopo(utente.id, SCOPO_RESET, durata_minuti=60)
         # Il link porta alla PAGINA del frontend dove si digita la nuova password.
         link = f"{settings.frontend_url}/?reset_token={token}"
-        invia_email(
-            destinatario=utente.email,
-            oggetto="Reimposta la tua password - CoordSync",
-            corpo=f"Ciao {utente.nome},\nreimposta la password cliccando qui:\n{link}\n\nIl link scade tra 1 ora. Se non hai richiesto tu il reset, ignora questa email.",
-        )
+        oggetto, testo, html = email_reset_template(utente.nome, link)
+        invia_email(destinatario=utente.email, oggetto=oggetto, corpo=testo, corpo_html=html)
     return {"messaggio": "Se l'email e' registrata, riceverai un link per reimpostare la password"}
 
 
