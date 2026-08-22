@@ -32,15 +32,23 @@ class Settings(BaseSettings):
     # es. il reset password dove digita la nuova password).
     frontend_url: str = "http://localhost:5173"
 
-    # --- Invio email (SMTP) ---
-    # Se smtp_host e' vuoto (sviluppo): le email vengono stampate nei log.
-    # Se e' valorizzato (produzione): le email vengono spedite davvero.
-    # Funziona con qualsiasi provider SMTP (Brevo, Resend, SendGrid...).
+    # --- Invio email ---
+    # Mittente (deve essere un indirizzo/dominio VERIFICATO presso il provider).
+    mittente_email: str = ""
+    mittente_nome: str = "CoordSync"
+
+    # Opzione A (consigliata su hosting che bloccano SMTP, es. Render free):
+    # API HTTP di Brevo. Usa la porta 443 (sempre aperta). Basta la API key.
+    brevo_api_key: str = ""
+
+    # Opzione B: SMTP classico. Funziona dove le porte SMTP non sono bloccate
+    # (piani a pagamento, altri hosting, sviluppo locale).
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
-    email_from: str = "CoordSync <no-reply@coordsync.local>"
+
+    # Se nessuna delle due e' configurata: le email vengono stampate nei log.
 
     @property
     def lista_cors(self) -> list[str]:
