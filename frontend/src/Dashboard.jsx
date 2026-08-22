@@ -46,15 +46,19 @@ export default function Dashboard({ onLogout }) {
     setLavori(await api.lavori(progettoId));
   }
 
-  // All'apertura: carico i progetti una volta.
+  // All'apertura: verifico chi sono. Se il token e' scaduto/invalido (401),
+  // torno al login automaticamente. Altrimenti carico i dati.
   useEffect(() => {
-    caricaProgetti()
-      .catch((e) => setErrore(e.message))
+    api.me()
+      .then((utente) => {
+        setIo(utente);
+        return Promise.all([
+          caricaProgetti().catch((e) => setErrore(e.message)),
+          api.utenti().then(setUtenti).catch((e) => setErrore(e.message)),
+        ]);
+      })
+      .catch(() => onLogout())   // token non valido -> disconnetto
       .finally(() => setCaricando(false));
-    // carico anche i colleghi dell'azienda (servono per l'assegnazione).
-    api.utenti().then(setUtenti).catch((e) => setErrore(e.message));
-    // carico chi sono io (per sapere il mio ruolo e adattare l'interfaccia).
-    api.me().then(setIo).catch((e) => setErrore(e.message));
   }, []);
 
   // Ogni volta che cambia il progetto selezionato: ricarico i suoi lavori.

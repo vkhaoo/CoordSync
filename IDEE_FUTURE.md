@@ -76,3 +76,11 @@ isolamento multi-tenant. Questi sono STRATI AGGIUNTIVI, da fare al deploy:
 - Approccio pulito: variabili CSS gia' impostate (:root) + una classe "tema-scuro"
   che le ridefinisce, con un interruttore che la attiva. Salvare la preferenza.
 - Non un ritocco: tocca ogni colore. Milestone frontend a se'.
+
+## Sicurezza del token (quando sara' prodotto)
+
+- Oggi il token JWT sta in localStorage (pragmatico, diffuso). Limite: e'
+  leggibile da eventuale JS malevolo (rischio XSS).
+- Alternativa piu' robusta: cookie httpOnly (il JS non li legge). Piu' complessi
+  da gestire (CSRF, gestione lato backend). Da valutare se CoordSync diventa
+  un prodotto con clienti veri.

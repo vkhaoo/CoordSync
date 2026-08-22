@@ -6,9 +6,16 @@
 // la variabile VITE_API_URL con l'indirizzo del backend online.
 const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
-// Tiene il token in memoria dopo il login. Le chiamate protette lo allegano.
-let token = null;
-export function setToken(t) { token = t; }
+// Il token viene salvato nel browser (localStorage) cosi' resta anche dopo
+// aver ricaricato la pagina. Al primo caricamento lo rileggo da li'.
+const CHIAVE_TOKEN = "coordsync_token";
+let token = localStorage.getItem(CHIAVE_TOKEN);
+
+export function setToken(t) {
+  token = t;
+  if (t) localStorage.setItem(CHIAVE_TOKEN, t);   // salvo
+  else localStorage.removeItem(CHIAVE_TOKEN);       // logout: rimuovo
+}
 export function getToken() { return token; }
 
 async function richiesta(metodo, percorso, corpo) {

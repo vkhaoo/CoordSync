@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { api, setToken } from "./api.js";
+import { api, setToken, getToken } from "./api.js";
 import Dashboard from "./Dashboard.jsx";
 
 export default function App() {
   // "stato" = dati che, se cambiano, ridisegnano lo schermo da soli.
   const [modo, setModo] = useState("login");      // "login" oppure "registra"
-  const [connesso, setConnesso] = useState(false);
+  // All'avvio sono gia' connesso se un token e' salvato nel browser.
+  const [connesso, setConnesso] = useState(Boolean(getToken()));
   const [errore, setErrore] = useState(null);
 
   // Campi del form
