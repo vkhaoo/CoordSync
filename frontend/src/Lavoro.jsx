@@ -11,11 +11,16 @@ const STATI = Object.keys(ETICHETTA_STATO);
 
 // Una singola card lavoro. Gestisce da sola i propri commenti:
 // ogni card ha il suo stato "aperto" e la sua lista di commenti.
-export default function Lavoro({ lavoro, utenti, onCambiaStato, onAssegnazioneCambiata }) {
+export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazioneCambiata }) {
   const [aperto, setAperto] = useState(false);
   const [commenti, setCommenti] = useState([]);
   const [nuovoCommento, setNuovoCommento] = useState("");
   const [errore, setErrore] = useState(null);
+
+  // Permessi calcolati in base al mio ruolo e all'essere assegnato o meno.
+  const gestisco = io && (io.ruolo === "admin" || io.ruolo === "caposquadra");
+  const sonoAssegnato = io && lavoro.assegnatari.some((u) => u.id === io.id);
+  const possoAggiornare = gestisco || sonoAssegnato;   // stato e commenti
 
   async function assegna(utenteId) {
     setErrore(null);
@@ -64,6 +69,7 @@ export default function Lavoro({ lavoro, utenti, onCambiaStato, onAssegnazioneCa
         <select
           className={`stato-select stato-${lavoro.stato}`}
           value={lavoro.stato}
+          disabled={!possoAggiornare}
           onChange={(e) => onCambiaStato(lavoro.id, e.target.value)}
         >
           {STATI.map((s) => <option key={s} value={s}>{ETICHETTA_STATO[s]}</option>)}
@@ -77,15 +83,17 @@ export default function Lavoro({ lavoro, utenti, onCambiaStato, onAssegnazioneCa
         </button>
       </div>
 
-      {/* Assegnatari: chi ci lavora, con rimozione, e menu per aggiungere */}
+      {/* Assegnatari: visibili a tutti; modificabili solo da chi gestisce */}
       <div className="assegnazione">
         {lavoro.assegnatari.map((u) => (
           <span key={u.id} className="chip">
             {u.nome}
-            <button className="chip-x" onClick={() => rimuoviAssegnato(u.id)} title="Rimuovi">×</button>
+            {gestisco && (
+              <button className="chip-x" onClick={() => rimuoviAssegnato(u.id)} title="Rimuovi">×</button>
+            )}
           </span>
         ))}
-        {disponibili.length > 0 && (
+        {gestisco && disponibili.length > 0 && (
           <select
             className="assegna-select"
             value=""
@@ -94,6 +102,9 @@ export default function Lavoro({ lavoro, utenti, onCambiaStato, onAssegnazioneCa
             <option value="">+ Assegna…</option>
             {disponibili.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
           </select>
+        )}
+        {lavoro.assegnatari.length === 0 && !gestisco && (
+          <span className="vuoto piccolo">Nessun assegnatario</span>
         )}
       </div>
 
@@ -112,15 +123,19 @@ export default function Lavoro({ lavoro, utenti, onCambiaStato, onAssegnazioneCa
               ))}
             </ul>
           )}
-          <form className="form-commento" onSubmit={inviaCommento}>
-            <input
-              placeholder="Scrivi un commento…"
-              value={nuovoCommento}
-              onChange={(e) => setNuovoCommento(e.target.value)}
-              required
-            />
-            <button type="submit" className="mini">→</button>
-          </form>
+          {possoAggiornare ? (
+            <form className="form-commento" onSubmit={inviaCommento}>
+              <input
+                placeholder="Scrivi un commento…"
+                value={nuovoCommento}
+                onChange={(e) => setNuovoCommento(e.target.value)}
+                required
+              />
+              <button type="submit" className="mini">→</button>
+            </form>
+          ) : (
+            <p className="vuoto piccolo">Solo chi è assegnato può commentare.</p>
+          )}
         </div>
       )}
     </li>

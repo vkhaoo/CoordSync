@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.organizzazione import Organizzazione
 from app.models.utente import Utente, RuoloUtente
+from app.schemas.utente import UtenteRead
 from app.security import verifica_password, crea_token, hash_password
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -75,3 +77,10 @@ def login(dati: LoginRichiesta, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
 
     return TokenRisposta(access_token=crea_token(utente.id))
+
+
+@router.get("/me", response_model=UtenteRead)
+def leggi_me(current: Utente = Depends(get_current_user)):
+    """Restituisce l'utente attualmente loggato (nome, email, ruolo, azienda).
+    Serve al frontend per sapere che ruolo ho e adattare l'interfaccia."""
+    return current

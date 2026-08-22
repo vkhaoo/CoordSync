@@ -33,6 +33,7 @@ async function richiesta(metodo, percorso, corpo) {
 export const api = {
   registra: (dati) => richiesta("POST", "/auth/register", dati),
   login:    (dati) => richiesta("POST", "/auth/login", dati),
+  me:       () => richiesta("GET", "/auth/me"),
   progetti: ()     => richiesta("GET", "/progetti"),
   lavori:   (progettoId) => richiesta("GET", `/lavori?progetto_id=${progettoId}`),
   creaProgetto: (dati) => richiesta("POST", "/progetti", dati),

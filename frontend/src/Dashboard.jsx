@@ -23,6 +23,7 @@ export default function Dashboard({ onLogout }) {
   const [selezionato, setSelezionato] = useState(null);
   const [lavori, setLavori] = useState([]);
   const [utenti, setUtenti] = useState([]);   // colleghi dell'azienda (per l'assegnazione)
+  const [io, setIo] = useState(null);         // l'utente loggato (per sapere il mio ruolo)
   const [errore, setErrore] = useState(null);
   const [caricando, setCaricando] = useState(true);
 
@@ -52,6 +53,8 @@ export default function Dashboard({ onLogout }) {
       .finally(() => setCaricando(false));
     // carico anche i colleghi dell'azienda (servono per l'assegnazione).
     api.utenti().then(setUtenti).catch((e) => setErrore(e.message));
+    // carico chi sono io (per sapere il mio ruolo e adattare l'interfaccia).
+    api.me().then(setIo).catch((e) => setErrore(e.message));
   }, []);
 
   // Ogni volta che cambia il progetto selezionato: ricarico i suoi lavori.
@@ -101,12 +104,17 @@ export default function Dashboard({ onLogout }) {
   if (caricando) return <div className="schermata"><p>Caricamento…</p></div>;
 
   const progettoCorrente = progetti.find((p) => p.id === selezionato);
+  // Chi può creare progetti/lavori e assegnare: admin e caposquadra.
+  const puoCreare = io && (io.ruolo === "admin" || io.ruolo === "caposquadra");
 
   return (
     <div className="app">
       <header className="barra">
         <span className="marchio">CoordSync</span>
-        <button className="esci" onClick={onLogout}>Esci</button>
+        <div className="barra-destra">
+          {io && <span className="mio-ruolo">{io.nome} · {io.ruolo}</span>}
+          <button className="esci" onClick={onLogout}>Esci</button>
+        </div>
       </header>
 
       {errore && <p className="errore" style={{ padding: "0 1rem" }}>{errore}</p>}
@@ -126,16 +134,18 @@ export default function Dashboard({ onLogout }) {
             ))}
           </ul>
 
-          {/* Form: nuovo progetto */}
-          <form className="form-inline" onSubmit={aggiungiProgetto}>
-            <input
-              placeholder="Nuovo progetto…"
-              value={nuovoProgetto}
-              onChange={(e) => setNuovoProgetto(e.target.value)}
-              required
-            />
-            <button type="submit" className="mini">+</button>
-          </form>
+          {/* Form: nuovo progetto — solo per chi può creare */}
+          {puoCreare && (
+            <form className="form-inline" onSubmit={aggiungiProgetto}>
+              <input
+                placeholder="Nuovo progetto…"
+                value={nuovoProgetto}
+                onChange={(e) => setNuovoProgetto(e.target.value)}
+                required
+              />
+              <button type="submit" className="mini">+</button>
+            </form>
+          )}
         </aside>
 
         <main className="area-lavori">
@@ -143,19 +153,21 @@ export default function Dashboard({ onLogout }) {
             <>
               <h2 className="titolo-progetto">{progettoCorrente.nome}</h2>
 
-              {/* Form: nuovo lavoro nel progetto selezionato */}
-              <form className="form-lavoro" onSubmit={aggiungiLavoro}>
-                <input
-                  placeholder="Titolo del lavoro…"
-                  value={nuovoTitolo}
-                  onChange={(e) => setNuovoTitolo(e.target.value)}
-                  required
-                />
-                <select value={nuovaPriorita} onChange={(e) => setNuovaPriorita(e.target.value)}>
-                  {PRIORITA.map((p) => <option key={p} value={p}>{ETICHETTA_PRIORITA[p]}</option>)}
-                </select>
-                <button type="submit" className="principale piccolo">Aggiungi</button>
-              </form>
+              {/* Form: nuovo lavoro — solo per chi può creare */}
+              {puoCreare && (
+                <form className="form-lavoro" onSubmit={aggiungiLavoro}>
+                  <input
+                    placeholder="Titolo del lavoro…"
+                    value={nuovoTitolo}
+                    onChange={(e) => setNuovoTitolo(e.target.value)}
+                    required
+                  />
+                  <select value={nuovaPriorita} onChange={(e) => setNuovaPriorita(e.target.value)}>
+                    {PRIORITA.map((p) => <option key={p} value={p}>{ETICHETTA_PRIORITA[p]}</option>)}
+                  </select>
+                  <button type="submit" className="principale piccolo">Aggiungi</button>
+                </form>
+              )}
 
               {lavori.length === 0 ? (
                 <p className="vuoto">Nessun lavoro in questo progetto.</p>
@@ -166,6 +178,7 @@ export default function Dashboard({ onLogout }) {
                       key={l.id}
                       lavoro={l}
                       utenti={utenti}
+                      io={io}
                       onCambiaStato={cambiaStato}
                       onAssegnazioneCambiata={() => caricaLavori(selezionato)}
                     />

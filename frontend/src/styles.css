@@ -235,3 +235,8 @@ input:focus { outline: 2px solid var(--ambra); outline-offset: 0; border-color: 
 .prio-normale { background: #e5eefb; color: #185fa5; }
 .prio-alta    { background: #faedd6; color: #9a5b08; }
 .prio-urgente { background: #fbe3e0; color: #b23025; }
+
+/* ---- Ruolo nella barra + controlli disabilitati ---- */
+.barra-destra { display: flex; align-items: center; gap: 0.9rem; }
+.mio-ruolo { color: #cfd6dd; font-size: 0.82rem; text-transform: capitalize; }
+.stato-select:disabled { cursor: default; opacity: 0.85; }
