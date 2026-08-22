@@ -2,7 +2,9 @@
 // Tenere le chiamate qui (invece che sparse nei componenti) e' come avere
 // i router nel backend: ordine e un posto solo da cambiare se qualcosa cambia.
 
-const BASE = "http://127.0.0.1:8000";
+// L'indirizzo del backend. In locale usa il default; in produzione si imposta
+// la variabile VITE_API_URL con l'indirizzo del backend online.
+const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 // Tiene il token in memoria dopo il login. Le chiamate protette lo allegano.
 let token = null;

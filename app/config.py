@@ -1,9 +1,8 @@
 """
 Configurazione dell'app.
 
-Legge le impostazioni dalle variabili d'ambiente (file .env).
-Perche' cosi': i segreti (URL del database, chiave dei token) NON stanno nel
-codice, ma in un file .env che resta fuori da git. Standard professionale.
+Legge le impostazioni dalle variabili d'ambiente (file .env in locale,
+o le variabili impostate sulla piattaforma di hosting in produzione).
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,15 +10,33 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # Valore di default se .env non c'e': SQLite locale.
+    # Database. In locale: SQLite. In produzione: l'URL di PostgreSQL,
+    # che la piattaforma di hosting fornisce come variabile d'ambiente.
     database_url: str = "sqlite:///./gestione_lavori.db"
 
-    # Chiave segreta per FIRMARE i token JWT. In produzione DEVE stare nel .env
-    # ed essere lunga e casuale: chi la conosce puo' falsificare i token.
+    # Chiave segreta per firmare i token JWT. In produzione DEVE essere
+    # impostata come variabile d'ambiente (lunga e casuale).
     secret_key: str = "CAMBIAMI-in-produzione-con-una-chiave-lunga-e-casuale"
-
-    # Per quanto tempo resta valido un token dopo il login (in minuti).
     token_durata_minuti: int = 60 * 24  # 24 ore
+
+    # Origini permesse per il CORS (chi puo' chiamare l'API dal browser).
+    # In locale: il server di sviluppo. In produzione: l'indirizzo del frontend.
+    # Formato: indirizzi separati da virgola.
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
+    @property
+    def lista_cors(self) -> list[str]:
+        """Trasforma la stringa 'a,b,c' nella lista ['a','b','c']."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def db_url_normalizzato(self) -> str:
+        """Alcune piattaforme danno l'URL come 'postgres://...', ma SQLAlchemy
+        vuole 'postgresql://...'. Correggo qui, cosi' funziona ovunque."""
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
 
 
 settings = Settings()

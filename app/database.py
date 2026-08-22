@@ -12,9 +12,9 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import settings
 
 # connect_args serve solo a SQLite; con PostgreSQL non serve, lo togli.
-connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+connect_args = {"check_same_thread": False} if settings.db_url_normalizzato.startswith("sqlite") else {}
 
-engine = create_engine(settings.database_url, connect_args=connect_args)
+engine = create_engine(settings.db_url_normalizzato, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

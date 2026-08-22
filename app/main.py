@@ -27,12 +27,11 @@ app = FastAPI(title="CoordSync", version="0.1.0")
 
 # CORS: permette al frontend (server di sviluppo) di chiamare questa API.
 # In produzione, qui andra' l'indirizzo vero del sito, non localhost.
+from app.config import settings
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=settings.lista_cors,   # da variabile d'ambiente (locale o produzione)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
