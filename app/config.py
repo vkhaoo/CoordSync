@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # In produzione: l'URL del backend su Render.
     base_url: str = "http://127.0.0.1:8000"
 
+    # Indirizzo del frontend (per i link che portano l'utente su una PAGINA,
+    # es. il reset password dove digita la nuova password).
+    frontend_url: str = "http://localhost:5173"
+
     @property
     def lista_cors(self) -> list[str]:
         """Trasforma la stringa 'a,b,c' nella lista ['a','b','c']."""

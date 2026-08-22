@@ -51,6 +51,8 @@ export const api = {
   registra: (dati) => richiesta("POST", "/auth/register", dati),
   login:    (dati) => richiesta("POST", "/auth/login", dati),
   me:       () => richiesta("GET", "/auth/me"),
+  richiediReset: (email) => richiesta("POST", "/auth/richiedi-reset", { email }),
+  resetPassword: (token, nuova_password) => richiesta("POST", "/auth/reset-password", { token, nuova_password }),
   progetti: ()     => richiesta("GET", "/progetti"),
   lavori:   (progettoId) => richiesta("GET", `/lavori?progetto_id=${progettoId}`),
   creaProgetto: (dati) => richiesta("POST", "/progetti", dati),

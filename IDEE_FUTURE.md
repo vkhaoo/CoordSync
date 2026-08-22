@@ -84,3 +84,22 @@ isolamento multi-tenant. Questi sono STRATI AGGIUNTIVI, da fare al deploy:
 - Alternativa piu' robusta: cookie httpOnly (il JS non li legge). Piu' complessi
   da gestire (CSRF, gestione lato backend). Da valutare se CoordSync diventa
   un prodotto con clienti veri.
+
+## Onboarding utenti: creazione diretta vs inviti
+
+Due modelli per far entrare persone in un'azienda:
+
+- **Modello 1 - creazione diretta (ATTUALE).** L'admin inserisce nome/email/password.
+  Comodo per squadre sul campo (operai poco avvezzi alla tecnologia). Difetto:
+  l'admin conosce la password iniziale.
+  -> Miglioramento minimo: OBBLIGO cambio password al primo accesso (chiude il
+     difetto restando su questo modello). Serve un flag "deve_cambiare_password".
+
+- **Modello 2 - inviti via email (MODERNO, "SaaS").** L'admin inserisce solo
+  nome+email. Il sistema manda un invito con link; l'utente sceglie LUI la
+  password. Piu' sicuro/privacy. Come Slack/Notion/Google. Richiede il servizio
+  email funzionante. Riusa il meccanismo token-con-scopo della verifica email
+  (scopo "invito"). Da fare DOPO aver collegato un servizio email reale.
+
+- Molti prodotti offrono ENTRAMBI. Scelta consigliata: tenere il Modello 1 ora,
+  aggiungere l'obbligo cambio-password, poi il Modello 2 a inviti col servizio email.

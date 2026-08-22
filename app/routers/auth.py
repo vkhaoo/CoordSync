@@ -134,3 +134,51 @@ def reinvia_verifica(current: Utente = Depends(get_current_user)):
         return {"messaggio": "Email gia' verificata"}
     _invia_verifica(current)
     return {"messaggio": "Email di verifica inviata"}
+
+
+# ---------- RECUPERO PASSWORD ----------
+
+SCOPO_RESET = "reset_password"
+
+
+class RichiediResetRichiesta(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRichiesta(BaseModel):
+    token: str
+    nuova_password: PasswordStr
+
+
+@router.post("/richiedi-reset", status_code=202)
+def richiedi_reset(dati: RichiediResetRichiesta, db: Session = Depends(get_db)):
+    """L'utente chiede il reset inserendo l'email. Se esiste, gli mandiamo il link.
+    Rispondiamo SEMPRE ok (anche se l'email non esiste) per non rivelare quali
+    email sono registrate (evita 'email enumeration')."""
+    utente = db.query(Utente).filter(Utente.email == dati.email).first()
+    if utente is not None:
+        token = crea_token_scopo(utente.id, SCOPO_RESET, durata_minuti=60)
+        # Il link porta alla PAGINA del frontend dove si digita la nuova password.
+        link = f"{settings.frontend_url}/?reset_token={token}"
+        invia_email(
+            destinatario=utente.email,
+            oggetto="Reimposta la tua password - CoordSync",
+            corpo=f"Ciao {utente.nome},\nreimposta la password cliccando qui:\n{link}\n\nIl link scade tra 1 ora. Se non hai richiesto tu il reset, ignora questa email.",
+        )
+    return {"messaggio": "Se l'email e' registrata, riceverai un link per reimpostare la password"}
+
+
+@router.post("/reset-password", status_code=200)
+def reset_password(dati: ResetPasswordRichiesta, db: Session = Depends(get_db)):
+    """L'utente arriva qui dal link, con il token e la nuova password."""
+    utente_id = leggi_token_scopo(dati.token, SCOPO_RESET)
+    if utente_id is None:
+        raise HTTPException(status_code=400, detail="Link non valido o scaduto")
+
+    utente = db.query(Utente).filter(Utente.id == int(utente_id)).first()
+    if utente is None:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    utente.password_hash = hash_password(dati.nuova_password)
+    db.commit()
+    return {"messaggio": "Password reimpostata. Ora puoi accedere."}

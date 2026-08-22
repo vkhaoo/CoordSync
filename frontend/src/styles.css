@@ -272,3 +272,11 @@ input:focus { outline: 2px solid var(--ambra); outline-offset: 0; border-color: 
 }
 .tabella-utenti select { padding: 0.35rem 0.5rem; border: 1px solid #cfd6dd; border-radius: 4px; }
 .ruolo-mio { color: var(--tenue); font-style: italic; }
+
+/* ---- Link testuale (es. password dimenticata) ---- */
+.link-testo {
+  background: none; border: none; color: #185fa5;
+  cursor: pointer; font-size: 0.85rem; padding: 0.2rem;
+  text-decoration: underline; align-self: center;
+}
+.link-testo:hover { color: var(--acciaio); }
