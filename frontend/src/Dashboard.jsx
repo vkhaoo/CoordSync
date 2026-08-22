@@ -34,6 +34,8 @@ export default function Dashboard({ onLogout }) {
   const [nuovoProgetto, setNuovoProgetto] = useState("");
   const [nuovoTitolo, setNuovoTitolo] = useState("");
   const [nuovaPriorita, setNuovaPriorita] = useState("normale");
+  const [modificaLink, setModificaLink] = useState(false);   // sto modificando il link?
+  const [linkBozza, setLinkBozza] = useState("");
 
   // Funzioni di caricamento (fuori dagli useEffect, cosi' le richiamo dopo le creazioni).
   async function caricaProgetti(selezionaId) {
@@ -116,6 +118,15 @@ export default function Dashboard({ onLogout }) {
     } catch (err) { setAvvisoVerifica("Errore nell'invio: " + err.message); }
   }
 
+  async function salvaLink(progettoId) {
+    setErrore(null);
+    try {
+      await api.aggiornaProgetto(progettoId, { link_documento: linkBozza || null });
+      setModificaLink(false);
+      await caricaProgetti(progettoId);   // ricarico per vedere il link aggiornato
+    } catch (err) { setErrore(err.message); }
+  }
+
   if (caricando) return <div className="schermata"><p>Caricamento…</p></div>;
 
   const progettoCorrente = progetti.find((p) => p.id === selezionato);
@@ -195,7 +206,52 @@ export default function Dashboard({ onLogout }) {
         <main className="area-lavori">
           {progettoCorrente ? (
             <>
-              <h2 className="titolo-progetto">{progettoCorrente.nome}</h2>
+              <div className="intestazione-progetto">
+                <h2 className="titolo-progetto">{progettoCorrente.nome}</h2>
+
+                {/* Avanzamento: quanti lavori "fatti" su totale */}
+                {lavori.length > 0 && (() => {
+                  const fatti = lavori.filter((l) => l.stato === "fatto").length;
+                  const perc = Math.round((fatti / lavori.length) * 100);
+                  return (
+                    <div className="avanzamento">
+                      <div className="avanzamento-testo">{fatti}/{lavori.length} completati ({perc}%)</div>
+                      <div className="barra"><div className="barra-piena" style={{ width: `${perc}%` }} /></div>
+                    </div>
+                  );
+                })()}
+
+                {/* Link al documento esterno (Excel/foglio) */}
+                <div className="link-documento">
+                  {modificaLink ? (
+                    <div className="form-inline">
+                      <input
+                        placeholder="https://… (link a Excel/foglio)"
+                        value={linkBozza}
+                        onChange={(e) => setLinkBozza(e.target.value)}
+                      />
+                      <button className="mini" onClick={() => salvaLink(progettoCorrente.id)}>✓</button>
+                      <button className="mini annulla" onClick={() => setModificaLink(false)}>×</button>
+                    </div>
+                  ) : (
+                    <>
+                      {progettoCorrente.link_documento ? (
+                        <a href={progettoCorrente.link_documento} target="_blank" rel="noreferrer" className="doc-link">
+                          📄 Documento collegato
+                        </a>
+                      ) : (
+                        <span className="vuoto piccolo">Nessun documento collegato</span>
+                      )}
+                      {puoCreare && (
+                        <button className="link-testo"
+                                onClick={() => { setLinkBozza(progettoCorrente.link_documento || ""); setModificaLink(true); }}>
+                          {progettoCorrente.link_documento ? "Modifica" : "Aggiungi link"}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
 
               {/* Form: nuovo lavoro — solo per chi può creare */}
               {puoCreare && (

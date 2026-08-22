@@ -57,6 +57,7 @@ export const api = {
   progetti: ()     => richiesta("GET", "/progetti"),
   lavori:   (progettoId) => richiesta("GET", `/lavori?progetto_id=${progettoId}`),
   creaProgetto: (dati) => richiesta("POST", "/progetti", dati),
+  aggiornaProgetto: (id, dati) => richiesta("PATCH", `/progetti/${id}`, dati),
   creaLavoro:   (dati) => richiesta("POST", "/lavori", dati),
   cambiaStato:  (lavoroId, stato) => richiesta("PATCH", `/lavori/${lavoroId}/stato`, { stato }),
   commenti:     (lavoroId) => richiesta("GET", `/lavori/${lavoroId}/commenti`),

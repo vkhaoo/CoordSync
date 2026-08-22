@@ -292,3 +292,18 @@ input:focus { outline: 2px solid var(--ambra); outline-offset: 0; border-color: 
   padding: 0.35rem 0.8rem; cursor: pointer; font-size: 0.82rem; white-space: nowrap;
 }
 .banner-azione:hover { background: #6f420a; }
+
+/* ---- Intestazione progetto: avanzamento + link ---- */
+.intestazione-progetto { margin-bottom: 1.2rem; }
+.intestazione-progetto .titolo-progetto { margin-bottom: 0.5rem; }
+
+.avanzamento { margin-bottom: 0.6rem; max-width: 340px; }
+.avanzamento-testo { font-size: 0.8rem; color: var(--tenue); margin-bottom: 3px; }
+.barra { height: 8px; background: #e6ebf0; border-radius: 4px; overflow: hidden; }
+.barra-piena { height: 100%; background: #3b8f2f; border-radius: 4px; transition: width 0.3s; }
+
+.link-documento { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+.doc-link { color: #185fa5; text-decoration: none; }
+.doc-link:hover { text-decoration: underline; }
+.mini.annulla { background: #d6dbe1; color: #444; }
+.mini.annulla:hover { background: #c0392b; color: #fff; }

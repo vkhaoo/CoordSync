@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.progetto import Progetto
 from app.models.utente import Utente
-from app.schemas.progetto import ProgettoCreate, ProgettoRead
+from app.schemas.progetto import ProgettoCreate, ProgettoRead, ProgettoUpdate
 from app.models.utente import RuoloUtente
 from app.dependencies import get_current_user, richiedi_ruolo
 
@@ -22,9 +22,35 @@ def crea_progetto(
     progetto = Progetto(
         nome=dati.nome,
         descrizione=dati.descrizione,
+        link_documento=dati.link_documento,
         organizzazione_id=current.organizzazione_id,
     )
     db.add(progetto)
+    db.commit()
+    db.refresh(progetto)
+    return progetto
+
+
+@router.patch("/{progetto_id}", response_model=ProgettoRead)
+def modifica_progetto(
+    progetto_id: int,
+    dati: ProgettoUpdate,
+    db: Session = Depends(get_db),
+    current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra)),
+):
+    progetto = (
+        db.query(Progetto)
+        .filter(Progetto.id == progetto_id,
+                Progetto.organizzazione_id == current.organizzazione_id)
+        .first()
+    )
+    if progetto is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Progetto non trovato")
+
+    # Aggiorno solo i campi effettivamente forniti (gli altri restano invariati).
+    for campo, valore in dati.model_dump(exclude_unset=True).items():
+        setattr(progetto, campo, valore)
     db.commit()
     db.refresh(progetto)
     return progetto

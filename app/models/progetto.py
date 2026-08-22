@@ -13,6 +13,8 @@ class Progetto(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String, nullable=False)
     descrizione = Column(String, nullable=True)
+    # Link a un documento/foglio esterno (Excel, Google Sheets...) collegato al progetto.
+    link_documento = Column(String, nullable=True)
     creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Ogni progetto appartiene a un'organizzazione (il "tenant").

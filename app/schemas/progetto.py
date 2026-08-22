@@ -15,12 +15,20 @@ class ProgettoBase(BaseModel):
     """Campi comuni: quello che l'utente puo' fornire."""
     nome: str
     descrizione: str | None = None   # opzionale: se non arriva, resta None
+    link_documento: str | None = None  # link a un Excel/foglio esterno
 
 
 class ProgettoCreate(ProgettoBase):
     """Cosa serve per CREARE un progetto (input).
     NB: l'organizzazione NON si passa piu': viene presa dall'utente loggato."""
     pass
+
+
+class ProgettoUpdate(BaseModel):
+    """Cosa si puo' MODIFICARE di un progetto (tutti opzionali)."""
+    nome: str | None = None
+    descrizione: str | None = None
+    link_documento: str | None = None
 
 
 class ProgettoRead(ProgettoBase):
