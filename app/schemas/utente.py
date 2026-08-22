@@ -8,6 +8,7 @@ EmailStr valida che l'email abbia un formato plausibile.
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.models.utente import RuoloUtente
+from app.schemas.validators import PasswordStr
 
 
 class UtenteBase(BaseModel):
@@ -16,7 +17,7 @@ class UtenteBase(BaseModel):
 
 
 class UtenteCreate(UtenteBase):
-    password: str   # salvata come impronta (hash), mai in chiaro
+    password: PasswordStr   # regole minime di robustezza + hash, mai in chiaro
     ruolo: RuoloUtente = RuoloUtente.operatore   # l'admin sceglie il ruolo (default: operatore)
     # organizzazione_id NON serve piu': ereditata da chi crea l'utente
 

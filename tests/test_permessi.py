@@ -3,12 +3,12 @@ from tests.conftest import registra
 
 
 def _login(client, email):
-    tok = client.post("/auth/login", json={"email": email, "password": "pw"}).json()["access_token"]
+    tok = client.post("/auth/login", json={"email": email, "password": "password1"}).json()["access_token"]
     return {"Authorization": f"Bearer {tok}"}
 
 
 def _crea_utente(client, admin_headers, nome, email, ruolo):
-    client.post("/utenti", json={"nome": nome, "email": email, "password": "pw", "ruolo": ruolo},
+    client.post("/utenti", json={"nome": nome, "email": email, "password": "password1", "ruolo": ruolo},
                 headers=admin_headers)
     return _login(client, email)
 

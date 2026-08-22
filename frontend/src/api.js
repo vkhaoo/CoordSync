@@ -24,7 +24,15 @@ async function richiesta(metodo, percorso, corpo) {
   // Se il backend risponde con errore, leggo il messaggio e lo rilancio.
   if (!risposta.ok) {
     let dettaglio = "Errore";
-    try { dettaglio = (await risposta.json()).detail || dettaglio; } catch {}
+    try {
+      const corpo = await risposta.json();
+      if (typeof corpo.detail === "string") {
+        dettaglio = corpo.detail;                       // errore semplice
+      } else if (Array.isArray(corpo.detail)) {
+        // errori di validazione (es. password debole): lista di messaggi
+        dettaglio = corpo.detail.map((e) => e.msg).join("; ");
+      }
+    } catch {}
     throw new Error(dettaglio);
   }
   // 204 = nessun contenuto; altrimenti leggo il JSON.

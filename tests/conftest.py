@@ -35,7 +35,7 @@ def client():
 
 # --- piccoli aiutanti riutilizzabili dai test ---
 
-def registra(client, azienda, nome, email, password="pw"):
+def registra(client, azienda, nome, email, password="password1"):
     """Registra un'azienda+admin e restituisce gli header con il token pronti."""
     r = client.post("/auth/register", json={
         "nome_azienda": azienda, "nome": nome, "email": email, "password": password,

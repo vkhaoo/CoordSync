@@ -10,7 +10,7 @@ def _setup_lavoro(client, headers):
 
 def test_assegna_e_rimuovi(client):
     a = registra(client, "Azienda A", "Marco", "marco@a.it")
-    luca = client.post("/utenti", json={"nome": "Luca", "email": "luca@a.it", "password": "pw"}, headers=a).json()
+    luca = client.post("/utenti", json={"nome": "Luca", "email": "luca@a.it", "password": "password1"}, headers=a).json()
     lav = _setup_lavoro(client, a)
 
     # assegno

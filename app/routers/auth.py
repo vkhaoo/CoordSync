@@ -14,6 +14,7 @@ from app.models.organizzazione import Organizzazione
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.utente import UtenteRead
 from app.security import verifica_password, crea_token, hash_password
+from app.schemas.validators import PasswordStr
 from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -25,7 +26,7 @@ class RegisterRichiesta(BaseModel):
     nome_azienda: str
     nome: str
     email: EmailStr
-    password: str
+    password: PasswordStr
 
 
 class TokenRisposta(BaseModel):
