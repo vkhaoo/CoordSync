@@ -1,0 +1,48 @@
+"""Modello Lavoro: il cuore dell'app."""
+import enum
+from datetime import datetime, timezone
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy.orm import relationship
+
+from app.database import Base
+
+
+class StatoLavoro(str, enum.Enum):
+    """Gli stati possibili di un lavoro. Usare un enum evita errori di battitura
+    (nessuno puo' scrivere 'fattoo' o 'in corsoo': i valori sono fissi)."""
+    da_fare = "da_fare"
+    in_corso = "in_corso"
+    in_attesa = "in_attesa"
+    fatto = "fatto"
+
+
+class PrioritaLavoro(str, enum.Enum):
+    bassa = "bassa"
+    normale = "normale"
+    alta = "alta"
+    urgente = "urgente"
+
+
+class Lavoro(Base):
+    __tablename__ = "lavori"
+
+    id = Column(Integer, primary_key=True, index=True)
+    titolo = Column(String, nullable=False)
+    descrizione = Column(String, nullable=True)
+    stato = Column(SAEnum(StatoLavoro), default=StatoLavoro.da_fare, nullable=False)
+    priorita = Column(SAEnum(PrioritaLavoro), default=PrioritaLavoro.normale, nullable=False)
+
+    # Foreign key: il "puntatore" al progetto di appartenenza.
+    progetto_id = Column(Integer, ForeignKey("progetti.id", ondelete="CASCADE"), nullable=False)
+
+    creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    aggiornato_il = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Le due "scorciatoie" di navigazione:
+    progetto = relationship("Progetto", back_populates="lavori")
+    assegnatari = relationship("Utente", secondary="assegnazioni", back_populates="lavori")

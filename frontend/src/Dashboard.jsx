@@ -1,0 +1,183 @@
+import { useState, useEffect } from "react";
+import { api } from "./api.js";
+import Lavoro from "./Lavoro.jsx";
+
+const PRIORITA = ["bassa", "normale", "alta", "urgente"];
+const ETICHETTA_PRIORITA = {
+  bassa: "Bassa", normale: "Normale", alta: "Alta", urgente: "Urgente",
+};
+
+// Ordina i lavori: prima per priorità (urgente in cima), e i "Fatto" vanno in fondo.
+const RANGO_PRIORITA = { urgente: 0, alta: 1, normale: 2, bassa: 3 };
+function ordinaLavori(lista) {
+  return [...lista].sort((a, b) => {
+    const aFatto = a.stato === "fatto" ? 1 : 0;
+    const bFatto = b.stato === "fatto" ? 1 : 0;
+    if (aFatto !== bFatto) return aFatto - bFatto;                 // i "Fatto" dopo
+    return RANGO_PRIORITA[a.priorita] - RANGO_PRIORITA[b.priorita]; // poi per priorità
+  });
+}
+
+export default function Dashboard({ onLogout }) {
+  const [progetti, setProgetti] = useState([]);
+  const [selezionato, setSelezionato] = useState(null);
+  const [lavori, setLavori] = useState([]);
+  const [utenti, setUtenti] = useState([]);   // colleghi dell'azienda (per l'assegnazione)
+  const [errore, setErrore] = useState(null);
+  const [caricando, setCaricando] = useState(true);
+
+  // Campi dei form di creazione
+  const [nuovoProgetto, setNuovoProgetto] = useState("");
+  const [nuovoTitolo, setNuovoTitolo] = useState("");
+  const [nuovaPriorita, setNuovaPriorita] = useState("normale");
+
+  // Funzioni di caricamento (fuori dagli useEffect, cosi' le richiamo dopo le creazioni).
+  async function caricaProgetti(selezionaId) {
+    const dati = await api.progetti();
+    setProgetti(dati);
+    // seleziono il progetto indicato, o il primo se non ne ho uno.
+    if (selezionaId != null) setSelezionato(selezionaId);
+    else if (selezionato == null && dati.length > 0) setSelezionato(dati[0].id);
+  }
+
+  async function caricaLavori(progettoId) {
+    if (progettoId == null) { setLavori([]); return; }
+    setLavori(await api.lavori(progettoId));
+  }
+
+  // All'apertura: carico i progetti una volta.
+  useEffect(() => {
+    caricaProgetti()
+      .catch((e) => setErrore(e.message))
+      .finally(() => setCaricando(false));
+    // carico anche i colleghi dell'azienda (servono per l'assegnazione).
+    api.utenti().then(setUtenti).catch((e) => setErrore(e.message));
+  }, []);
+
+  // Ogni volta che cambia il progetto selezionato: ricarico i suoi lavori.
+  useEffect(() => {
+    caricaLavori(selezionato).catch((e) => setErrore(e.message));
+  }, [selezionato]);
+
+  // --- Creazioni ---
+
+  async function aggiungiProgetto(e) {
+    e.preventDefault();
+    setErrore(null);
+    try {
+      const creato = await api.creaProgetto({ nome: nuovoProgetto });
+      setNuovoProgetto("");
+      await caricaProgetti(creato.id);   // ricarico e seleziono il nuovo
+    } catch (err) { setErrore(err.message); }
+  }
+
+  async function aggiungiLavoro(e) {
+    e.preventDefault();
+    setErrore(null);
+    try {
+      await api.creaLavoro({
+        titolo: nuovoTitolo,
+        priorita: nuovaPriorita,
+        progetto_id: selezionato,
+      });
+      setNuovoTitolo("");
+      setNuovaPriorita("normale");
+      await caricaLavori(selezionato);   // ricarico i lavori: il nuovo compare
+    } catch (err) { setErrore(err.message); }
+  }
+
+  async function cambiaStato(lavoroId, nuovoStato) {
+    setErrore(null);
+    try {
+      const aggiornato = await api.cambiaStato(lavoroId, nuovoStato);
+      // Il backend mi restituisce il lavoro aggiornato: lo sostituisco nella lista
+      // SENZA ricaricare tutto. Creo una nuova lista con quell'elemento cambiato.
+      setLavori((precedenti) =>
+        precedenti.map((l) => (l.id === aggiornato.id ? aggiornato : l))
+      );
+    } catch (err) { setErrore(err.message); }
+  }
+
+  if (caricando) return <div className="schermata"><p>Caricamento…</p></div>;
+
+  const progettoCorrente = progetti.find((p) => p.id === selezionato);
+
+  return (
+    <div className="app">
+      <header className="barra">
+        <span className="marchio">CoordSync</span>
+        <button className="esci" onClick={onLogout}>Esci</button>
+      </header>
+
+      {errore && <p className="errore" style={{ padding: "0 1rem" }}>{errore}</p>}
+
+      <div className="corpo">
+        <aside className="colonna-progetti">
+          <h2 className="titolo-colonna">Progetti</h2>
+          {progetti.length === 0 && <p className="vuoto">Nessun progetto ancora.</p>}
+          <ul className="lista-progetti">
+            {progetti.map((p) => (
+              <li key={p.id}>
+                <button
+                  className={p.id === selezionato ? "voce attiva" : "voce"}
+                  onClick={() => setSelezionato(p.id)}
+                >{p.nome}</button>
+              </li>
+            ))}
+          </ul>
+
+          {/* Form: nuovo progetto */}
+          <form className="form-inline" onSubmit={aggiungiProgetto}>
+            <input
+              placeholder="Nuovo progetto…"
+              value={nuovoProgetto}
+              onChange={(e) => setNuovoProgetto(e.target.value)}
+              required
+            />
+            <button type="submit" className="mini">+</button>
+          </form>
+        </aside>
+
+        <main className="area-lavori">
+          {progettoCorrente ? (
+            <>
+              <h2 className="titolo-progetto">{progettoCorrente.nome}</h2>
+
+              {/* Form: nuovo lavoro nel progetto selezionato */}
+              <form className="form-lavoro" onSubmit={aggiungiLavoro}>
+                <input
+                  placeholder="Titolo del lavoro…"
+                  value={nuovoTitolo}
+                  onChange={(e) => setNuovoTitolo(e.target.value)}
+                  required
+                />
+                <select value={nuovaPriorita} onChange={(e) => setNuovaPriorita(e.target.value)}>
+                  {PRIORITA.map((p) => <option key={p} value={p}>{ETICHETTA_PRIORITA[p]}</option>)}
+                </select>
+                <button type="submit" className="principale piccolo">Aggiungi</button>
+              </form>
+
+              {lavori.length === 0 ? (
+                <p className="vuoto">Nessun lavoro in questo progetto.</p>
+              ) : (
+                <ul className="lista-lavori">
+                  {ordinaLavori(lavori).map((l) => (
+                    <Lavoro
+                      key={l.id}
+                      lavoro={l}
+                      utenti={utenti}
+                      onCambiaStato={cambiaStato}
+                      onAssegnazioneCambiata={() => caricaLavori(selezionato)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <p className="vuoto">Crea o seleziona un progetto per iniziare.</p>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}

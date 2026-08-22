@@ -1,0 +1,15 @@
+# Ambiente Python
+venv/
+__pycache__/
+*.pyc
+
+# Variabili d'ambiente (segreti: NON vanno mai su git)
+.env
+
+# Database locale
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/

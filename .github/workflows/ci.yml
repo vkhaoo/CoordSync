@@ -1,0 +1,27 @@
+# CI: ad ogni push (o pull request) GitHub esegue da solo questi passi.
+# Se i test falliscono, compare una X rossa e vieni avvisato.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # 1) Scarica il codice del repository
+      - uses: actions/checkout@v4
+
+      # 2) Prepara Python 3.12
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 3) Installa le dipendenze del progetto
+      - name: Installa dipendenze
+        run: pip install -r requirements.txt
+
+      # 4) Lancia i test
+      - name: Esegui i test
+        run: pytest -q
