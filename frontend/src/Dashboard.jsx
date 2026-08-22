@@ -26,6 +26,7 @@ export default function Dashboard({ onLogout }) {
   const [utenti, setUtenti] = useState([]);   // colleghi dell'azienda (per l'assegnazione)
   const [io, setIo] = useState(null);         // l'utente loggato (per sapere il mio ruolo)
   const [vista, setVista] = useState("lavori");  // "lavori" oppure "utenti"
+  const [avvisoVerifica, setAvvisoVerifica] = useState(null);  // feedback "reinvia"
   const [errore, setErrore] = useState(null);
   const [caricando, setCaricando] = useState(true);
 
@@ -107,6 +108,14 @@ export default function Dashboard({ onLogout }) {
     } catch (err) { setErrore(err.message); }
   }
 
+  async function reinviaVerifica() {
+    setAvvisoVerifica(null);
+    try {
+      await api.reinviaVerifica();
+      setAvvisoVerifica("Link di verifica inviato. Controlla la tua email.");
+    } catch (err) { setAvvisoVerifica("Errore nell'invio: " + err.message); }
+  }
+
   if (caricando) return <div className="schermata"><p>Caricamento…</p></div>;
 
   const progettoCorrente = progetti.find((p) => p.id === selezionato);
@@ -135,6 +144,19 @@ export default function Dashboard({ onLogout }) {
       </header>
 
       {errore && <p className="errore" style={{ padding: "0 1rem" }}>{errore}</p>}
+
+      {/* Banner: email non ancora verificata */}
+      {io && !io.email_verificata && (
+        <div className="banner-verifica">
+          <span>
+            La tua email non è ancora verificata.
+            {avvisoVerifica && <strong> {avvisoVerifica}</strong>}
+          </span>
+          {!avvisoVerifica && (
+            <button className="banner-azione" onClick={reinviaVerifica}>Reinvia link</button>
+          )}
+        </div>
+      )}
 
       {vista === "utenti" && sonoAdmin ? (
         <div className="corpo-singolo">
