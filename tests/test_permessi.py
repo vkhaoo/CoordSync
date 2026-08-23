@@ -45,3 +45,19 @@ def test_operatore_cambia_stato_solo_se_assegnato(client):
     client.post(f"/lavori/{l['id']}/assegnati", json={"utente_id": op_id}, headers=a)
     r = client.patch(f"/lavori/{l['id']}/stato", json={"stato": "in_corso"}, headers=op)
     assert r.status_code == 200
+
+
+def test_completamento_registra_data_e_autore(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "L", "progetto_id": p["id"]}, headers=a).json()
+
+    # passo a "fatto": deve registrare completato_il e completato_da
+    r = client.patch(f"/lavori/{l['id']}/stato", json={"stato": "fatto"}, headers=a).json()
+    assert r["completato_il"] is not None
+    assert r["completato_da"]["email"] == "marco@a.it"
+
+    # torno indietro: i dati di completamento si azzerano
+    r2 = client.patch(f"/lavori/{l['id']}/stato", json={"stato": "in_corso"}, headers=a).json()
+    assert r2["completato_il"] is None
+    assert r2["completato_da"] is None

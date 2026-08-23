@@ -83,6 +83,14 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
         </button>
       </div>
 
+      {/* Se completato: mostro quando e da chi */}
+      {lavoro.stato === "fatto" && lavoro.completato_il && (
+        <div className="completamento-info">
+          ✓ Completato il {new Date(lavoro.completato_il).toLocaleDateString("it-IT")}
+          {lavoro.completato_da && <> da {lavoro.completato_da.nome}</>}
+        </div>
+      )}
+
       {/* Assegnatari: visibili a tutti; modificabili solo da chi gestisce */}
       <div className="assegnazione">
         {lavoro.assegnatari.map((u) => (

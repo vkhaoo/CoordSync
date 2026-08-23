@@ -39,5 +39,7 @@ class LavoroRead(LavoroBase):
     creato_il: datetime
     aggiornato_il: datetime
     assegnatari: list[UtenteRead] = []   # chi ci lavora (molti-a-molti)
+    completato_il: datetime | None = None      # quando e' stato completato
+    completato_da: UtenteRead | None = None     # chi l'ha completato
 
     model_config = ConfigDict(from_attributes=True)

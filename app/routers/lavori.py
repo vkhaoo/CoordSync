@@ -78,7 +78,18 @@ def cambia_stato(lavoro_id: int, dati: LavoroUpdateStato,
         if not assegnato:
             raise HTTPException(status_code=403, detail="Puoi aggiornare solo i lavori a te assegnati")
 
-    lavoro.stato = dati.stato
+    from datetime import datetime, timezone
+    nuovo = dati.stato
+    # Se passa a "fatto" (e non lo era gia'): registro quando e chi.
+    if nuovo == StatoLavoro.fatto and lavoro.stato != StatoLavoro.fatto:
+        lavoro.completato_il = datetime.now(timezone.utc)
+        lavoro.completato_da_id = current.id
+    # Se esce da "fatto": azzero i dati di completamento (non e' piu' completo).
+    elif nuovo != StatoLavoro.fatto and lavoro.stato == StatoLavoro.fatto:
+        lavoro.completato_il = None
+        lavoro.completato_da_id = None
+
+    lavoro.stato = nuovo
     db.commit()
     db.refresh(lavoro)
     return lavoro

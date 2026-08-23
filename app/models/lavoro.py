@@ -43,6 +43,12 @@ class Lavoro(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
+    # Completamento: quando il lavoro e' passato a "fatto", e da chi.
+    # Restano vuoti finche' non e' completato (e si svuotano se torna indietro).
+    completato_il = Column(DateTime, nullable=True)
+    completato_da_id = Column(Integer, ForeignKey("utenti.id"), nullable=True)
+
     # Le due "scorciatoie" di navigazione:
     progetto = relationship("Progetto", back_populates="lavori")
     assegnatari = relationship("Utente", secondary="assegnazioni", back_populates="lavori")
+    completato_da = relationship("Utente", foreign_keys=[completato_da_id])

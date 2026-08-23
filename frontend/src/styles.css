@@ -307,3 +307,9 @@ input:focus { outline: 2px solid var(--ambra); outline-offset: 0; border-color: 
 .doc-link:hover { text-decoration: underline; }
 .mini.annulla { background: #d6dbe1; color: #444; }
 .mini.annulla:hover { background: #c0392b; color: #fff; }
+
+/* ---- Info completamento ---- */
+.completamento-info {
+  margin-top: 0.5rem; font-size: 0.8rem; color: #3b6d11;
+  background: #eaf3de; border-radius: 4px; padding: 4px 8px; display: inline-block;
+}
