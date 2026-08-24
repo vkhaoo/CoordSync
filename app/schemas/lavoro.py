@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict
 # Riutilizziamo gli enum gia' definiti nel model: una sola fonte di verita'.
 from app.models.lavoro import StatoLavoro, PrioritaLavoro
 from app.schemas.utente import UtenteRead
+from app.schemas.sotto_attivita import SottoAttivitaRead
 
 
 class LavoroBase(BaseModel):
@@ -41,5 +42,6 @@ class LavoroRead(LavoroBase):
     assegnatari: list[UtenteRead] = []   # chi ci lavora (molti-a-molti)
     completato_il: datetime | None = None      # quando e' stato completato
     completato_da: UtenteRead | None = None     # chi l'ha completato
+    sotto_attivita: list[SottoAttivitaRead] = []   # checklist del lavoro
 
     model_config = ConfigDict(from_attributes=True)

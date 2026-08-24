@@ -52,3 +52,5 @@ class Lavoro(Base):
     progetto = relationship("Progetto", back_populates="lavori")
     assegnatari = relationship("Utente", secondary="assegnazioni", back_populates="lavori")
     completato_da = relationship("Utente", foreign_keys=[completato_da_id])
+    sotto_attivita = relationship("SottoAttivita", back_populates="lavoro",
+                                  cascade="all, delete-orphan")

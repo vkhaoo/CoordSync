@@ -18,6 +18,7 @@ from app.routers import lavori
 from app.routers import utenti
 from app.routers import commenti
 from app.routers import assegnazioni
+from app.routers import sotto_attivita
 
 # Lo schema del database e' gestito dalle MIGRAZIONI Alembic
 # (comando: alembic upgrade head), non piu' creato "al volo" qui.
@@ -45,6 +46,7 @@ app.include_router(lavori.router)
 app.include_router(utenti.router)
 app.include_router(commenti.router)
 app.include_router(assegnazioni.router)
+app.include_router(sotto_attivita.router)
 
 
 @app.get("/health")

@@ -20,7 +20,40 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
   // Permessi calcolati in base al mio ruolo e all'essere assegnato o meno.
   const gestisco = io && (io.ruolo === "admin" || io.ruolo === "caposquadra");
   const sonoAssegnato = io && lavoro.assegnatari.some((u) => u.id === io.id);
-  const possoAggiornare = gestisco || sonoAssegnato;   // stato e commenti
+  const possoAggiornare = gestisco || sonoAssegnato;   // stato, commenti, spunta checklist
+
+  // Checklist: parto dalle sotto-attivita' gia' incluse nel lavoro.
+  const [sotto, setSotto] = useState(lavoro.sotto_attivita || []);
+  const [nuovaVoce, setNuovaVoce] = useState("");
+
+  async function aggiungiVoce(e) {
+    e.preventDefault();
+    setErrore(null);
+    try {
+      const creata = await api.creaSotto(lavoro.id, nuovaVoce);
+      setSotto((prec) => [...prec, creata]);
+      setNuovaVoce("");
+      onAssegnazioneCambiata();   // ricarico i lavori (aggiorna eventuali conteggi)
+    } catch (err) { setErrore(err.message); }
+  }
+
+  async function spunta(voce) {
+    setErrore(null);
+    try {
+      const agg = await api.spuntaSotto(voce.id, !voce.completata);
+      setSotto((prec) => prec.map((v) => (v.id === agg.id ? agg : v)));
+    } catch (err) { setErrore(err.message); }
+  }
+
+  async function eliminaVoce(voceId) {
+    setErrore(null);
+    try {
+      await api.eliminaSotto(voceId);
+      setSotto((prec) => prec.filter((v) => v.id !== voceId));
+    } catch (err) { setErrore(err.message); }
+  }
+
+  const fatteSotto = sotto.filter((v) => v.completata).length;
 
   async function assegna(utenteId) {
     setErrore(null);
@@ -88,6 +121,37 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
         <div className="completamento-info">
           ✓ Completato il {new Date(lavoro.completato_il).toLocaleDateString("it-IT")}
           {lavoro.completato_da && <> da {lavoro.completato_da.nome}</>}
+        </div>
+      )}
+
+      {/* Checklist (sotto-attivita') */}
+      {(sotto.length > 0 || gestisco) && (
+        <div className="checklist">
+          {sotto.length > 0 && (
+            <div className="checklist-testa">Checklist · {fatteSotto}/{sotto.length}</div>
+          )}
+          <ul className="lista-sotto">
+            {sotto.map((v) => (
+              <li key={v.id} className="voce-sotto">
+                <label className={v.completata ? "spuntata" : ""}>
+                  <input type="checkbox" checked={v.completata}
+                         disabled={!possoAggiornare}
+                         onChange={() => spunta(v)} />
+                  {v.testo}
+                </label>
+                {gestisco && (
+                  <button className="chip-x" onClick={() => eliminaVoce(v.id)} title="Elimina">×</button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {gestisco && (
+            <form className="form-sotto" onSubmit={aggiungiVoce}>
+              <input placeholder="Aggiungi voce…" value={nuovaVoce}
+                     onChange={(e) => setNuovaVoce(e.target.value)} required />
+              <button type="submit" className="mini">+</button>
+            </form>
+          )}
         </div>
       )}
 

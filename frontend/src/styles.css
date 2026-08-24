@@ -313,3 +313,19 @@ input:focus { outline: 2px solid var(--ambra); outline-offset: 0; border-color: 
   margin-top: 0.5rem; font-size: 0.8rem; color: #3b6d11;
   background: #eaf3de; border-radius: 4px; padding: 4px 8px; display: inline-block;
 }
+
+/* ---- Checklist (sotto-attivita') ---- */
+.checklist { margin-top: 0.6rem; border-top: 1px solid #eceff2; padding-top: 0.6rem; }
+.checklist-testa {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--tenue); margin-bottom: 0.4rem;
+}
+.lista-sotto { list-style: none; padding: 0; margin: 0 0 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.voce-sotto { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.voce-sotto label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer; }
+.voce-sotto label.spuntata { color: var(--tenue); text-decoration: line-through; }
+.form-sotto { display: flex; gap: 4px; }
+.form-sotto input {
+  flex: 1; padding: 0.35rem 0.5rem; font-size: 0.85rem;
+  border: 1px solid #cfd6dd; border-radius: 4px;
+}

@@ -8,8 +8,9 @@ from app.models.progetto import Progetto
 from app.models.lavoro import Lavoro, StatoLavoro, PrioritaLavoro
 from app.models.assegnazione import assegnazione
 from app.models.commento import Commento
+from app.models.sotto_attivita import SottoAttivita
 
 __all__ = [
     "Utente", "Progetto", "Lavoro",
-    "StatoLavoro", "PrioritaLavoro", "assegnazione", "Commento", "Organizzazione",
+    "StatoLavoro", "PrioritaLavoro", "assegnazione", "Commento", "Organizzazione", "SottoAttivita",
 ]
