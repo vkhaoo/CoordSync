@@ -32,6 +32,15 @@ class LavoroUpdateStato(BaseModel):
     stato: StatoLavoro
 
 
+class LavoroUpdate(BaseModel):
+    """Modifica di un lavoro (tutti opzionali): titolo, descrizione, priorita',
+    e anche spostarlo in un altro progetto (progetto_id)."""
+    titolo: str | None = None
+    descrizione: str | None = None
+    priorita: PrioritaLavoro | None = None
+    progetto_id: int | None = None
+
+
 class LavoroRead(LavoroBase):
     """Cosa restituisce l'API."""
     id: int

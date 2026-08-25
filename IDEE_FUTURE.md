@@ -103,3 +103,13 @@ Due modelli per far entrare persone in un'azienda:
 
 - Molti prodotti offrono ENTRAMBI. Scelta consigliata: tenere il Modello 1 ora,
   aggiungere l'obbligo cambio-password, poi il Modello 2 a inviti col servizio email.
+
+## Appunti dall'uso reale (raccolti sul campo)
+
+- **Checklist collassabile.** Con molte voci (es. 14) la card diventa lunghissima.
+  La checklist deve potersi aprire/chiudere come i commenti (toggle), mostrando
+  magari il conteggio "5/14 (36%)" anche da chiusa. Piccolo, alta utilita'.
+- **Rinomina/elimina PROGETTI** (gemello di quello fatto per i lavori). Il backend
+  puo' gia' rinominare (PATCH /progetti), manca l'eliminazione e tutto il frontend.
+- **Restyling UI + responsivita'.** Interfaccia troppo piatta; renderla piu' curata
+  (profondita', tipografia, micro-interazioni) e adattabile a mobile/tablet.

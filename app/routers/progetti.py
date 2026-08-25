@@ -1,5 +1,5 @@
 """Router dei Progetti: protetto da login, filtrato per organizzazione."""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -45,7 +45,6 @@ def modifica_progetto(
         .first()
     )
     if progetto is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Progetto non trovato")
 
     # Aggiorno solo i campi effettivamente forniti (gli altri restano invariati).
@@ -54,6 +53,26 @@ def modifica_progetto(
     db.commit()
     db.refresh(progetto)
     return progetto
+
+
+@router.delete("/{progetto_id}", status_code=204)
+def elimina_progetto(
+    progetto_id: int,
+    db: Session = Depends(get_db),
+    current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra)),
+):
+    progetto = (
+        db.query(Progetto)
+        .filter(Progetto.id == progetto_id,
+                Progetto.organizzazione_id == current.organizzazione_id)
+        .first()
+    )
+    if progetto is None:
+        raise HTTPException(status_code=404, detail="Progetto non trovato")
+    # Cancellando il progetto spariscono in cascata i suoi lavori
+    # (e a loro volta sotto-attivita' e commenti).
+    db.delete(progetto)
+    db.commit()
 
 
 @router.get("", response_model=list[ProgettoRead])

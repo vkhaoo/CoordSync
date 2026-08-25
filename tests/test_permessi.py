@@ -61,3 +61,64 @@ def test_completamento_registra_data_e_autore(client):
     r2 = client.patch(f"/lavori/{l['id']}/stato", json={"stato": "in_corso"}, headers=a).json()
     assert r2["completato_il"] is None
     assert r2["completato_da"] is None
+
+
+def test_modifica_ed_elimina_lavoro(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p1 = client.post("/progetti", json={"nome": "P1"}, headers=a).json()
+    p2 = client.post("/progetti", json={"nome": "P2"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "Nome sbagliato", "progetto_id": p1["id"]}, headers=a).json()
+
+    # rinomino e sposto nell'altro progetto
+    r = client.patch(f"/lavori/{l['id']}", json={"titolo": "Nome giusto", "progetto_id": p2["id"]}, headers=a)
+    assert r.status_code == 200
+    assert r.json()["titolo"] == "Nome giusto"
+    assert r.json()["progetto_id"] == p2["id"]
+
+    # elimino
+    assert client.delete(f"/lavori/{l['id']}", headers=a).status_code == 204
+
+
+def test_operatore_non_modifica_ne_elimina_lavoro(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    client.post("/utenti", json={"nome": "Op", "email": "op@a.it", "password": "password1",
+                                 "ruolo": "operatore"}, headers=a)
+    tok = client.post("/auth/login", json={"email": "op@a.it", "password": "password1"}).json()["access_token"]
+    op = {"Authorization": f"Bearer {tok}"}
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "L", "progetto_id": p["id"]}, headers=a).json()
+
+    assert client.patch(f"/lavori/{l['id']}", json={"titolo": "X"}, headers=op).status_code == 403
+    assert client.delete(f"/lavori/{l['id']}", headers=op).status_code == 403
+
+
+def test_elimina_progetto_a_cascata(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "L", "progetto_id": p["id"]}, headers=a).json()
+    # aggiungo una sotto-attivita' per verificare la cascata profonda
+    client.post(f"/lavori/{l['id']}/sotto-attivita", json={"testo": "X"}, headers=a)
+
+    # elimino il progetto
+    assert client.delete(f"/progetti/{p['id']}", headers=a).status_code == 204
+    # il progetto non c'e' piu'
+    assert client.get("/progetti", headers=a).json() == []
+    # e nemmeno i suoi lavori (la sotto-attivita' del lavoro darebbe 404 sul lavoro)
+    assert client.get(f"/lavori/{l['id']}/sotto-attivita", headers=a).status_code == 404
+
+
+def test_rinomina_progetto(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "Nome vecchio"}, headers=a).json()
+    r = client.patch(f"/progetti/{p['id']}", json={"nome": "Nome nuovo"}, headers=a)
+    assert r.status_code == 200 and r.json()["nome"] == "Nome nuovo"
+
+
+def test_operatore_non_elimina_progetto(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    client.post("/utenti", json={"nome": "Op", "email": "op@a.it", "password": "password1",
+                                 "ruolo": "operatore"}, headers=a)
+    tok = client.post("/auth/login", json={"email": "op@a.it", "password": "password1"}).json()["access_token"]
+    op = {"Authorization": f"Bearer {tok}"}
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    assert client.delete(f"/progetti/{p['id']}", headers=op).status_code == 403

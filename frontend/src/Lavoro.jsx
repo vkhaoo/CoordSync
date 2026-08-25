@@ -54,6 +54,30 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
   }
 
   const fatteSotto = sotto.filter((v) => v.completata).length;
+  const percSotto = sotto.length ? Math.round((fatteSotto / sotto.length) * 100) : 0;
+  const [checklistAperta, setChecklistAperta] = useState(false);
+
+  // Modifica titolo ed eliminazione del lavoro (solo chi gestisce).
+  const [modificaTitolo, setModificaTitolo] = useState(false);
+  const [titoloBozza, setTitoloBozza] = useState(lavoro.titolo);
+
+  async function salvaTitolo() {
+    setErrore(null);
+    try {
+      await api.modificaLavoro(lavoro.id, { titolo: titoloBozza });
+      setModificaTitolo(false);
+      onAssegnazioneCambiata();   // ricarico i lavori (mostra il titolo nuovo)
+    } catch (err) { setErrore(err.message); }
+  }
+
+  async function elimina() {
+    if (!window.confirm(`Eliminare il lavoro "${lavoro.titolo}"? L'azione è irreversibile.`)) return;
+    setErrore(null);
+    try {
+      await api.eliminaLavoro(lavoro.id);
+      onAssegnazioneCambiata();   // ricarico: il lavoro sparisce dalla lista
+    } catch (err) { setErrore(err.message); }
+  }
 
   async function assegna(utenteId) {
     setErrore(null);
@@ -98,15 +122,32 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
   return (
     <li className={`lavoro card-${lavoro.stato}`}>
       <div className="lavoro-testa">
-        <span className="lavoro-titolo">{lavoro.titolo}</span>
-        <select
-          className={`stato-select stato-${lavoro.stato}`}
-          value={lavoro.stato}
-          disabled={!possoAggiornare}
-          onChange={(e) => onCambiaStato(lavoro.id, e.target.value)}
-        >
-          {STATI.map((s) => <option key={s} value={s}>{ETICHETTA_STATO[s]}</option>)}
-        </select>
+        {modificaTitolo ? (
+          <div className="form-inline" style={{ flex: 1 }}>
+            <input value={titoloBozza} onChange={(e) => setTitoloBozza(e.target.value)} />
+            <button className="mini" onClick={salvaTitolo}>✓</button>
+            <button className="mini annulla" onClick={() => { setModificaTitolo(false); setTitoloBozza(lavoro.titolo); }}>×</button>
+          </div>
+        ) : (
+          <span className="lavoro-titolo">{lavoro.titolo}</span>
+        )}
+        <div className="lavoro-azioni">
+          {gestisco && !modificaTitolo && (
+            <>
+              <button className="azione-icona" title="Rinomina"
+                      onClick={() => { setTitoloBozza(lavoro.titolo); setModificaTitolo(true); }}>✎</button>
+              <button className="azione-icona elimina" title="Elimina" onClick={elimina}>🗑</button>
+            </>
+          )}
+          <select
+            className={`stato-select stato-${lavoro.stato}`}
+            value={lavoro.stato}
+            disabled={!possoAggiornare}
+            onChange={(e) => onCambiaStato(lavoro.id, e.target.value)}
+          >
+            {STATI.map((s) => <option key={s} value={s}>{ETICHETTA_STATO[s]}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="lavoro-meta">
@@ -124,33 +165,48 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
         </div>
       )}
 
-      {/* Checklist (sotto-attivita') */}
+      {/* Checklist (sotto-attivita') — collassabile */}
       {(sotto.length > 0 || gestisco) && (
         <div className="checklist">
+          <button className="checklist-toggle" onClick={() => setChecklistAperta((a) => !a)}>
+            <span className="freccia">{checklistAperta ? "▾" : "▸"}</span>
+            {sotto.length > 0
+              ? <>Checklist · {fatteSotto}/{sotto.length} ({percSotto}%)</>
+              : <>Checklist</>}
+          </button>
+
+          {/* Barra di avanzamento: visibile anche da chiusa, per un colpo d'occhio */}
           {sotto.length > 0 && (
-            <div className="checklist-testa">Checklist · {fatteSotto}/{sotto.length}</div>
+            <div className="barra barra-sm" style={{ maxWidth: 260, marginBottom: "0.4rem" }}>
+              <div className="barra-piena" style={{ width: `${percSotto}%` }} />
+            </div>
           )}
-          <ul className="lista-sotto">
-            {sotto.map((v) => (
-              <li key={v.id} className="voce-sotto">
-                <label className={v.completata ? "spuntata" : ""}>
-                  <input type="checkbox" checked={v.completata}
-                         disabled={!possoAggiornare}
-                         onChange={() => spunta(v)} />
-                  {v.testo}
-                </label>
-                {gestisco && (
-                  <button className="chip-x" onClick={() => eliminaVoce(v.id)} title="Elimina">×</button>
-                )}
-              </li>
-            ))}
-          </ul>
-          {gestisco && (
-            <form className="form-sotto" onSubmit={aggiungiVoce}>
-              <input placeholder="Aggiungi voce…" value={nuovaVoce}
-                     onChange={(e) => setNuovaVoce(e.target.value)} required />
-              <button type="submit" className="mini">+</button>
-            </form>
+
+          {checklistAperta && (
+            <>
+              <ul className="lista-sotto">
+                {sotto.map((v) => (
+                  <li key={v.id} className="voce-sotto">
+                    <label className={v.completata ? "spuntata" : ""}>
+                      <input type="checkbox" checked={v.completata}
+                             disabled={!possoAggiornare}
+                             onChange={() => spunta(v)} />
+                      {v.testo}
+                    </label>
+                    {gestisco && (
+                      <button className="chip-x" onClick={() => eliminaVoce(v.id)} title="Elimina">×</button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {gestisco && (
+                <form className="form-sotto" onSubmit={aggiungiVoce}>
+                  <input placeholder="Aggiungi voce…" value={nuovaVoce}
+                         onChange={(e) => setNuovaVoce(e.target.value)} required />
+                  <button type="submit" className="mini">+</button>
+                </form>
+              )}
+            </>
           )}
         </div>
       )}

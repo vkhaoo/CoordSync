@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.lavoro import Lavoro, StatoLavoro
 from app.models.progetto import Progetto
 from app.models.utente import Utente, RuoloUtente
-from app.schemas.lavoro import LavoroCreate, LavoroRead, LavoroUpdateStato
+from app.schemas.lavoro import LavoroCreate, LavoroRead, LavoroUpdateStato, LavoroUpdate
 from app.dependencies import get_current_user, richiedi_ruolo
 
 router = APIRouter(prefix="/lavori", tags=["lavori"])
@@ -93,3 +93,36 @@ def cambia_stato(lavoro_id: int, dati: LavoroUpdateStato,
     db.commit()
     db.refresh(lavoro)
     return lavoro
+
+
+@router.patch("/{lavoro_id}", response_model=LavoroRead)
+def modifica_lavoro(lavoro_id: int, dati: LavoroUpdate,
+                    db: Session = Depends(get_db),
+                    current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
+    lavoro = _lavoro_mio(db, lavoro_id, current)
+    if lavoro is None:
+        raise HTTPException(status_code=404, detail="Lavoro non trovato")
+
+    dati_forniti = dati.model_dump(exclude_unset=True)
+
+    # Se si vuole spostare il lavoro in un altro progetto, quel progetto
+    # dev'essere della MIA organizzazione (non si "ruba" un lavoro altrui).
+    if "progetto_id" in dati_forniti:
+        if _progetto_mio(db, dati_forniti["progetto_id"], current) is None:
+            raise HTTPException(status_code=404, detail="Progetto di destinazione non trovato")
+
+    for campo, valore in dati_forniti.items():
+        setattr(lavoro, campo, valore)
+    db.commit()
+    db.refresh(lavoro)
+    return lavoro
+
+
+@router.delete("/{lavoro_id}", status_code=204)
+def elimina_lavoro(lavoro_id: int, db: Session = Depends(get_db),
+                   current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
+    lavoro = _lavoro_mio(db, lavoro_id, current)
+    if lavoro is None:
+        raise HTTPException(status_code=404, detail="Lavoro non trovato")
+    db.delete(lavoro)   # le sotto-attivita' e i commenti spariscono in cascata
+    db.commit()

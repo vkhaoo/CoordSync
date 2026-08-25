@@ -36,6 +36,8 @@ export default function Dashboard({ onLogout }) {
   const [nuovaPriorita, setNuovaPriorita] = useState("normale");
   const [modificaLink, setModificaLink] = useState(false);   // sto modificando il link?
   const [linkBozza, setLinkBozza] = useState("");
+  const [modificaNome, setModificaNome] = useState(false);   // sto rinominando il progetto?
+  const [nomeBozza, setNomeBozza] = useState("");
 
   // Funzioni di caricamento (fuori dagli useEffect, cosi' le richiamo dopo le creazioni).
   async function caricaProgetti(selezionaId) {
@@ -127,6 +129,25 @@ export default function Dashboard({ onLogout }) {
     } catch (err) { setErrore(err.message); }
   }
 
+  async function salvaNome(progettoId) {
+    setErrore(null);
+    try {
+      await api.aggiornaProgetto(progettoId, { nome: nomeBozza });
+      setModificaNome(false);
+      await caricaProgetti(progettoId);
+    } catch (err) { setErrore(err.message); }
+  }
+
+  async function eliminaProgetto(progetto) {
+    if (!window.confirm(`Eliminare il progetto "${progetto.nome}" e tutti i suoi lavori? L'azione è irreversibile.`)) return;
+    setErrore(null);
+    try {
+      await api.eliminaProgetto(progetto.id);
+      setSelezionato(null);        // nessun progetto selezionato dopo l'eliminazione
+      await caricaProgetti();
+    } catch (err) { setErrore(err.message); }
+  }
+
   if (caricando) return <div className="schermata"><p>Caricamento…</p></div>;
 
   const progettoCorrente = progetti.find((p) => p.id === selezionato);
@@ -207,7 +228,25 @@ export default function Dashboard({ onLogout }) {
           {progettoCorrente ? (
             <>
               <div className="intestazione-progetto">
-                <h2 className="titolo-progetto">{progettoCorrente.nome}</h2>
+                {modificaNome ? (
+                  <div className="form-inline" style={{ marginTop: 0, marginBottom: "0.7rem", maxWidth: 420 }}>
+                    <input value={nomeBozza} onChange={(e) => setNomeBozza(e.target.value)} />
+                    <button className="mini" onClick={() => salvaNome(progettoCorrente.id)}>✓</button>
+                    <button className="mini annulla" onClick={() => setModificaNome(false)}>×</button>
+                  </div>
+                ) : (
+                  <div className="testa-progetto">
+                    <h2 className="titolo-progetto">{progettoCorrente.nome}</h2>
+                    {puoCreare && (
+                      <div className="lavoro-azioni">
+                        <button className="azione-icona" title="Rinomina progetto"
+                                onClick={() => { setNomeBozza(progettoCorrente.nome); setModificaNome(true); }}>✎</button>
+                        <button className="azione-icona elimina" title="Elimina progetto"
+                                onClick={() => eliminaProgetto(progettoCorrente)}>🗑</button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Avanzamento: quanti lavori "fatti" su totale */}
                 {lavori.length > 0 && (() => {
