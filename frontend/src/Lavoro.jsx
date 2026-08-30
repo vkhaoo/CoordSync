@@ -201,7 +201,7 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
             ⏱ {new Date(lavoro.data_scadenza + "T00:00:00").toLocaleDateString("it-IT")}
             {badge && badge.testo && <> · {badge.testo}</>}
           </button>
-        ) : gestisco && (
+        ) : gestisco && lavoro.stato !== "fatto" && (
           <button className="scadenza aggiungi"
                   onClick={() => { setScadenzaBozza(""); setModificaScadenza(true); }}>
             + scadenza
