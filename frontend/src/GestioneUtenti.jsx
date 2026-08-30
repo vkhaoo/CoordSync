@@ -15,6 +15,12 @@ export default function GestioneUtenti({ io }) {
   const [password, setPassword] = useState("");
   const [ruolo, setRuolo] = useState("operatore");
 
+  // Campi del form "invita utente" (niente password: la sceglie l'invitato)
+  const [nomeInvito, setNomeInvito] = useState("");
+  const [emailInvito, setEmailInvito] = useState("");
+  const [ruoloInvito, setRuoloInvito] = useState("operatore");
+  const [messaggio, setMessaggio] = useState(null);
+
   async function carica() {
     try { setUtenti(await api.utenti()); }
     catch (e) { setErrore(e.message); }
@@ -25,10 +31,21 @@ export default function GestioneUtenti({ io }) {
 
   async function aggiungiUtente(e) {
     e.preventDefault();
-    setErrore(null);
+    setErrore(null); setMessaggio(null);
     try {
       await api.creaUtente({ nome, email, password, ruolo });
       setNome(""); setEmail(""); setPassword(""); setRuolo("operatore");
+      await carica();
+    } catch (err) { setErrore(err.message); }
+  }
+
+  async function invitaUtente(e) {
+    e.preventDefault();
+    setErrore(null); setMessaggio(null);
+    try {
+      await api.invitaUtente({ nome: nomeInvito, email: emailInvito, ruolo: ruoloInvito });
+      setMessaggio(`Invito inviato a ${emailInvito}.`);
+      setNomeInvito(""); setEmailInvito(""); setRuoloInvito("operatore");
       await carica();
     } catch (err) { setErrore(err.message); }
   }
@@ -48,7 +65,19 @@ export default function GestioneUtenti({ io }) {
       <h2 className="titolo-progetto">Utenti dell'azienda</h2>
 
       {errore && <p className="errore">{errore}</p>}
+      {messaggio && <p className="ok">{messaggio}</p>}
 
+      <p className="etichetta-form">Invita via email (sceglie lui la password)</p>
+      <form className="form-utente" onSubmit={invitaUtente}>
+        <input placeholder="Nome" value={nomeInvito} onChange={(e) => setNomeInvito(e.target.value)} required />
+        <input type="email" placeholder="Email" value={emailInvito} onChange={(e) => setEmailInvito(e.target.value)} required />
+        <select value={ruoloInvito} onChange={(e) => setRuoloInvito(e.target.value)}>
+          {RUOLI.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <button type="submit" className="principale piccolo">Invita utente</button>
+      </form>
+
+      <p className="etichetta-form">Oppure crea direttamente con una password</p>
       <form className="form-utente" onSubmit={aggiungiUtente}>
         <input placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />

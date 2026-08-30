@@ -88,6 +88,36 @@ def verifica_email(nome: str, link: str):
     return oggetto, testo, html
 
 
+def invito(nome: str, azienda: str, link: str):
+    oggetto = f"Invito a unirti a {azienda} su CoordSync"
+    testo = (
+        f"Ciao {nome},\n\n"
+        f"sei stato invitato a unirti a {azienda} su CoordSync, la piattaforma "
+        "di coordinamento lavori per squadre tecniche. Per attivare il tuo account, "
+        "scegli la tua password aprendo questo link:\n\n"
+        f"{link}\n\n"
+        "Il link scade tra 7 giorni.\n\n"
+        "Se non ti aspettavi questo invito, ignora pure questa email.\n\n"
+        "Il team di CoordSync"
+    )
+    html = _layout(
+        titolo=f"Ciao {nome}, ti aspettiamo su CoordSync",
+        righe_html=(
+            _riga(f"Sei stato invitato a unirti a <strong>{azienda}</strong> su CoordSync.") +
+            _riga("Per attivare il tuo account, scegli la tua password:")
+        ),
+        cta_testo="Accetta l'invito",
+        cta_link=link,
+    )
+    html = html.replace(
+        "</tbody></table>",
+        _riga('<span style="font-size:13px; color:#8a94a0;">Il link scade tra 7 giorni.</span>') +
+        "</tbody></table>",
+        1,
+    )
+    return oggetto, testo, html
+
+
 def reset_password(nome: str, link: str):
     oggetto = "Reimposta la tua password"
     testo = (

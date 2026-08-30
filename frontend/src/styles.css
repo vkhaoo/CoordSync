@@ -275,6 +275,7 @@ input, select, textarea { font-family: var(--sans); }
 /* Gestione utenti */
 .gestione-utenti { max-width: 820px; }
 .form-utente { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-bottom: 1.5rem; align-items: center; background: var(--pannello); border: 1px solid var(--linea); border-radius: var(--raggio); padding: 1rem; box-shadow: var(--ombra-1); }
+.etichetta-form { font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tenue-2); margin: 0 0 0.4rem; }
 .form-utente input { flex: 1; min-width: 150px; }
 .tabella-utenti { width: 100%; border-collapse: collapse; background: var(--pannello); border: 1px solid var(--linea); border-radius: var(--raggio); overflow: hidden; box-shadow: var(--ombra-1); }
 .tabella-utenti th, .tabella-utenti td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--linea-2); font-size: 0.9rem; }

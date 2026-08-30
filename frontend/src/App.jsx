@@ -2,9 +2,12 @@ import { useState } from "react";
 import { api, setToken, getToken } from "./api.js";
 import Dashboard from "./Dashboard.jsx";
 import ResetPassword from "./ResetPassword.jsx";
+import AccettaInvito from "./AccettaInvito.jsx";
 
-// Leggo un eventuale token di reset dall'indirizzo (arrivo dal link email).
-const tokenReset = new URLSearchParams(window.location.search).get("reset_token");
+// Leggo eventuali token dall'indirizzo (arrivo da un link email).
+const parametri = new URLSearchParams(window.location.search);
+const tokenReset = parametri.get("reset_token");
+const tokenInvito = parametri.get("invito_token");
 
 export default function App() {
   // "stato" = dati che, se cambiano, ridisegnano lo schermo da soli.
@@ -23,6 +26,12 @@ export default function App() {
   // Se arrivo dal link dell'email, mostro la pagina per la nuova password.
   if (tokenReset) {
     return <ResetPassword token={tokenReset}
+             onFatto={() => { window.location.href = window.location.origin; }} />;
+  }
+
+  // Se arrivo da un invito, mostro la pagina "scegli la tua password".
+  if (tokenInvito) {
+    return <AccettaInvito token={tokenInvito}
              onFatto={() => { window.location.href = window.location.origin; }} />;
   }
 

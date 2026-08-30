@@ -180,3 +180,37 @@ def reset_password(dati: ResetPasswordRichiesta, db: Session = Depends(get_db)):
     utente.password_hash = hash_password(dati.nuova_password)
     db.commit()
     return {"messaggio": "Password reimpostata. Ora puoi accedere."}
+
+
+# ---------- INVITI ----------
+
+# Lo scopo del token di invito. Usato anche da /utenti/invita (che lo genera).
+SCOPO_INVITO = "invito"
+
+
+class AccettaInvitoRichiesta(BaseModel):
+    token: str
+    password: PasswordStr
+
+
+@router.post("/accetta-invito", status_code=200)
+def accetta_invito(dati: AccettaInvitoRichiesta, db: Session = Depends(get_db)):
+    """L'invitato arriva qui dal link nell'email e sceglie la SUA password.
+    L'admin non la conosce mai: piu' sicuro del modello 'admin crea con password'."""
+    utente_id = leggi_token_scopo(dati.token, SCOPO_INVITO)
+    if utente_id is None:
+        raise HTTPException(status_code=400, detail="Invito non valido o scaduto")
+
+    utente = db.query(Utente).filter(Utente.id == int(utente_id)).first()
+    if utente is None:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    # Un invito vale una volta sola: se la password c'e' gia', e' gia' stato usato.
+    if utente.password_hash is not None:
+        raise HTTPException(status_code=400, detail="Invito gia' utilizzato")
+
+    utente.password_hash = hash_password(dati.password)
+    # L'invito e' arrivato via email: cliccare il link prova gia' che l'email e' sua.
+    utente.email_verificata = True
+    db.commit()
+    return {"messaggio": "Password impostata. Ora puoi accedere."}
