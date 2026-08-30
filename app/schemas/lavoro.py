@@ -6,7 +6,7 @@ In piu' qui c'e' un LavoroUpdateStato: uno schema minuscolo dedicato al
 solo cambio di stato (non vogliamo far reinviare tutto il lavoro per
 spostarlo da 'da_fare' a 'in_corso').
 """
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -20,6 +20,7 @@ class LavoroBase(BaseModel):
     titolo: str
     descrizione: str | None = None
     priorita: PrioritaLavoro = PrioritaLavoro.normale   # default se non fornita
+    data_scadenza: date | None = None   # facoltativa; i badge li calcola il frontend
 
 
 class LavoroCreate(LavoroBase):
@@ -39,6 +40,8 @@ class LavoroUpdate(BaseModel):
     descrizione: str | None = None
     priorita: PrioritaLavoro | None = None
     progetto_id: int | None = None
+    # None qui vale "togli la scadenza": exclude_unset distingue 'non inviato' da 'null'.
+    data_scadenza: date | None = None
 
 
 class LavoroRead(LavoroBase):

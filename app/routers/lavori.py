@@ -41,6 +41,7 @@ def crea_lavoro(dati: LavoroCreate, db: Session = Depends(get_db),
         descrizione=dati.descrizione,
         priorita=dati.priorita,
         progetto_id=dati.progetto_id,
+        data_scadenza=dati.data_scadenza,
     )
     db.add(lavoro)
     db.commit()

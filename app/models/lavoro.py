@@ -2,7 +2,7 @@
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -35,6 +35,9 @@ class Lavoro(Base):
 
     # Foreign key: il "puntatore" al progetto di appartenenza.
     progetto_id = Column(Integer, ForeignKey("progetti.id", ondelete="CASCADE"), nullable=False)
+
+    # Scadenza (solo data, niente ora: sul campo si ragiona a giorni). Facoltativa.
+    data_scadenza = Column(Date, nullable=True)
 
     creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     aggiornato_il = Column(

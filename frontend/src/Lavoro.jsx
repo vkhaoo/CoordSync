@@ -9,6 +9,23 @@ const ETICHETTA_PRIORITA = {
 };
 const STATI = Object.keys(ETICHETTA_STATO);
 
+// "In scadenza" se mancano al massimo questi giorni. Calcolato qui (lato client):
+// e' un dato derivato, non si memorizza (regola del progetto).
+const GIORNI_AVVISO = 3;
+
+function infoScadenza(lavoro) {
+  if (!lavoro.data_scadenza || lavoro.stato === "fatto") return null;
+  const oggi = new Date();
+  oggi.setHours(0, 0, 0, 0);
+  // "T00:00:00" forza la mezzanotte LOCALE (senza, la data ISO verrebbe letta come UTC).
+  const scadenza = new Date(lavoro.data_scadenza + "T00:00:00");
+  const giorni = Math.round((scadenza - oggi) / 86400000);
+  if (giorni < 0) return { classe: "scad-ritardo", testo: "In ritardo" };
+  if (giorni === 0) return { classe: "scad-vicina", testo: "Scade oggi" };
+  if (giorni <= GIORNI_AVVISO) return { classe: "scad-vicina", testo: "In scadenza" };
+  return null;
+}
+
 // Una singola card lavoro. Gestisce da sola i propri commenti:
 // ogni card ha il suo stato "aperto" e la sua lista di commenti.
 export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazioneCambiata }) {
@@ -60,6 +77,20 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
   // Modifica titolo ed eliminazione del lavoro (solo chi gestisce).
   const [modificaTitolo, setModificaTitolo] = useState(false);
   const [titoloBozza, setTitoloBozza] = useState(lavoro.titolo);
+
+  // Scadenza: badge per tutti, modifica per chi gestisce.
+  const [modificaScadenza, setModificaScadenza] = useState(false);
+  const [scadenzaBozza, setScadenzaBozza] = useState("");
+  const badge = infoScadenza(lavoro);
+
+  async function salvaScadenza(valore) {
+    setErrore(null);
+    try {
+      await api.modificaLavoro(lavoro.id, { data_scadenza: valore || null });
+      setModificaScadenza(false);
+      onAssegnazioneCambiata();   // ricarico i lavori (badge aggiornato)
+    } catch (err) { setErrore(err.message); }
+  }
 
   async function salvaTitolo() {
     setErrore(null);
@@ -152,6 +183,31 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
 
       <div className="lavoro-meta">
         <span className={`prio prio-${lavoro.priorita}`}>{ETICHETTA_PRIORITA[lavoro.priorita]}</span>
+
+        {/* Scadenza: chip informativo; chi gestisce ci clicca per modificarla */}
+        {modificaScadenza ? (
+          <span className="scadenza-edit">
+            <input type="date" value={scadenzaBozza}
+                   onChange={(e) => setScadenzaBozza(e.target.value)} />
+            <button className="mini" title="Salva (vuota = togli scadenza)"
+                    onClick={() => salvaScadenza(scadenzaBozza)}>✓</button>
+            <button className="mini annulla" title="Annulla"
+                    onClick={() => setModificaScadenza(false)}>×</button>
+          </span>
+        ) : lavoro.data_scadenza ? (
+          <button className={`scadenza ${badge ? badge.classe : ""}`} disabled={!gestisco}
+                  title={gestisco ? "Modifica scadenza" : undefined}
+                  onClick={() => { setScadenzaBozza(lavoro.data_scadenza); setModificaScadenza(true); }}>
+            ⏱ {new Date(lavoro.data_scadenza + "T00:00:00").toLocaleDateString("it-IT")}
+            {badge && badge.testo && <> · {badge.testo}</>}
+          </button>
+        ) : gestisco && (
+          <button className="scadenza aggiungi"
+                  onClick={() => { setScadenzaBozza(""); setModificaScadenza(true); }}>
+            + scadenza
+          </button>
+        )}
+
         <button className="link-commenti" onClick={apriChiudi}>
           {aperto ? "Nascondi commenti" : "Commenti"}
         </button>

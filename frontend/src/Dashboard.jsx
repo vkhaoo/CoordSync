@@ -35,6 +35,7 @@ export default function Dashboard({ onLogout }) {
   const [nuovoProgetto, setNuovoProgetto] = useState("");
   const [nuovoTitolo, setNuovoTitolo] = useState("");
   const [nuovaPriorita, setNuovaPriorita] = useState("normale");
+  const [nuovaScadenza, setNuovaScadenza] = useState("");   // "" = senza scadenza
   const [modificaLink, setModificaLink] = useState(false);   // sto modificando il link?
   const [linkBozza, setLinkBozza] = useState("");
   const [modificaNome, setModificaNome] = useState(false);   // sto rinominando il progetto?
@@ -94,9 +95,11 @@ export default function Dashboard({ onLogout }) {
         titolo: nuovoTitolo,
         priorita: nuovaPriorita,
         progetto_id: selezionato,
+        data_scadenza: nuovaScadenza || null,
       });
       setNuovoTitolo("");
       setNuovaPriorita("normale");
+      setNuovaScadenza("");
       await caricaLavori(selezionato);   // ricarico i lavori: il nuovo compare
     } catch (err) { setErrore(err.message); }
   }
@@ -312,6 +315,8 @@ export default function Dashboard({ onLogout }) {
                   <select value={nuovaPriorita} onChange={(e) => setNuovaPriorita(e.target.value)}>
                     {PRIORITA.map((p) => <option key={p} value={p}>{ETICHETTA_PRIORITA[p]}</option>)}
                   </select>
+                  <input type="date" title="Scadenza (facoltativa)" value={nuovaScadenza}
+                         onChange={(e) => setNuovaScadenza(e.target.value)} />
                   <button type="submit" className="principale piccolo">Aggiungi</button>
                 </form>
               )}
