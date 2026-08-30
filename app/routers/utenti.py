@@ -34,6 +34,8 @@ def crea_utente(dati: UtenteCreate, db: Session = Depends(get_db),
         password_hash=hash_password(dati.password),
         ruolo=dati.ruolo,
         organizzazione_id=current.organizzazione_id,
+        # L'admin conosce questa password: al primo accesso l'utente ne sceglie una sua.
+        deve_cambiare_password=True,
     )
     db.add(utente)
     db.commit()

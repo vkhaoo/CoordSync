@@ -178,8 +178,32 @@ def reset_password(dati: ResetPasswordRichiesta, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
     utente.password_hash = hash_password(dati.nuova_password)
+    # La password ora l'ha scelta lui: se era obbligato a cambiarla, l'obbligo decade.
+    utente.deve_cambiare_password = False
     db.commit()
     return {"messaggio": "Password reimpostata. Ora puoi accedere."}
+
+
+# ---------- CAMBIO PASSWORD (utente loggato) ----------
+
+class CambiaPasswordRichiesta(BaseModel):
+    vecchia_password: str
+    nuova_password: PasswordStr
+
+
+@router.post("/cambia-password", status_code=200)
+def cambia_password(dati: CambiaPasswordRichiesta, db: Session = Depends(get_db),
+                    current: Utente = Depends(get_current_user)):
+    """Cambio password volontario o obbligato (primo accesso di un utente
+    creato dall'admin). Chiedo la vecchia password: un token rubato da solo
+    non deve bastare a cambiarla."""
+    if current.password_hash is None or not verifica_password(dati.vecchia_password, current.password_hash):
+        raise HTTPException(status_code=401, detail="Password attuale non corretta")
+
+    current.password_hash = hash_password(dati.nuova_password)
+    current.deve_cambiare_password = False
+    db.commit()
+    return {"messaggio": "Password aggiornata."}
 
 
 # ---------- INVITI ----------

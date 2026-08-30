@@ -28,6 +28,10 @@ class Utente(Base):
     # Email verificata tramite link inviato via email. Default: non verificata.
     email_verificata = Column(Boolean, default=False, nullable=False)
 
+    # True per gli utenti creati dall'admin con password: al primo accesso devono
+    # sceglierne una loro (l'admin non deve conoscere la password di nessuno).
+    deve_cambiare_password = Column(Boolean, default=False, nullable=False)
+
     # Ogni utente appartiene a un'organizzazione (il "tenant").
     organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
     organizzazione = relationship("Organizzazione", back_populates="utenti")

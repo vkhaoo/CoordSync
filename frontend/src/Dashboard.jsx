@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "./api.js";
 import Lavoro from "./Lavoro.jsx";
 import GestioneUtenti from "./GestioneUtenti.jsx";
+import CambiaPassword from "./CambiaPassword.jsx";
 
 const PRIORITA = ["bassa", "normale", "alta", "urgente"];
 const ETICHETTA_PRIORITA = {
@@ -149,6 +150,13 @@ export default function Dashboard({ onLogout }) {
   }
 
   if (caricando) return <div className="schermata"><p>Caricamento…</p></div>;
+
+  // Utente creato dall'admin al primo accesso: prima sceglie una password sua,
+  // poi entra. Blocco qui (non nel login) cosi' vale anche per i token gia' salvati.
+  if (io && io.deve_cambiare_password) {
+    return <CambiaPassword onLogout={onLogout}
+             onFatto={() => setIo({ ...io, deve_cambiare_password: false })} />;
+  }
 
   const progettoCorrente = progetti.find((p) => p.id === selezionato);
   // Chi può creare progetti/lavori e assegnare: admin e caposquadra.

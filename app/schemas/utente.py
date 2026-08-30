@@ -27,4 +27,5 @@ class UtenteRead(UtenteBase):
     organizzazione_id: int
     ruolo: RuoloUtente
     email_verificata: bool
+    deve_cambiare_password: bool   # il frontend blocca l'accesso finche' e' True
     model_config = ConfigDict(from_attributes=True)

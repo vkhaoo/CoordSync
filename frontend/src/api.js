@@ -55,6 +55,7 @@ export const api = {
   richiediReset: (email) => richiesta("POST", "/auth/richiedi-reset", { email }),
   resetPassword: (token, nuova_password) => richiesta("POST", "/auth/reset-password", { token, nuova_password }),
   accettaInvito: (token, password) => richiesta("POST", "/auth/accetta-invito", { token, password }),
+  cambiaPassword: (vecchia_password, nuova_password) => richiesta("POST", "/auth/cambia-password", { vecchia_password, nuova_password }),
   progetti: ()     => richiesta("GET", "/progetti"),
   lavori:   (progettoId) => richiesta("GET", `/lavori?progetto_id=${progettoId}`),
   creaProgetto: (dati) => richiesta("POST", "/progetti", dati),
