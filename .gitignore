@@ -10,6 +10,9 @@ __pycache__/
 *.db
 *.sqlite3
 
+# Build del frontend (la genera Render, non va su git)
+frontend/dist/
+
 # IDE
 .vscode/
 .idea/
