@@ -8,9 +8,20 @@ from app.models.progetto import Progetto
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.lavoro import LavoroCreate, LavoroRead, LavoroUpdateStato, LavoroUpdate
 from app.dependencies import get_current_user, richiedi_ruolo
-from app.visibilita import lavori_visibili, lavoro_visibile, progetto_visibile
+from app.visibilita import (lavori_visibili, lavoro_visibile, progetto_visibile,
+                            macchina_visibile)
+from app.models.allegato import Allegato
+from app.schemas.allegato import AllegatoCreate, AllegatoRead
 
 router = APIRouter(prefix="/lavori", tags=["lavori"])
+
+
+def _macchina_collegabile(db, current, forniti: dict) -> None:
+    """La macchina che si collega dev'essere una che posso vedere."""
+    if "macchina_id" not in forniti or forniti["macchina_id"] is None:
+        return
+    if macchina_visibile(db, current, forniti["macchina_id"]) is None:
+        raise HTTPException(status_code=404, detail="Macchina non trovata")
 
 
 # Le funzioni _progetto_mio/_lavoro_mio che stavano qui sono state sostituite da
@@ -23,12 +34,15 @@ def crea_lavoro(dati: LavoroCreate, db: Session = Depends(get_db),
     if progetto_visibile(db, current, dati.progetto_id) is None:
         raise HTTPException(status_code=404, detail="Progetto non trovato")
 
+    _macchina_collegabile(db, current, {"macchina_id": dati.macchina_id})
+
     lavoro = Lavoro(
         titolo=dati.titolo,
         descrizione=dati.descrizione,
         priorita=dati.priorita,
         progetto_id=dati.progetto_id,
         data_scadenza=dati.data_scadenza,
+        macchina_id=dati.macchina_id,
     )
     db.add(lavoro)
     db.commit()
@@ -95,6 +109,7 @@ def modifica_lavoro(lavoro_id: int, dati: LavoroUpdate,
     if "progetto_id" in dati_forniti:
         if progetto_visibile(db, current, dati_forniti["progetto_id"]) is None:
             raise HTTPException(status_code=404, detail="Progetto di destinazione non trovato")
+    _macchina_collegabile(db, current, dati_forniti)
 
     for campo, valore in dati_forniti.items():
         setattr(lavoro, campo, valore)
@@ -111,3 +126,17 @@ def elimina_lavoro(lavoro_id: int, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
     db.delete(lavoro)   # le sotto-attivita' e i commenti spariscono in cascata
     db.commit()
+
+
+@router.post("/{lavoro_id}/allegati", response_model=AllegatoRead, status_code=201)
+def allega_a_lavoro(lavoro_id: int, dati: AllegatoCreate, db: Session = Depends(get_db),
+                    current: Utente = Depends(get_current_user)):
+    """Un link appeso al lavoro (foto dal campo, schema, documentazione)."""
+    if lavoro_visibile(db, current, lavoro_id) is None:
+        raise HTTPException(status_code=404, detail="Lavoro non trovato")
+    allegato = Allegato(url=dati.url, titolo=dati.titolo,
+                        lavoro_id=lavoro_id, autore_id=current.id)
+    db.add(allegato)
+    db.commit()
+    db.refresh(allegato)
+    return allegato

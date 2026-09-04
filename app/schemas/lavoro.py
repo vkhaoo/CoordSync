@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from app.models.lavoro import StatoLavoro, PrioritaLavoro
 from app.schemas.utente import UtenteRead
 from app.schemas.sotto_attivita import SottoAttivitaRead
+from app.schemas.allegato import AllegatoRead
 
 
 class LavoroBase(BaseModel):
@@ -21,6 +22,7 @@ class LavoroBase(BaseModel):
     descrizione: str | None = None
     priorita: PrioritaLavoro = PrioritaLavoro.normale   # default se non fornita
     data_scadenza: date | None = None   # facoltativa; i badge li calcola il frontend
+    macchina_id: int | None = None      # collegamento facoltativo a una macchina
 
 
 class LavoroCreate(LavoroBase):
@@ -42,6 +44,7 @@ class LavoroUpdate(BaseModel):
     progetto_id: int | None = None
     # None qui vale "togli la scadenza": exclude_unset distingue 'non inviato' da 'null'.
     data_scadenza: date | None = None
+    macchina_id: int | None = None
 
 
 class LavoroRead(LavoroBase):
@@ -55,5 +58,6 @@ class LavoroRead(LavoroBase):
     completato_il: datetime | None = None      # quando e' stato completato
     completato_da: UtenteRead | None = None     # chi l'ha completato
     sotto_attivita: list[SottoAttivitaRead] = []   # checklist del lavoro
+    allegati: list[AllegatoRead] = []              # link appesi al lavoro
 
     model_config = ConfigDict(from_attributes=True)

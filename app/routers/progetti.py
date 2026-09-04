@@ -8,9 +8,21 @@ from app.models.utente import Utente
 from app.schemas.progetto import ProgettoCreate, ProgettoRead, ProgettoUpdate
 from app.models.utente import RuoloUtente
 from app.dependencies import get_current_user, richiedi_ruolo
-from app.visibilita import progetti_visibili, progetto_visibile, reparto_assegnabile
+from app.visibilita import (progetti_visibili, progetto_visibile,
+                            reparto_assegnabile, macchina_visibile)
+from app.models.allegato import Allegato
+from app.schemas.allegato import AllegatoCreate, AllegatoRead
 
 router = APIRouter(prefix="/progetti", tags=["progetti"])
+
+
+def _macchina_collegabile(db, current, forniti: dict) -> None:
+    """Se si vuole collegare una macchina, dev'essere una che posso vedere.
+    None e' sempre ammesso: significa "nessuna macchina collegata"."""
+    if "macchina_id" not in forniti or forniti["macchina_id"] is None:
+        return
+    if macchina_visibile(db, current, forniti["macchina_id"]) is None:
+        raise HTTPException(status_code=404, detail="Macchina non trovata")
 
 
 @router.post("", response_model=ProgettoRead, status_code=201)
@@ -22,6 +34,7 @@ def crea_progetto(
     # Non si puo' piazzare un progetto in un reparto che non e' mio.
     if not reparto_assegnabile(db, current, dati.reparto_id):
         raise HTTPException(status_code=404, detail="Reparto non trovato")
+    _macchina_collegabile(db, current, {"macchina_id": dati.macchina_id})
 
     # L'organizzazione la prende dall'utente loggato, NON dal client.
     progetto = Progetto(
@@ -30,6 +43,7 @@ def crea_progetto(
         link_documento=dati.link_documento,
         organizzazione_id=current.organizzazione_id,
         reparto_id=dati.reparto_id,
+        macchina_id=dati.macchina_id,
     )
     db.add(progetto)
     db.commit()
@@ -52,6 +66,7 @@ def modifica_progetto(
     # Spostare un progetto in un altro reparto: vale la stessa regola della creazione.
     if "reparto_id" in dati_forniti and not reparto_assegnabile(db, current, dati_forniti["reparto_id"]):
         raise HTTPException(status_code=404, detail="Reparto non trovato")
+    _macchina_collegabile(db, current, dati_forniti)
 
     # Aggiorno solo i campi effettivamente forniti (gli altri restano invariati).
     for campo, valore in dati_forniti.items():
@@ -83,3 +98,17 @@ def elenca_progetti(
 ):
     # Azienda + reparto: la regola sta tutta in visibilita.py.
     return progetti_visibili(db, current).all()
+
+
+@router.post("/{progetto_id}/allegati", response_model=AllegatoRead, status_code=201)
+def allega_a_progetto(progetto_id: int, dati: AllegatoCreate, db: Session = Depends(get_db),
+                      current: Utente = Depends(get_current_user)):
+    """Un link appeso al progetto (foglio, cartella, documentazione)."""
+    if progetto_visibile(db, current, progetto_id) is None:
+        raise HTTPException(status_code=404, detail="Progetto non trovato")
+    allegato = Allegato(url=dati.url, titolo=dati.titolo,
+                        progetto_id=progetto_id, autore_id=current.id)
+    db.add(allegato)
+    db.commit()
+    db.refresh(allegato)
+    return allegato

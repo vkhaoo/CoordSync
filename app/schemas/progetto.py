@@ -10,6 +10,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.allegato import AllegatoRead
+
 
 class ProgettoBase(BaseModel):
     """Campi comuni: quello che l'utente puo' fornire."""
@@ -22,6 +24,7 @@ class ProgettoCreate(ProgettoBase):
     """Cosa serve per CREARE un progetto (input).
     NB: l'organizzazione NON si passa piu': viene presa dall'utente loggato."""
     reparto_id: int | None = None   # None = progetto "generale" di tutta l'azienda
+    macchina_id: int | None = None  # collegamento facoltativo a una macchina
 
 
 class ProgettoUpdate(BaseModel):
@@ -31,6 +34,7 @@ class ProgettoUpdate(BaseModel):
     link_documento: str | None = None
     # None esplicito = riporta il progetto fra i "generali".
     reparto_id: int | None = None
+    macchina_id: int | None = None
 
 
 class ProgettoRead(ProgettoBase):
@@ -38,7 +42,9 @@ class ProgettoRead(ProgettoBase):
     id: int
     organizzazione_id: int
     reparto_id: int | None = None
+    macchina_id: int | None = None
     creato_il: datetime
+    allegati: list[AllegatoRead] = []
 
     # Permette a Pydantic di leggere i dati da un oggetto SQLAlchemy
     # (non solo da un dizionario). Senza questo, non saprebbe convertire il model.

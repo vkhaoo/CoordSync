@@ -327,13 +327,69 @@ input, select, textarea { font-family: var(--sans); }
 .testa-reparto { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.5rem; }
 .nome-reparto { margin: 0; font-size: 1rem; font-weight: 600; color: var(--acciaio-800); }
 
+/* Scheda macchina */
+.descrizione-macchina { width: 100%; max-width: 520px; margin-bottom: 0.7rem;
+  padding: 0.45rem 0.6rem; border: 1px solid var(--linea); border-radius: var(--raggio-sm);
+  font-family: var(--sans); font-size: 0.88rem; color: var(--testo); background: var(--pannello); }
+
+.barra-sezioni { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 0.8rem; }
+.sez { font-family: var(--mono); font-size: 0.72rem; padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--linea); background: var(--pannello); color: var(--tenue); cursor: pointer;
+  transition: all .12s ease; }
+.sez:hover { border-color: var(--acciaio-600); color: var(--acciaio-700); }
+.sez.attiva { background: var(--acciaio-800); color: #fff; border-color: var(--acciaio-800); }
+.sez-gruppo { display: inline-flex; align-items: center; gap: 2px; }
+.form-sezione, .form-allegato { margin-top: 0; max-width: 340px; }
+
+.blocco-info { background: #fdf8ec; border: 1px solid #efd9a8; border-radius: var(--raggio);
+  padding: 0.8rem 1rem; margin-bottom: 1rem; }
+.blocco-info .titolo-colonna { margin-bottom: 0.5rem; }
+.blocco-info .lavoro { background: var(--pannello); margin-bottom: 0.5rem; }
+
+.form-voce { display: flex; flex-direction: column; gap: 0.5rem; background: var(--pannello);
+  border: 1px solid var(--linea); border-radius: var(--raggio); padding: 0.9rem 1rem;
+  margin-bottom: 1.2rem; box-shadow: var(--ombra-1); }
+.riga-voce { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.riga-voce input { flex: 1; min-width: 0; padding: 0.55rem 0.7rem; border: 1px solid var(--linea);
+  border-radius: var(--raggio-sm); font-size: 0.92rem; font-family: var(--sans); }
+.riga-voce select { font-family: var(--mono); font-size: 0.78rem; padding: 0.45rem 0.6rem;
+  border: 1px solid var(--linea); border-radius: var(--raggio-sm); background: var(--pannello); }
+.form-voce textarea { width: 100%; padding: 0.55rem 0.7rem; border: 1px solid var(--linea);
+  border-radius: var(--raggio-sm); font-family: var(--sans); font-size: 0.9rem; resize: vertical; }
+.piazzamento { gap: 0.9rem; }
+.spunta { flex-direction: row; align-items: center; gap: 0.35rem; font-size: 0.82rem; cursor: pointer; }
+.spunta input { width: 15px; height: 15px; margin: 0; accent-color: var(--st-incorso); }
+
+.voce-macchina.tipo-lavoro { border-left-color: var(--st-incorso); }
+.voce-macchina.tipo-modifica { border-left-color: var(--ambra-scuro); }
+.voce-macchina.tipo-analisi { border-left-color: #7a5cc4; }
+.voce-macchina.tipo-informazione { border-left-color: var(--st-fatto); }
+.tipo-badge-lavoro { background: #e3eefb; color: #17568f; }
+.tipo-badge-modifica { background: #fbe9d2; color: #9a5b08; }
+.tipo-badge-analisi { background: #ece6fa; color: #5b40a0; }
+.tipo-badge-informazione { background: #e5f3da; color: #34701a; }
+.data-voce { font-family: var(--mono); font-size: 0.72rem; color: var(--tenue-2); }
+.testo-voce { margin: 0.5rem 0 0; font-size: 0.9rem; line-height: 1.55; color: var(--testo);
+  white-space: pre-wrap; overflow-wrap: anywhere; }
+.chip.piccolo { font-size: 0.68rem; padding: 2px 8px; }
+
+.allegati { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-top: 0.55rem; }
+.chip.allegato a { color: var(--st-incorso); text-decoration: none; }
+.chip.allegato a:hover { text-decoration: underline; }
+
 .vuoto { color: var(--tenue); font-size: 0.9rem; }
 .vuoto.piccolo { font-size: 0.8rem; margin: 0 0 0.55rem; }
 
 /* Responsività */
 @media (max-width: 768px) {
   .barra { padding: 0.55rem 0.9rem; flex-wrap: wrap; gap: 0.4rem; }
-  .barra-sinistra { gap: 0.8rem; }
+  /* Con quattro voci il menu non ci sta in 375px: invece di sbordare,
+     scorre in orizzontale restando dentro la barra. */
+  /* riga intera al menu, nome utente ed Esci vanno a capo sotto */
+  .barra-sinistra { gap: 0.8rem; min-width: 0; flex: 1 1 100%; }
+  .nav-viste { overflow-x: auto; flex: 1; min-width: 0; scrollbar-width: none; }
+  .nav-viste::-webkit-scrollbar { display: none; }
+  .nav-viste button { white-space: nowrap; flex: 0 0 auto; }
   .barra .marchio { font-size: 1.05rem; }
   .mio-ruolo { font-size: 0.72rem; }
   .corpo { flex-direction: column; }

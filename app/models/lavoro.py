@@ -51,8 +51,14 @@ class Lavoro(Base):
     completato_il = Column(DateTime, nullable=True)
     completato_da_id = Column(Integer, ForeignKey("utenti.id"), nullable=True)
 
+    # Collegamento FACOLTATIVO alla macchina su cui si interviene: cosi' la
+    # scheda dell'impianto mostra anche i lavori coordinati che l'hanno toccato.
+    macchina_id = Column(Integer, ForeignKey("macchine.id", ondelete="SET NULL"),
+                         nullable=True, index=True)
+
     # Le due "scorciatoie" di navigazione:
     progetto = relationship("Progetto", back_populates="lavori")
+    allegati = relationship("Allegato", back_populates="lavoro", cascade="all, delete-orphan")
     assegnatari = relationship("Utente", secondary="assegnazioni", back_populates="lavori")
     completato_da = relationship("Utente", foreign_keys=[completato_da_id])
     sotto_attivita = relationship("SottoAttivita", back_populates="lavoro",

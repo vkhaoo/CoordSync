@@ -70,19 +70,26 @@ macchina e non possono essere un elenco fisso deciso dal codice.
 una commessa che prima o poi finisce, la macchina è un impianto che resta lì per
 anni. Un lavoro può appartenere a entrambi.
 
-**Scelta importante sui "lavori" dentro le sezioni.** Non creare una lista di
-lavori separata: "lavori da fare" e "lavori fatti" sono già l'entità `Lavoro`
-che l'app ha, con stato, assegnatari, checklist, commenti, priorità e scadenza.
-Duplicarla significherebbe avere il lavoro in due posti che non si parlano.
-Quindi il lavoro guadagna un collegamento facoltativo alla sezione di macchina,
-e da lì si vede filtrato per stato: quelli non ancora conclusi sono i "da fare",
-quelli conclusi entrano nello storico da soli, con data e autore che già
-registriamo. Lo stesso lavoro resta visibile da due angolazioni: dalla commessa
-e dall'impianto.
+**Le due parti restano separate** (deciso da Nik: "le cose non sono collegate").
+Da un lato si coordina la squadra in ufficio, dall'altro si guarda la macchina e
+si tiene il suo storico. Hanno vite diverse — una commessa finisce e viene
+archiviata, la macchina resta lì per anni e il suo valore è la memoria che
+accumula — e servono a due momenti diversi del lavoro.
 
-**Le altre voci non sono lavori**, sono appunti: modifiche, analisi e
-informazioni utili. Servono come entità a sé, con tipo, data, autore e testo,
-così si può annotare qualcosa senza dover aprire un lavoro formale.
+Quindi la scheda macchina ha **voci proprie**, non riusa l'entità `Lavoro`. Una
+voce ha un tipo (lavoro, modifica, analisi, informazione utile), e le voci di
+tipo "lavoro" hanno anche uno stato (da fare / in corso / fatto). Sono
+annotazioni con uno stato, non compiti da assegnare: nel momento in cui serve
+assegnare qualcuno e mettere una scadenza, quello e' un lavoro di progetto.
+
+**Ma il collegamento è possibile, non obbligatorio.** Un progetto o un lavoro può
+puntare a una macchina, così la scheda mostra anche gli interventi coordinati che
+l'hanno toccata. Nessuno e' costretto a collegare niente: e' un di piu' per chi
+lo vuole.
+
+**Allegati (link) su ogni scheda:** macchina, sezione, voce, progetto e lavoro
+possono avere una lista di link (foto, PDF di schemi, fogli). Serve a tenere
+tutto nello stesso posto.
 
 **Le "informazioni utili" sono un caso a parte:** non sono un evento con una
 data, sono conoscenza di riferimento che resta valida (il modello del PLC, una

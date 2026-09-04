@@ -74,6 +74,33 @@ def lavoro_visibile(db: Session, current: Utente, lavoro_id: int) -> Lavoro | No
     return lavori_visibili(db, current).filter(Lavoro.id == lavoro_id).first()
 
 
+def macchine_visibili(db: Session, current: Utente):
+    """Query delle macchine che vedo.
+
+    Stessa idea dei progetti, ma piu' semplice: sulle macchine non esistono
+    assegnatari, quindi non c'e' la rete di sicurezza. L'admin vede tutto;
+    gli altri vedono le macchine dei propri reparti piu' quelle senza reparto.
+    """
+    from app.models.macchina import Macchina
+
+    query = db.query(Macchina).filter(
+        Macchina.organizzazione_id == current.organizzazione_id)
+    if current.ruolo == RuoloUtente.admin:
+        return query
+
+    ids_reparti = [r.id for r in current.reparti]
+    return query.filter(or_(
+        Macchina.reparto_id.is_(None),
+        Macchina.reparto_id.in_(ids_reparti),
+    ))
+
+
+def macchina_visibile(db: Session, current: Utente, macchina_id: int):
+    """La macchina, ma solo se posso vederla. Altrimenti None (-> 404)."""
+    from app.models.macchina import Macchina
+    return macchine_visibili(db, current).filter(Macchina.id == macchina_id).first()
+
+
 def reparto_assegnabile(db: Session, current: Utente, reparto_id: int | None) -> bool:
     """Posso mettere un progetto in questo reparto?
 

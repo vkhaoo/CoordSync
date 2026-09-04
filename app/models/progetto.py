@@ -23,9 +23,20 @@ class Progetto(Base):
 
     # Reparto di appartenenza. NULL = progetto "generale", visibile a tutta
     # l'azienda: e' anche lo stato in cui restano i progetti gia' esistenti.
-    reparto_id = Column(Integer, ForeignKey("reparti.id", ondelete="SET NULL"), nullable=True)
+    # index=True: ogni elenco progetti filtra per reparto (l'indice esiste gia'
+    # dalla migrazione dei reparti; qui il modello lo dichiara, cosi' Alembic
+    # non lo vede come "di troppo" e non prova a eliminarlo).
+    reparto_id = Column(Integer, ForeignKey("reparti.id", ondelete="SET NULL"),
+                        nullable=True, index=True)
     reparto = relationship("Reparto", back_populates="progetti")
+
+    # Collegamento FACOLTATIVO a una macchina: serve a chi vuole ritrovare nella
+    # scheda dell'impianto anche le commesse che l'hanno toccato. Nessun obbligo:
+    # i due mondi restano indipendenti.
+    macchina_id = Column(Integer, ForeignKey("macchine.id", ondelete="SET NULL"),
+                         nullable=True, index=True)
 
     # Un progetto ha molti lavori. 'cascade' = se cancelli il progetto,
     # spariscono anche i suoi lavori (niente lavori "orfani").
     lavori = relationship("Lavoro", back_populates="progetto", cascade="all, delete-orphan")
+    allegati = relationship("Allegato", back_populates="progetto", cascade="all, delete-orphan")
