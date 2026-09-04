@@ -269,7 +269,7 @@ input, select, textarea { font-family: var(--sans); }
 .voce-sotto label.spuntata { color: var(--tenue-2); text-decoration: line-through; }
 .voce-sotto input[type="checkbox"] { flex: 0 0 auto; margin: 0; width: 15px; height: 15px; accent-color: var(--st-incorso); }
 .form-sotto { display: flex; gap: 5px; }
-.form-sotto input { flex: 1; }
+.form-sotto input { flex: 1; min-width: 0; }
 
 /* Assegnazione */
 .assegnazione { margin-top: 0.55rem; display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; }
@@ -285,11 +285,14 @@ input, select, textarea { font-family: var(--sans); }
 .commento-autore { font-weight: 600; color: var(--acciaio-800); margin-right: 0.45rem; }
 .commento-testo { color: var(--testo); }
 .form-commento { display: flex; gap: 5px; }
-.form-commento input { flex: 1; }
+.form-commento input { flex: 1; min-width: 0; }
 
 /* Form inline */
+/* min-width:0 sui campi: senza, un <input> non scende sotto la sua larghezza
+   minima automatica (~194px per il size predefinito) e spinge il pulsante
+   accanto FUORI dal contenitore — es. il "+" che usciva dalla colonna progetti. */
 .form-inline { display: flex; gap: 5px; margin-top: 0.7rem; }
-.form-inline input { flex: 1; }
+.form-inline input { flex: 1; min-width: 0; }
 .mini { width: 34px; flex-shrink: 0; border: none; border-radius: var(--raggio-sm); background: var(--acciaio-800); color: #fff; font-size: 1.05rem; cursor: pointer; transition: background .15s ease; }
 .mini:hover { background: var(--acciaio-700); }
 .mini.annulla { background: #d6dbe1; color: #444; }
