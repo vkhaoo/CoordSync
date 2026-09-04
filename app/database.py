@@ -6,15 +6,28 @@ Connessione al database e gestione delle sessioni.
   una, la usa per leggere/scrivere, e la chiude. Come aprire e chiudere un file.
 - 'Base' e' la classe da cui erediteranno tutti i nostri modelli (le tabelle).
 """
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.config import settings
 
+_e_sqlite = settings.db_url_normalizzato.startswith("sqlite")
+
 # connect_args serve solo a SQLite; con PostgreSQL non serve, lo togli.
-connect_args = {"check_same_thread": False} if settings.db_url_normalizzato.startswith("sqlite") else {}
+connect_args = {"check_same_thread": False} if _e_sqlite else {}
 
 engine = create_engine(settings.db_url_normalizzato, connect_args=connect_args)
+
+if _e_sqlite:
+    @event.listens_for(engine, "connect")
+    def _abilita_chiavi_esterne(connessione, _record):
+        """SQLite NON applica le chiavi esterne se non glielo si chiede: senza
+        questo, ON DELETE CASCADE e SET NULL vengono ignorati in locale mentre
+        in produzione (PostgreSQL) funzionano. Sviluppo e produzione devono
+        comportarsi allo stesso modo, altrimenti i test raccontano bugie."""
+        cursore = connessione.cursor()
+        cursore.execute("PRAGMA foreign_keys=ON")
+        cursore.close()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
