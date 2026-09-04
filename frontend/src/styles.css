@@ -237,6 +237,9 @@ input, select, textarea { font-family: var(--sans); }
 .prio-normale { background: #e3eefb; color: #17568f; }
 .prio-alta { background: #fbe9d2; color: #9a5b08; }
 .prio-urgente { background: #fadfdb; color: #b23025; }
+/* Stessa veste del chip, ma cliccabile: eredita i colori da .prio-<priorita> */
+.prio-select { font-family: var(--mono); border: 1px solid transparent; cursor: pointer; transition: filter .12s ease; }
+.prio-select:hover { filter: brightness(.97); }
 
 /* Scadenza: chip neutro; ambra se vicina, rosso se in ritardo */
 .scadenza { font-family: var(--mono); font-size: 0.72rem; font-weight: 600; padding: 3px 8px;

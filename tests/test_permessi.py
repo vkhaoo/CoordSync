@@ -79,6 +79,40 @@ def test_modifica_ed_elimina_lavoro(client):
     assert client.delete(f"/lavori/{l['id']}", headers=a).status_code == 204
 
 
+def test_cambia_priorita_dopo_la_creazione(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "L", "progetto_id": p["id"]}, headers=a).json()
+    assert l["priorita"] == "normale"   # default alla creazione
+
+    r = client.patch(f"/lavori/{l['id']}", json={"priorita": "urgente"}, headers=a)
+    assert r.status_code == 200 and r.json()["priorita"] == "urgente"
+    # e la nuova priorita' resta anche rileggendo l'elenco
+    letto = client.get(f"/lavori?progetto_id={p['id']}", headers=a).json()[0]
+    assert letto["priorita"] == "urgente"
+
+
+def test_priorita_inesistente_rifiutata(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "L", "progetto_id": p["id"]}, headers=a).json()
+    assert client.patch(f"/lavori/{l['id']}", json={"priorita": "altissima"},
+                        headers=a).status_code == 422
+
+
+def test_operatore_non_cambia_priorita(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    op = _crea_utente(client, a, "Op", "op@a.it", "operatore")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "L", "progetto_id": p["id"]}, headers=a).json()
+
+    # nemmeno se e' assegnato: la priorita' la decide chi gestisce
+    op_id = [u for u in client.get("/utenti", headers=a).json() if u["email"] == "op@a.it"][0]["id"]
+    client.post(f"/lavori/{l['id']}/assegnati", json={"utente_id": op_id}, headers=a)
+    assert client.patch(f"/lavori/{l['id']}", json={"priorita": "urgente"},
+                        headers=op).status_code == 403
+
+
 def test_operatore_non_modifica_ne_elimina_lavoro(client):
     a = registra(client, "Azienda A", "Marco", "marco@a.it")
     client.post("/utenti", json={"nome": "Op", "email": "op@a.it", "password": "password1",

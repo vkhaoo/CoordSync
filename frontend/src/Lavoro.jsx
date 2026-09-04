@@ -8,6 +8,7 @@ const ETICHETTA_PRIORITA = {
   bassa: "Bassa", normale: "Normale", alta: "Alta", urgente: "Urgente",
 };
 const STATI = Object.keys(ETICHETTA_STATO);
+const PRIORITA = Object.keys(ETICHETTA_PRIORITA);
 
 // "In scadenza" se mancano al massimo questi giorni. Calcolato qui (lato client):
 // e' un dato derivato, non si memorizza (regola del progetto).
@@ -82,6 +83,16 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
   const [modificaScadenza, setModificaScadenza] = useState(false);
   const [scadenzaBozza, setScadenzaBozza] = useState("");
   const badge = infoScadenza(lavoro);
+
+  async function cambiaPriorita(nuova) {
+    setErrore(null);
+    try {
+      await api.modificaLavoro(lavoro.id, { priorita: nuova });
+      // Ricarico invece di aggiornare solo la card: la lista e' ordinata per
+      // priorita', quindi il lavoro deve anche spostarsi al posto giusto.
+      onAssegnazioneCambiata();
+    } catch (err) { setErrore(err.message); }
+  }
 
   async function salvaScadenza(valore) {
     setErrore(null);
@@ -182,7 +193,16 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
       </div>
 
       <div className="lavoro-meta">
-        <span className={`prio prio-${lavoro.priorita}`}>{ETICHETTA_PRIORITA[lavoro.priorita]}</span>
+        {/* Priorita': modificabile da chi gestisce, solo etichetta per gli altri */}
+        {gestisco ? (
+          <select className={`prio prio-select prio-${lavoro.priorita}`} value={lavoro.priorita}
+                  title="Cambia priorità"
+                  onChange={(e) => cambiaPriorita(e.target.value)}>
+            {PRIORITA.map((p) => <option key={p} value={p}>{ETICHETTA_PRIORITA[p]}</option>)}
+          </select>
+        ) : (
+          <span className={`prio prio-${lavoro.priorita}`}>{ETICHETTA_PRIORITA[lavoro.priorita]}</span>
+        )}
 
         {/* Scadenza: chip informativo; chi gestisce ci clicca per modificarla */}
         {modificaScadenza ? (
