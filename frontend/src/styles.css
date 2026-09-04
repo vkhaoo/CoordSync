@@ -313,6 +313,20 @@ input, select, textarea { font-family: var(--sans); }
 .tabella-utenti select { font-family: var(--mono); padding: 0.35rem 0.55rem; border: 1px solid var(--linea); border-radius: var(--raggio-sm); }
 .ruolo-mio { color: var(--tenue); font-style: italic; font-family: var(--mono); font-size: 0.82rem; }
 
+/* Reparti */
+.riga-reparto { margin-bottom: 0.7rem; }
+.reparto-select, .reparto-chip {
+  font-family: var(--mono); font-size: 0.72rem; padding: 3px 8px; border-radius: 4px;
+  background: var(--pannello-2); border: 1px solid var(--linea); color: var(--tenue);
+}
+.reparto-select { cursor: pointer; }
+.scheda-reparto {
+  background: var(--pannello); border: 1px solid var(--linea); border-left: 3px solid var(--ambra);
+  border-radius: var(--raggio); padding: 0.9rem 1.1rem; margin-bottom: 0.75rem; box-shadow: var(--ombra-1);
+}
+.testa-reparto { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.5rem; }
+.nome-reparto { margin: 0; font-size: 1rem; font-weight: 600; color: var(--acciaio-800); }
+
 .vuoto { color: var(--tenue); font-size: 0.9rem; }
 .vuoto.piccolo { font-size: 0.8rem; margin: 0 0 0.55rem; }
 

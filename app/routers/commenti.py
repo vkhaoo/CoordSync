@@ -9,25 +9,16 @@ from app.models.progetto import Progetto
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.commento import CommentoCreate, CommentoRead
 from app.dependencies import get_current_user
+from app.visibilita import lavoro_visibile
 
 router = APIRouter(prefix="/lavori/{lavoro_id}/commenti", tags=["commenti"])
-
-
-def _lavoro_mio(db, lavoro_id, current):
-    return (
-        db.query(Lavoro)
-        .join(Progetto)
-        .filter(Lavoro.id == lavoro_id,
-                Progetto.organizzazione_id == current.organizzazione_id)
-        .first()
-    )
 
 
 @router.post("", response_model=CommentoRead, status_code=201)
 def aggiungi_commento(lavoro_id: int, dati: CommentoCreate,
                       db: Session = Depends(get_db),
                       current: Utente = Depends(get_current_user)):
-    lavoro = _lavoro_mio(db, lavoro_id, current)
+    lavoro = lavoro_visibile(db, current, lavoro_id)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
 
@@ -48,7 +39,7 @@ def aggiungi_commento(lavoro_id: int, dati: CommentoCreate,
 @router.get("", response_model=list[CommentoRead])
 def elenca_commenti(lavoro_id: int, db: Session = Depends(get_db),
                     current: Utente = Depends(get_current_user)):
-    if _lavoro_mio(db, lavoro_id, current) is None:
+    if lavoro_visibile(db, current, lavoro_id) is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
 
     return (

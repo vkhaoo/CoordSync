@@ -21,6 +21,11 @@ class Progetto(Base):
     organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
     organizzazione = relationship("Organizzazione", back_populates="progetti")
 
+    # Reparto di appartenenza. NULL = progetto "generale", visibile a tutta
+    # l'azienda: e' anche lo stato in cui restano i progetti gia' esistenti.
+    reparto_id = Column(Integer, ForeignKey("reparti.id", ondelete="SET NULL"), nullable=True)
+    reparto = relationship("Reparto", back_populates="progetti")
+
     # Un progetto ha molti lavori. 'cascade' = se cancelli il progetto,
     # spariscono anche i suoi lavori (niente lavori "orfani").
     lavori = relationship("Lavoro", back_populates="progetto", cascade="all, delete-orphan")

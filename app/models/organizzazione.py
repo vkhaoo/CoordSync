@@ -21,3 +21,4 @@ class Organizzazione(Base):
 
     utenti = relationship("Utente", back_populates="organizzazione")
     progetti = relationship("Progetto", back_populates="organizzazione")
+    reparti = relationship("Reparto", cascade="all, delete-orphan")

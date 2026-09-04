@@ -19,26 +19,18 @@ from app.schemas.sotto_attivita import (
     SottoAttivitaCreate, SottoAttivitaUpdate, SottoAttivitaRead,
 )
 from app.dependencies import get_current_user, richiedi_ruolo
+from app.visibilita import lavoro_visibile, condizione_progetti_visibili
 
 router = APIRouter(tags=["sotto-attivita"])
 
 
-def _lavoro_mio(db, lavoro_id, current):
-    """Il lavoro, ma solo se e' della MIA organizzazione."""
-    return (
-        db.query(Lavoro).join(Progetto)
-        .filter(Lavoro.id == lavoro_id,
-                Progetto.organizzazione_id == current.organizzazione_id)
-        .first()
-    )
-
-
 def _sotto_mia(db, sotto_id, current):
-    """La sotto-attivita' con il suo lavoro, solo se della mia organizzazione."""
+    """La voce di checklist, ma solo se posso vedere il lavoro a cui appartiene."""
     return (
         db.query(SottoAttivita).join(Lavoro).join(Progetto)
         .filter(SottoAttivita.id == sotto_id,
-                Progetto.organizzazione_id == current.organizzazione_id)
+                Progetto.organizzazione_id == current.organizzazione_id,
+                condizione_progetti_visibili(db, current))
         .first()
     )
 
@@ -53,7 +45,7 @@ def _puo_aggiornare(lavoro, current) -> bool:
 @router.get("/lavori/{lavoro_id}/sotto-attivita", response_model=list[SottoAttivitaRead])
 def elenca(lavoro_id: int, db: Session = Depends(get_db),
            current: Utente = Depends(get_current_user)):
-    lavoro = _lavoro_mio(db, lavoro_id, current)
+    lavoro = lavoro_visibile(db, current, lavoro_id)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
     return lavoro.sotto_attivita
@@ -62,7 +54,7 @@ def elenca(lavoro_id: int, db: Session = Depends(get_db),
 @router.post("/lavori/{lavoro_id}/sotto-attivita", response_model=SottoAttivitaRead, status_code=201)
 def crea(lavoro_id: int, dati: SottoAttivitaCreate, db: Session = Depends(get_db),
          current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
-    lavoro = _lavoro_mio(db, lavoro_id, current)
+    lavoro = lavoro_visibile(db, current, lavoro_id)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
     voce = SottoAttivita(testo=dati.testo, lavoro_id=lavoro_id)

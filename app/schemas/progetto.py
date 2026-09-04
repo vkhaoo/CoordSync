@@ -21,7 +21,7 @@ class ProgettoBase(BaseModel):
 class ProgettoCreate(ProgettoBase):
     """Cosa serve per CREARE un progetto (input).
     NB: l'organizzazione NON si passa piu': viene presa dall'utente loggato."""
-    pass
+    reparto_id: int | None = None   # None = progetto "generale" di tutta l'azienda
 
 
 class ProgettoUpdate(BaseModel):
@@ -29,12 +29,15 @@ class ProgettoUpdate(BaseModel):
     nome: str | None = None
     descrizione: str | None = None
     link_documento: str | None = None
+    # None esplicito = riporta il progetto fra i "generali".
+    reparto_id: int | None = None
 
 
 class ProgettoRead(ProgettoBase):
     """Cosa l'API RESTITUISCE (output): include i campi generati dal DB."""
     id: int
     organizzazione_id: int
+    reparto_id: int | None = None
     creato_il: datetime
 
     # Permette a Pydantic di leggere i dati da un oggetto SQLAlchemy

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "./api.js";
 import Lavoro from "./Lavoro.jsx";
 import GestioneUtenti from "./GestioneUtenti.jsx";
+import GestioneReparti from "./GestioneReparti.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
 
 const PRIORITA = ["bassa", "normale", "alta", "urgente"];
@@ -25,6 +26,7 @@ export default function Dashboard({ onLogout }) {
   const [selezionato, setSelezionato] = useState(null);
   const [lavori, setLavori] = useState([]);
   const [utenti, setUtenti] = useState([]);   // colleghi dell'azienda (per l'assegnazione)
+  const [reparti, setReparti] = useState([]); // reparti dell'azienda (per la visibilità)
   const [io, setIo] = useState(null);         // l'utente loggato (per sapere il mio ruolo)
   const [vista, setVista] = useState("lavori");  // "lavori" oppure "utenti"
   const [avvisoVerifica, setAvvisoVerifica] = useState(null);  // feedback "reinvia"
@@ -61,10 +63,7 @@ export default function Dashboard({ onLogout }) {
     api.me()
       .then((utente) => {
         setIo(utente);
-        return Promise.all([
-          caricaProgetti().catch((e) => setErrore(e.message)),
-          api.utenti().then(setUtenti).catch((e) => setErrore(e.message)),
-        ]);
+        return caricaProgetti().catch((e) => setErrore(e.message));
       })
       .catch(() => onLogout())   // token non valido -> disconnetto
       .finally(() => setCaricando(false));
@@ -75,6 +74,15 @@ export default function Dashboard({ onLogout }) {
     caricaLavori(selezionato).catch((e) => setErrore(e.message));
   }, [selezionato]);
 
+  // Colleghi e reparti si ricaricano ogni volta che torno alla vista lavori:
+  // se ho appena creato un reparto o aggiunto un utente dai pannelli admin,
+  // devo ritrovarmeli qui senza dover ricaricare la pagina.
+  useEffect(() => {
+    if (vista !== "lavori") return;
+    api.utenti().then(setUtenti).catch((e) => setErrore(e.message));
+    api.reparti().then(setReparti).catch((e) => setErrore(e.message));
+  }, [vista]);
+
   // --- Creazioni ---
 
   async function aggiungiProgetto(e) {
@@ -84,6 +92,16 @@ export default function Dashboard({ onLogout }) {
       const creato = await api.creaProgetto({ nome: nuovoProgetto });
       setNuovoProgetto("");
       await caricaProgetti(creato.id);   // ricarico e seleziono il nuovo
+    } catch (err) { setErrore(err.message); }
+  }
+
+  async function cambiaReparto(progettoId, valore) {
+    setErrore(null);
+    try {
+      // "" dal menu significa "nessun reparto": progetto visibile a tutta l'azienda.
+      await api.aggiornaProgetto(progettoId, { reparto_id: valore === "" ? null : Number(valore) });
+      // Ricarico: cambiando reparto il progetto potrebbe non essere più mio da vedere.
+      await caricaProgetti();
     } catch (err) { setErrore(err.message); }
   }
 
@@ -175,8 +193,12 @@ export default function Dashboard({ onLogout }) {
             <button className={vista === "lavori" ? "nav-attiva" : ""}
                     onClick={() => setVista("lavori")}>Lavori</button>
             {sonoAdmin && (
-              <button className={vista === "utenti" ? "nav-attiva" : ""}
-                      onClick={() => setVista("utenti")}>Utenti</button>
+              <>
+                <button className={vista === "utenti" ? "nav-attiva" : ""}
+                        onClick={() => setVista("utenti")}>Utenti</button>
+                <button className={vista === "reparti" ? "nav-attiva" : ""}
+                        onClick={() => setVista("reparti")}>Reparti</button>
+              </>
             )}
           </nav>
         </div>
@@ -204,6 +226,10 @@ export default function Dashboard({ onLogout }) {
       {vista === "utenti" && sonoAdmin ? (
         <div className="corpo-singolo">
           <GestioneUtenti io={io} />
+        </div>
+      ) : vista === "reparti" && sonoAdmin ? (
+        <div className="corpo-singolo">
+          <GestioneReparti />
         </div>
       ) : (
       <div className="corpo">
@@ -255,6 +281,26 @@ export default function Dashboard({ onLogout }) {
                         <button className="azione-icona elimina" title="Elimina progetto"
                                 onClick={() => eliminaProgetto(progettoCorrente)}>🗑</button>
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Reparto: decide chi vede questo progetto */}
+                {reparti.length > 0 && (
+                  <div className="riga-reparto">
+                    {puoCreare ? (
+                      <select className="reparto-select"
+                              value={progettoCorrente.reparto_id ?? ""}
+                              title="Chi vede questo progetto"
+                              onChange={(e) => cambiaReparto(progettoCorrente.id, e.target.value)}>
+                        <option value="">Tutta l'azienda</option>
+                        {reparti.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                      </select>
+                    ) : (
+                      <span className="reparto-chip">
+                        {reparti.find((r) => r.id === progettoCorrente.reparto_id)?.nome
+                          ?? "Tutta l'azienda"}
+                      </span>
                     )}
                   </div>
                 )}

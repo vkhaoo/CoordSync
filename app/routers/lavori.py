@@ -8,32 +8,19 @@ from app.models.progetto import Progetto
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.lavoro import LavoroCreate, LavoroRead, LavoroUpdateStato, LavoroUpdate
 from app.dependencies import get_current_user, richiedi_ruolo
+from app.visibilita import lavori_visibili, lavoro_visibile, progetto_visibile
 
 router = APIRouter(prefix="/lavori", tags=["lavori"])
 
 
-def _progetto_mio(db, progetto_id, current):
-    return (
-        db.query(Progetto)
-        .filter(Progetto.id == progetto_id,
-                Progetto.organizzazione_id == current.organizzazione_id)
-        .first()
-    )
-
-
-def _lavoro_mio(db, lavoro_id, current):
-    return (
-        db.query(Lavoro).join(Progetto)
-        .filter(Lavoro.id == lavoro_id,
-                Progetto.organizzazione_id == current.organizzazione_id)
-        .first()
-    )
+# Le funzioni _progetto_mio/_lavoro_mio che stavano qui sono state sostituite da
+# quelle di visibilita.py: la regola (azienda + reparto) vive in un posto solo.
 
 
 @router.post("", response_model=LavoroRead, status_code=201)
 def crea_lavoro(dati: LavoroCreate, db: Session = Depends(get_db),
                 current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
-    if _progetto_mio(db, dati.progetto_id, current) is None:
+    if progetto_visibile(db, current, dati.progetto_id) is None:
         raise HTTPException(status_code=404, detail="Progetto non trovato")
 
     lavoro = Lavoro(
@@ -53,10 +40,7 @@ def crea_lavoro(dati: LavoroCreate, db: Session = Depends(get_db),
 def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = None,
                   db: Session = Depends(get_db),
                   current: Utente = Depends(get_current_user)):
-    query = (
-        db.query(Lavoro).join(Progetto)
-        .filter(Progetto.organizzazione_id == current.organizzazione_id)
-    )
+    query = lavori_visibili(db, current)
     if progetto_id is not None:
         query = query.filter(Lavoro.progetto_id == progetto_id)
     if stato is not None:
@@ -68,7 +52,7 @@ def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = No
 def cambia_stato(lavoro_id: int, dati: LavoroUpdateStato,
                  db: Session = Depends(get_db),
                  current: Utente = Depends(get_current_user)):
-    lavoro = _lavoro_mio(db, lavoro_id, current)
+    lavoro = lavoro_visibile(db, current, lavoro_id)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
 
@@ -100,7 +84,7 @@ def cambia_stato(lavoro_id: int, dati: LavoroUpdateStato,
 def modifica_lavoro(lavoro_id: int, dati: LavoroUpdate,
                     db: Session = Depends(get_db),
                     current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
-    lavoro = _lavoro_mio(db, lavoro_id, current)
+    lavoro = lavoro_visibile(db, current, lavoro_id)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
 
@@ -109,7 +93,7 @@ def modifica_lavoro(lavoro_id: int, dati: LavoroUpdate,
     # Se si vuole spostare il lavoro in un altro progetto, quel progetto
     # dev'essere della MIA organizzazione (non si "ruba" un lavoro altrui).
     if "progetto_id" in dati_forniti:
-        if _progetto_mio(db, dati_forniti["progetto_id"], current) is None:
+        if progetto_visibile(db, current, dati_forniti["progetto_id"]) is None:
             raise HTTPException(status_code=404, detail="Progetto di destinazione non trovato")
 
     for campo, valore in dati_forniti.items():
@@ -122,7 +106,7 @@ def modifica_lavoro(lavoro_id: int, dati: LavoroUpdate,
 @router.delete("/{lavoro_id}", status_code=204)
 def elimina_lavoro(lavoro_id: int, db: Session = Depends(get_db),
                    current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
-    lavoro = _lavoro_mio(db, lavoro_id, current)
+    lavoro = lavoro_visibile(db, current, lavoro_id)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
     db.delete(lavoro)   # le sotto-attivita' e i commenti spariscono in cascata

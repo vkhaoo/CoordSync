@@ -39,3 +39,6 @@ class Utente(Base):
     # 'lavori' NON e' una colonna: e' una scorciatoia che, dato un utente,
     # ti da' la lista dei lavori a cui e' assegnato (via tabella-ponte).
     lavori = relationship("Lavoro", secondary="assegnazioni", back_populates="assegnatari")
+
+    # I reparti di cui faccio parte (un utente puo' starne in piu' d'uno).
+    reparti = relationship("Reparto", secondary="membri_reparto", back_populates="membri")

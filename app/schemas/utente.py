@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.models.utente import RuoloUtente
 from app.schemas.validators import PasswordStr
+from app.schemas.reparto import RepartoRead
 
 
 class UtenteBase(BaseModel):
@@ -28,4 +29,5 @@ class UtenteRead(UtenteBase):
     ruolo: RuoloUtente
     email_verificata: bool
     deve_cambiare_password: bool   # il frontend blocca l'accesso finche' e' True
+    reparti: list[RepartoRead] = []   # i reparti di cui faccio parte
     model_config = ConfigDict(from_attributes=True)
