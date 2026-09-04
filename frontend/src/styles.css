@@ -4,6 +4,12 @@
    ============================================================ */
 
 :root {
+  /* Il design system e' a colori chiari: dichiararlo impedisce ai browser in
+     modalita' scura di ridipingere l'app da soli (campi neri, placeholder
+     illeggibili) e tiene chiari anche i controlli nativi (date picker, select,
+     scrollbar). Quando arrivera' il tema scuro vero, qui andra' "light dark". */
+  color-scheme: light;
+
   --acciaio-900: #16212e;
   --acciaio-800: #1b2836;
   --acciaio-700: #26394b;
