@@ -4,6 +4,7 @@ import Lavoro from "./Lavoro.jsx";
 import GestioneUtenti from "./GestioneUtenti.jsx";
 import GestioneReparti from "./GestioneReparti.jsx";
 import Macchine from "./Macchine.jsx";
+import Agenda from "./Agenda.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
 
 const PRIORITA = ["bassa", "normale", "alta", "urgente"];
@@ -79,7 +80,7 @@ export default function Dashboard({ onLogout }) {
   // se ho appena creato un reparto o aggiunto un utente dai pannelli admin,
   // devo ritrovarmeli qui senza dover ricaricare la pagina.
   useEffect(() => {
-    if (vista !== "lavori" && vista !== "macchine") return;
+    if (vista !== "lavori" && vista !== "macchine" && vista !== "agenda") return;
     api.utenti().then(setUtenti).catch((e) => setErrore(e.message));
     api.reparti().then(setReparti).catch((e) => setErrore(e.message));
   }, [vista]);
@@ -193,6 +194,8 @@ export default function Dashboard({ onLogout }) {
           <nav className="nav-viste">
             <button className={vista === "lavori" ? "nav-attiva" : ""}
                     onClick={() => setVista("lavori")}>Lavori</button>
+            <button className={vista === "agenda" ? "nav-attiva" : ""}
+                    onClick={() => setVista("agenda")}>Agenda</button>
             <button className={vista === "macchine" ? "nav-attiva" : ""}
                     onClick={() => setVista("macchine")}>Macchine</button>
             {sonoAdmin && (
@@ -236,6 +239,8 @@ export default function Dashboard({ onLogout }) {
         </div>
       ) : vista === "macchine" ? (
         <Macchine io={io} reparti={reparti} />
+      ) : vista === "agenda" ? (
+        <Agenda io={io} utenti={utenti} />
       ) : (
       <div className="corpo">
         <aside className="colonna-progetti">

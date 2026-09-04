@@ -13,11 +13,12 @@ from app.models.reparto import Reparto, membro_reparto
 from app.models.macchina import Macchina, SezioneMacchina
 from app.models.voce_macchina import VoceMacchina, TipoVoce, StatoVoce, voce_sezione
 from app.models.allegato import Allegato
+from app.models.impegno import Impegno
 
 __all__ = [
     "Utente", "Progetto", "Lavoro",
     "StatoLavoro", "PrioritaLavoro", "assegnazione", "Commento", "Organizzazione", "SottoAttivita",
     "Reparto", "membro_reparto",
     "Macchina", "SezioneMacchina", "VoceMacchina", "TipoVoce", "StatoVoce", "voce_sezione",
-    "Allegato",
+    "Allegato", "Impegno",
 ]

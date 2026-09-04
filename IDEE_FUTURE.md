@@ -99,24 +99,24 @@ non sepolte nella cronologia.
 **Lo "storico effettivo"** è la vista cronologica completa: tutto quello che è
 successo su quella macchina in ordine di tempo, senza filtri.
 
-### 4 · Agenda
+### 4 · Agenda — FATTA
 
-**Non è un calendario delle scadenze**, è diverso: Nik vuole **inserire i propri
-impegni con data e ora** per organizzarsi gli interventi. La scadenza di un
-lavoro dice "entro quando", l'impegno dice "martedì alle 9 sono da questo
-cliente". Serve quindi un'entità con l'orario, perché le scadenze sono solo data.
+Calendario mensile con due livelli sovrapposti: gli **impegni** propri (con data
+e ora, perché "martedì alle 9 sono da questo cliente" è diverso da "entro
+quando") e, sullo sfondo, le **scadenze** dei lavori. Interruttore fra "i miei",
+"il mio reparto" e "tutta l'azienda". Chi coordina può mettere un impegno
+nell'agenda di un collega. Collegamenti facoltativi a lavoro e macchina.
 
-Il calendario mostra due livelli sovrapposti: gli impegni propri e, sullo
-sfondo, le scadenze dei lavori che riguardano chi guarda. Con l'interruttore fra
-"i miei", "il mio reparto" e "tutta l'azienda" — ed è un'altra ragione per cui i
-reparti vengono prima.
+Le scadenze mostrate sono solo quelle dei lavori già visibili: l'agenda non è
+una scorciatoia per aggirare i reparti (c'è un test apposta).
 
-**Vincolo sui promemoria, da sapere prima di partire:** il piano gratuito di
-Render addormenta il servizio dopo 15 minuti e non offre lavori programmati, per
-cui un promemoria a orario non parte in modo affidabile. Tre strade: calcolare
-cosa è in arrivo all'apertura dell'app (gratis, ma avvisa solo quando apri);
-una GitHub Action schedulata che chiama un endpoint che manda le email (gratis,
-e le Actions ci sono già per i test); oppure il piano a pagamento.
+**Promemoria — resta da fare la parte che avvisa davvero.** Oggi c'è il blocco
+"i tuoi prossimi 7 giorni" all'apertura dell'agenda, che funziona senza
+infrastruttura, e il campo `promemoria_minuti` è già salvato sull'impegno.
+Manca l'invio vero, che richiede qualcosa di sempre acceso: il piano gratuito di
+Render addormenta il servizio dopo 15 minuti e non offre lavori programmati.
+Due strade: una **GitHub Action schedulata** che chiama un endpoint che manda le
+email (gratis, e le Actions ci sono già per i test), oppure il piano a pagamento.
 
 ### 5 · Notifiche in-app
 

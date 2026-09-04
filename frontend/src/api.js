@@ -71,6 +71,13 @@ export const api = {
   creaSotto: (lavoroId, testo) => richiesta("POST", `/lavori/${lavoroId}/sotto-attivita`, { testo }),
   spuntaSotto: (sottoId, completata) => richiesta("PATCH", `/sotto-attivita/${sottoId}`, { completata }),
   eliminaSotto: (sottoId) => richiesta("DELETE", `/sotto-attivita/${sottoId}`),
+  // --- Agenda (impegni con data e ora + scadenze in sovrapposizione) ---
+  agenda:       (dal, al, ambito) => richiesta("GET", `/agenda?dal=${dal}&al=${al}&ambito=${ambito}`),
+  prossimiImpegni: (giorni = 7) => richiesta("GET", `/agenda/prossimi?giorni=${giorni}`),
+  creaImpegno:  (dati) => richiesta("POST", "/agenda", dati),
+  modificaImpegno: (id, dati) => richiesta("PATCH", `/agenda/${id}`, dati),
+  eliminaImpegno: (id) => richiesta("DELETE", `/agenda/${id}`),
+
   // --- Scheda macchina (storico dell'impianto) ---
   macchine:     () => richiesta("GET", "/macchine"),
   macchina:     (id) => richiesta("GET", `/macchine/${id}`),
