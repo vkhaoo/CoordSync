@@ -187,10 +187,12 @@ ricerca unica che attraversi progetti, macchine e agenda insieme.
   molti-a-molti con il ruolo per azienda, più il concetto di "azienda attiva"
   nel token. Cambio strutturale, non un ritocco. Alternativa già adottata: due
   account separati.
-- **Dark mode.** Tocca ogni colore. Le variabili CSS sono già pronte in `:root`,
-  servirebbe un set alternativo più un interruttore che salva la preferenza.
-  Nota: oggi la pagina dichiara `color-scheme: light`; quando arriverà il tema
-  scuro vero quel valore diventa `light dark`.
+- ~~**Dark mode.**~~ FATTO: interruttore nel menu del proprio nome, preferenza
+  salvata in questo dispositivo (sul telefono lo si può volere scuro e sul fisso
+  no). Il tema si applica prima che la pagina venga dipinta, così non c'è il
+  lampo di bianco al caricamento. Resta valida la protezione dal "tema scuro
+  forzato" del browser: con il sistema in scuro l'app parte comunque chiara, e
+  passa a scuro solo se lo si chiede.
 - **Chat in tempo reale.** Richiede websocket. Rimandata: i commenti attaccati
   al singolo lavoro coordinano meglio, perché la conversazione resta legata al
   lavoro.

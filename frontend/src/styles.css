@@ -555,3 +555,115 @@ input, select, textarea { font-family: var(--sans); }
 .riga-profilo { margin: 0 0 0.6rem; font-size: 0.88rem; line-height: 1.5; }
 .riga-profilo.tenue { color: var(--tenue); font-size: 0.8rem; }
 .corpo-profilo .vuoto { margin: 0 0 0.8rem; line-height: 1.5; }
+
+/* ============================================================
+   TEMA SCURO
+   Si accende con data-tema="scuro" sull'elemento radice. Il chiaro
+   resta quello di prima: qui si ridefiniscono solo le variabili e i
+   pochi colori scritti a mano (i chip colorati di stato e priorita').
+   Stessa idea di sempre — acciaio e ambra — ma con i valori invertiti.
+   ============================================================ */
+:root[data-tema="scuro"] {
+  color-scheme: dark;   /* cosi' anche calendari, menu e barre native vanno scuri */
+
+  --fondo: #121922;
+  --fondo-2: #0d131a;
+  --pannello: #1a222c;
+  --pannello-2: #212b36;
+
+  --inchiostro: #eef3f8;
+  --testo: #d5dee8;
+  --tenue: #97a3b1;
+  --tenue-2: #788593;
+
+  --linea: #2c3846;
+  --linea-2: #232d38;
+
+  /* Su fondo scuro i colori di stato vanno alzati, altrimenti spariscono. */
+  --st-dafare: #8b97a5;
+  --st-incorso: #5aa2e8;
+  --st-attesa: #e0a445;
+  --st-fatto: #4cbd76;
+  --errore: #e8776a;
+  --ok: #5cc47f;
+
+  --ombra-1: 0 1px 2px rgba(0, 0, 0, .3);
+  --ombra-2: 0 3px 10px rgba(0, 0, 0, .38);
+  --ombra-3: 0 12px 34px rgba(0, 0, 0, .5);
+}
+
+:root[data-tema="scuro"] body {
+  background: radial-gradient(1200px 600px at 80% -10%, #1a2431 0%, transparent 60%), var(--fondo);
+}
+
+/* I pulsanti pieni: sul pannello scuro l'acciaio si confonderebbe col fondo. */
+:root[data-tema="scuro"] .principale,
+:root[data-tema="scuro"] .mini,
+:root[data-tema="scuro"] .voce.attiva,
+:root[data-tema="scuro"] .sez.attiva,
+:root[data-tema="scuro"] .tabs button.attivo { background: #33506e; border-color: #33506e; }
+:root[data-tema="scuro"] .principale:hover,
+:root[data-tema="scuro"] .mini:hover { background: #3d6084; }
+:root[data-tema="scuro"] .mini.annulla { background: #384451; color: #d5dee8; }
+
+/* Chip di priorita' */
+:root[data-tema="scuro"] .prio-bassa { background: #2a323b; color: #a3aeba; }
+:root[data-tema="scuro"] .prio-normale { background: #1d3348; color: #8dc4f2; }
+:root[data-tema="scuro"] .prio-alta { background: #3d2f1a; color: #e6b467; }
+:root[data-tema="scuro"] .prio-urgente { background: #3f2422; color: #f0938a; }
+
+/* Menu di stato */
+:root[data-tema="scuro"] .stato-select.stato-da_fare { background: #2a323b; color: #a3aeba; }
+:root[data-tema="scuro"] .stato-select.stato-in_corso { background: #1d3348; color: #8dc4f2; }
+:root[data-tema="scuro"] .stato-select.stato-in_attesa { background: #3d2f1a; color: #e6b467; }
+:root[data-tema="scuro"] .stato-select.stato-fatto { background: #1f3626; color: #86d3a2; }
+
+/* Card lavoro: le velature colorate a sinistra */
+:root[data-tema="scuro"] .lavoro.card-in_corso { background: linear-gradient(90deg, #1b2833, var(--pannello) 12%); }
+:root[data-tema="scuro"] .lavoro.card-in_attesa { background: linear-gradient(90deg, #2a2519, var(--pannello) 12%); }
+:root[data-tema="scuro"] .lavoro.card-fatto { background: linear-gradient(90deg, #1a2820, var(--pannello) 12%); }
+:root[data-tema="scuro"] .scadenza-card { background: linear-gradient(90deg, #2a2519, var(--pannello) 12%); }
+
+/* Scadenze, tipi di voce, blocchi in evidenza */
+:root[data-tema="scuro"] .scad-vicina { background: #3d2f1a; border-color: #5c481f; color: #e6b467; }
+:root[data-tema="scuro"] .scad-ritardo { background: #3f2422; border-color: #613330; color: #f0938a; }
+:root[data-tema="scuro"] .tipo-badge-lavoro { background: #1d3348; color: #8dc4f2; }
+:root[data-tema="scuro"] .tipo-badge-modifica { background: #3d2f1a; color: #e6b467; }
+:root[data-tema="scuro"] .tipo-badge-analisi { background: #2d2545; color: #b9a6e8; }
+:root[data-tema="scuro"] .tipo-badge-informazione { background: #1f3626; color: #86d3a2; }
+:root[data-tema="scuro"] .voce-macchina.tipo-analisi { border-left-color: #9b86d6; }
+:root[data-tema="scuro"] .completamento-info { background: #1f3626; color: #86d3a2; }
+:root[data-tema="scuro"] .blocco-info { background: #2a2519; border-color: #4a3c20; }
+:root[data-tema="scuro"] .blocco-info.prossimi { background: #1b2833; border-color: #2c4257; }
+:root[data-tema="scuro"] .banner-verifica { background: #2a2519; border-color: #4a3c20; color: #e6b467; }
+
+/* Calendario e avvisi */
+:root[data-tema="scuro"] .cella.fuori { background: #161d25; }
+:root[data-tema="scuro"] .pillola.impegno { background: #1d3348; color: #8dc4f2; }
+:root[data-tema="scuro"] .pillola.scadenza-pillola { background: #3d2f1a; color: #e6b467; }
+:root[data-tema="scuro"] .avviso.non-letto { background: #1b2833; }
+:root[data-tema="scuro"] .chip-x { background: #384451; color: #cdd6e0; }
+:root[data-tema="scuro"] .tabella-utenti th { background: var(--pannello-2); }
+
+/* Interruttore del tema, nel menu del profilo */
+.riga-tema { display: flex; align-items: center; justify-content: space-between;
+  gap: 0.6rem; margin-bottom: 0.8rem; padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--linea-2); }
+.bottone-tema { font-family: var(--mono); font-size: 0.72rem; padding: 5px 11px;
+  border-radius: 20px; border: 1px solid var(--linea); background: var(--pannello-2);
+  color: var(--testo); cursor: pointer; transition: all .12s ease; }
+.bottone-tema:hover { border-color: var(--acciaio-600); }
+
+/* Acciaio usato come colore del TESTO: su fondo scuro sparirebbe.
+   Non ridefinisco la variabile perche' serve ancora scura alla barra in alto
+   e ai pulsanti pieni; sistemo i punti in cui fa da inchiostro. */
+:root[data-tema="scuro"] .marchio,
+:root[data-tema="scuro"] .titolo-progetto,
+:root[data-tema="scuro"] .commento-autore,
+:root[data-tema="scuro"] .nome-reparto { color: var(--inchiostro); }
+:root[data-tema="scuro"] .chip { color: var(--testo); }
+:root[data-tema="scuro"] .ora { color: #8dc4f2; }
+:root[data-tema="scuro"] .azione-icona:hover,
+:root[data-tema="scuro"] .checklist-toggle:hover,
+:root[data-tema="scuro"] .sez:hover,
+:root[data-tema="scuro"] .tabs button:hover { color: var(--inchiostro); }

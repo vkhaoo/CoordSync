@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "./api.js";
+import { temaCorrente, impostaTema } from "./tema.js";
 
 // Il menu del proprio account, aperto cliccando il nome nella barra.
 // Sta qui e non nel pannello Utenti (che e' solo per l'admin) perche'
 // scaricare i propri dati e' un diritto di chiunque, non un privilegio.
 export default function MioProfilo({ io }) {
   const [aperto, setAperto] = useState(false);
+  const [tema, setTema] = useState(temaCorrente);
   const [errore, setErrore] = useState(null);
   const [scaricando, setScaricando] = useState(false);
   const contenitore = useRef(null);
@@ -54,6 +56,13 @@ export default function MioProfilo({ io }) {
             <span className="titolo-colonna">Il tuo account</span>
           </div>
           <div className="corpo-profilo">
+            <div className="riga-tema">
+              <span className="tenue">Aspetto</span>
+              <button className="bottone-tema"
+                      onClick={() => setTema(impostaTema(tema === "scuro" ? "chiaro" : "scuro"))}>
+                {tema === "scuro" ? "🌙 Scuro" : "☀️ Chiaro"}
+              </button>
+            </div>
             <p className="riga-profilo"><strong>{io.nome}</strong><br />{io.email}</p>
             {io.reparti && io.reparti.length > 0 && (
               <p className="riga-profilo tenue">

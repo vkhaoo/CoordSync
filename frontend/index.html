@@ -5,8 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Dichiara che la pagina gestisce da se' i propri colori: senza questo i
          browser con "tema scuro forzato" invertono l'app (campi neri, testo
-         illeggibile). Qui prima del CSS, cosi' vale gia' alla prima pennellata. -->
-    <meta name="color-scheme" content="light" />
+         illeggibile). Ora i temi sono due davvero, quindi "light dark": chi
+         decide resta comunque il CSS, che parte da chiaro e passa a scuro solo
+         quando l'utente lo chiede. -->
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      // Applica il tema salvato PRIMA che la pagina venga dipinta: se lo
+      // facesse React, chi usa lo scuro vedrebbe un lampo di bianco a ogni
+      // caricamento. Tre righe qui valgono piu' di qualunque animazione.
+      try {
+        var tema = localStorage.getItem("coordsync_tema");
+        if (tema === "scuro") document.documentElement.dataset.tema = "scuro";
+      } catch (e) { /* se il browser blocca la memoria locale, resta il chiaro */ }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
