@@ -1,14 +1,13 @@
 """
-Punto d'ingresso dell'applicazione FastAPI.
+Punto d'ingresso dell'applicazione FastAPI: mette insieme i pezzi.
 
-Per ora fa due cose:
-1. Crea le tabelle nel database all'avvio (dai modelli che abbiamo definito).
-2. Espone un endpoint /health per verificare che tutto giri.
-
-Gli endpoint veri (progetti, lavori, utenti) li agganciamo al prossimo passo.
+Qui si accendono anche i log e gli avvisi sugli errori (vedi osservabilita.py),
+prima di tutto il resto: se qualcosa esplode durante l'avvio, si vuole saperlo.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.osservabilita import prepara_log, prepara_sentry, traccia_richieste
 
 from app.database import Base, engine
 from app import models  # noqa: F401  (importa i modelli cosi' vengono registrati)
@@ -29,7 +28,14 @@ from app.routers import notifiche_app
 # Questo tiene locale e produzione allineati e permette di evolvere le tabelle
 # senza perdere i dati.
 
+# Prima di costruire l'app: log leggibili e avvisi sugli errori.
+prepara_log()
+prepara_sentry()   # senza SENTRY_DSN non fa niente e non si lamenta
+
 app = FastAPI(title="CoordSync", version="0.1.0")
+
+# Una riga di log per richiesta: gli errori sempre, quelle riuscite solo se lente.
+app.middleware("http")(traccia_richieste)
 
 # CORS: permette al frontend (server di sviluppo) di chiamare questa API.
 # In produzione, qui andra' l'indirizzo vero del sito, non localhost.

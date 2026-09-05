@@ -10,3 +10,4 @@ pwdlib[bcrypt]==0.2.1
 pyjwt==2.9.0
 psycopg2-binary==2.9.9
 alembic==1.13.2
+sentry-sdk[fastapi]==2.14.0

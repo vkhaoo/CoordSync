@@ -6,7 +6,7 @@ __pycache__/
 # Variabili d'ambiente (segreti: NON vanno mai su git)
 .env
 
-# Database locale
+# Database locale (quello dei test sta fuori dal progetto, vedi conftest.py)
 *.db
 *.sqlite3
 

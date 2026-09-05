@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     # es. il reset password dove digita la nuova password).
     frontend_url: str = "http://localhost:5173"
 
+    # --- Sapere quando l'app si rompe ---
+    # Chiave di Sentry. VUOTA = nessun avviso spedito a nessuno: e' cosi' che
+    # deve restare in locale e nei test.
+    sentry_dsn: str = ""
+    # Serve solo a distinguere gli errori veri da quelli delle prove.
+    ambiente: str = "sviluppo"
+
     # Chiave per far partire l'invio dei promemoria dall'esterno (es. una
     # GitHub Action schedulata). Finche' resta VUOTA l'endpoint rifiuta di
     # funzionare: meglio inerte che aperto a chiunque.
