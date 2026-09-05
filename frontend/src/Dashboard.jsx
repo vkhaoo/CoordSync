@@ -5,6 +5,7 @@ import GestioneUtenti from "./GestioneUtenti.jsx";
 import GestioneReparti from "./GestioneReparti.jsx";
 import Macchine from "./Macchine.jsx";
 import Agenda from "./Agenda.jsx";
+import SelettoreReparti from "./SelettoreReparti.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
 
 const PRIORITA = ["bassa", "normale", "alta", "urgente"];
@@ -97,12 +98,12 @@ export default function Dashboard({ onLogout }) {
     } catch (err) { setErrore(err.message); }
   }
 
-  async function cambiaReparto(progettoId, valore) {
+  async function cambiaReparti(progettoId, ids) {
     setErrore(null);
     try {
-      // "" dal menu significa "nessun reparto": progetto visibile a tutta l'azienda.
-      await api.aggiornaProgetto(progettoId, { reparto_id: valore === "" ? null : Number(valore) });
-      // Ricarico: cambiando reparto il progetto potrebbe non essere più mio da vedere.
+      // Lista vuota = nessun reparto: progetto visibile a tutta l'azienda.
+      await api.aggiornaProgetto(progettoId, { reparti_ids: ids });
+      // Ricarico: togliendomi un reparto il progetto potrebbe non essere più mio da vedere.
       await caricaProgetti();
     } catch (err) { setErrore(err.message); }
   }
@@ -295,25 +296,11 @@ export default function Dashboard({ onLogout }) {
                   </div>
                 )}
 
-                {/* Reparto: decide chi vede questo progetto */}
-                {reparti.length > 0 && (
-                  <div className="riga-reparto">
-                    {puoCreare ? (
-                      <select className="reparto-select"
-                              value={progettoCorrente.reparto_id ?? ""}
-                              title="Chi vede questo progetto"
-                              onChange={(e) => cambiaReparto(progettoCorrente.id, e.target.value)}>
-                        <option value="">Tutta l'azienda</option>
-                        {reparti.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-                      </select>
-                    ) : (
-                      <span className="reparto-chip">
-                        {reparti.find((r) => r.id === progettoCorrente.reparto_id)?.nome
-                          ?? "Tutta l'azienda"}
-                      </span>
-                    )}
-                  </div>
-                )}
+                {/* Reparti: decidono chi vede questo progetto (anche piu' d'uno) */}
+                <SelettoreReparti reparti={reparti}
+                                  selezionati={progettoCorrente.reparti}
+                                  modificabile={puoCreare}
+                                  onCambia={(ids) => cambiaReparti(progettoCorrente.id, ids)} />
 
                 {/* Avanzamento: quanti lavori "fatti" su totale */}
                 {lavori.length > 0 && (() => {

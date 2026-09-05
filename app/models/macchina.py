@@ -27,9 +27,10 @@ class Macchina(Base):
     creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
-    # Stesso meccanismo dei progetti: NULL = macchina visibile a tutta l'azienda.
-    reparto_id = Column(Integer, ForeignKey("reparti.id", ondelete="SET NULL"),
-                        nullable=True, index=True)
+    # Stesso meccanismo dei progetti: piu' reparti possibili, e nessun reparto
+    # significa macchina visibile a tutta l'azienda.
+    reparti = relationship("Reparto", secondary="macchine_reparto",
+                           back_populates="macchine")
 
     sezioni = relationship("SezioneMacchina", back_populates="macchina",
                            cascade="all, delete-orphan",

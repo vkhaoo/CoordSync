@@ -55,7 +55,7 @@ def test_macchine_seguono_il_reparto(client):
     dino = _crea_utente(client, a, "Dino", "dino@a.it", "caposquadra")
     reparto = client.post("/reparti", json={"nome": "Automazione"}, headers=a).json()
 
-    riservata = _macchina(client, a, nome="Riservata", reparto_id=reparto["id"])
+    riservata = _macchina(client, a, nome="Riservata", reparti_ids=[reparto["id"]])
     _macchina(client, a, nome="Generale")
 
     # Dino non e' nel reparto: vede solo quella senza reparto.
@@ -187,7 +187,7 @@ def test_voci_invisibili_fuori_dal_reparto(client):
     a = registra(client, "Azienda A", "Marco", "marco@a.it")
     dino = _crea_utente(client, a, "Dino", "dino@a.it", "caposquadra")
     reparto = client.post("/reparti", json={"nome": "Automazione"}, headers=a).json()
-    m = _macchina(client, a, nome="Riservata", reparto_id=reparto["id"])
+    m = _macchina(client, a, nome="Riservata", reparti_ids=[reparto["id"]])
     v = client.post(f"/macchine/{m['id']}/voci", json={"tipo": "modifica", "titolo": "X"},
                     headers=a).json()
 

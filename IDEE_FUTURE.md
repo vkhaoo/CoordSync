@@ -25,11 +25,13 @@ per reparti.
 
 **L'impianto:**
 - Nuova entità `Reparto` (appartiene all'organizzazione).
-- Tabella ponte utente ↔ reparto: **un utente può stare in più reparti**
-  (deciso: cambiare più tardi un'assunzione del genere è un refactor pesante,
-  vedi la lezione del multi-azienda più sotto).
-- Riferimento facoltativo al reparto sul progetto. Senza reparto = progetto
-  "generale", visibile a tutta l'azienda.
+- **Tutti e tre i legami col reparto sono molti-a-molti**: un utente può stare
+  in più reparti, e un progetto o una macchina possono appartenere a più
+  reparti (una linea seguita sia da Automazione sia da Digitale non è di uno
+  solo dei due). Senza alcun reparto = "generale", visibile a tutta l'azienda.
+- Nelle query si usa `.any()` (un EXISTS) e non una join: con i legami
+  multipli una join restituirebbe lo stesso progetto una volta per reparto in
+  comune.
 
 **La regola di visibilità:** l'admin vede tutta l'azienda. Gli altri vedono i
 progetti dei propri reparti, più quelli generali, più quelli dove sono

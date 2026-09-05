@@ -189,7 +189,7 @@ def test_l_agenda_non_aggira_i_reparti(client):
     a = registra(client, "Azienda A", "Marco", "marco@a.it")
     dino = _crea_utente(client, a, "Dino", "dino@a.it", "caposquadra")
     rep = client.post("/reparti", json={"nome": "Riservato"}, headers=a).json()
-    p = client.post("/progetti", json={"nome": "Segreto", "reparto_id": rep["id"]},
+    p = client.post("/progetti", json={"nome": "Segreto", "reparti_ids": [rep["id"]]},
                     headers=a).json()
     client.post("/lavori", json={"titolo": "Non deve vedersi", "progetto_id": p["id"],
                                  "data_scadenza": str(DOMANI)}, headers=a)

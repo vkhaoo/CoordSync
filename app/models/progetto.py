@@ -21,14 +21,11 @@ class Progetto(Base):
     organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
     organizzazione = relationship("Organizzazione", back_populates="progetti")
 
-    # Reparto di appartenenza. NULL = progetto "generale", visibile a tutta
-    # l'azienda: e' anche lo stato in cui restano i progetti gia' esistenti.
-    # index=True: ogni elenco progetti filtra per reparto (l'indice esiste gia'
-    # dalla migrazione dei reparti; qui il modello lo dichiara, cosi' Alembic
-    # non lo vede come "di troppo" e non prova a eliminarlo).
-    reparto_id = Column(Integer, ForeignKey("reparti.id", ondelete="SET NULL"),
-                        nullable=True, index=True)
-    reparto = relationship("Reparto", back_populates="progetti")
+    # Reparti a cui il progetto appartiene: puo' essere piu' d'uno (una linea
+    # condivisa fra due reparti). NESSUN reparto = progetto "generale", visibile
+    # a tutta l'azienda, ed e' lo stato in cui restano i progetti esistenti.
+    reparti = relationship("Reparto", secondary="progetti_reparto",
+                           back_populates="progetti")
 
     # Collegamento FACOLTATIVO a una macchina: serve a chi vuole ritrovare nella
     # scheda dell'impianto anche le commesse che l'hanno toccato. Nessun obbligo:

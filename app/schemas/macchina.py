@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.models.voce_macchina import TipoVoce, StatoVoce
 from app.schemas.allegato import AllegatoCreate, AllegatoRead   # noqa: F401 (riesportati)
+from app.schemas.reparto import RepartoRead
 
 
 # ---------- SEZIONI ----------
@@ -76,13 +77,13 @@ class VoceRead(BaseModel):
 class MacchinaCreate(BaseModel):
     nome: str
     descrizione: str | None = None   # modello, matricola, note d'impianto
-    reparto_id: int | None = None    # None = visibile a tutta l'azienda
+    reparti_ids: list[int] = []      # vuota = visibile a tutta l'azienda
 
 
 class MacchinaUpdate(BaseModel):
     nome: str | None = None
     descrizione: str | None = None
-    reparto_id: int | None = None
+    reparti_ids: list[int] | None = None
 
 
 class MacchinaRead(BaseModel):
@@ -90,7 +91,7 @@ class MacchinaRead(BaseModel):
     nome: str
     descrizione: str | None = None
     organizzazione_id: int
-    reparto_id: int | None = None
+    reparti: list[RepartoRead] = []
     creato_il: datetime
     model_config = ConfigDict(from_attributes=True)
 

@@ -9,7 +9,7 @@ from app.schemas.progetto import ProgettoCreate, ProgettoRead, ProgettoUpdate
 from app.models.utente import RuoloUtente
 from app.dependencies import get_current_user, richiedi_ruolo
 from app.visibilita import (progetti_visibili, progetto_visibile,
-                            reparto_assegnabile, macchina_visibile)
+                            reparti_assegnabili, carica_reparti, macchina_visibile)
 from app.models.allegato import Allegato
 from app.schemas.allegato import AllegatoCreate, AllegatoRead
 
@@ -31,8 +31,8 @@ def crea_progetto(
     db: Session = Depends(get_db),
     current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra)),
 ):
-    # Non si puo' piazzare un progetto in un reparto che non e' mio.
-    if not reparto_assegnabile(db, current, dati.reparto_id):
+    # Non si puo' piazzare un progetto in reparti che non sono miei.
+    if not reparti_assegnabili(db, current, dati.reparti_ids):
         raise HTTPException(status_code=404, detail="Reparto non trovato")
     _macchina_collegabile(db, current, {"macchina_id": dati.macchina_id})
 
@@ -42,9 +42,9 @@ def crea_progetto(
         descrizione=dati.descrizione,
         link_documento=dati.link_documento,
         organizzazione_id=current.organizzazione_id,
-        reparto_id=dati.reparto_id,
         macchina_id=dati.macchina_id,
     )
+    progetto.reparti = carica_reparti(db, current, dati.reparti_ids)
     db.add(progetto)
     db.commit()
     db.refresh(progetto)
@@ -64,13 +64,16 @@ def modifica_progetto(
 
     dati_forniti = dati.model_dump(exclude_unset=True)
     # Spostare un progetto in un altro reparto: vale la stessa regola della creazione.
-    if "reparto_id" in dati_forniti and not reparto_assegnabile(db, current, dati_forniti["reparto_id"]):
+    reparti_ids = dati_forniti.pop("reparti_ids", None)
+    if reparti_ids is not None and not reparti_assegnabili(db, current, reparti_ids):
         raise HTTPException(status_code=404, detail="Reparto non trovato")
     _macchina_collegabile(db, current, dati_forniti)
 
     # Aggiorno solo i campi effettivamente forniti (gli altri restano invariati).
     for campo, valore in dati_forniti.items():
         setattr(progetto, campo, valore)
+    if reparti_ids is not None:
+        progetto.reparti = carica_reparti(db, current, reparti_ids)
     db.commit()
     db.refresh(progetto)
     return progetto

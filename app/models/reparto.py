@@ -2,8 +2,12 @@
 Modello Reparto: un sotto-gruppo dentro l'azienda (es. Digitale, Automazione).
 
 E' il SECONDO livello di isolamento, sotto quello dell'organizzazione: serve a
-non far vedere a un reparto i progetti di un altro. Un utente puo' appartenere
-a piu' reparti (un capo puo' seguirne due), quindi il legame e' molti-a-molti.
+non far vedere a un reparto i progetti di un altro.
+
+Tutti e tre i legami col reparto sono molti-a-molti, perche' nella realta' le
+cose si sovrappongono: una persona puo' seguire piu' reparti, e un progetto o
+una macchina possono riguardarne piu' d'uno (una linea condivisa fra
+Automazione e Digitale non appartiene a uno solo dei due).
 """
 from datetime import datetime, timezone
 
@@ -20,6 +24,22 @@ membro_reparto = Table(
     Column("utente_id", Integer, ForeignKey("utenti.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# Progetto <-> reparto. Nessuna riga = progetto "generale", visto da tutta l'azienda.
+progetto_reparto = Table(
+    "progetti_reparto",
+    Base.metadata,
+    Column("progetto_id", Integer, ForeignKey("progetti.id", ondelete="CASCADE"), primary_key=True),
+    Column("reparto_id", Integer, ForeignKey("reparti.id", ondelete="CASCADE"), primary_key=True),
+)
+
+# Macchina <-> reparto, stessa logica.
+macchina_reparto = Table(
+    "macchine_reparto",
+    Base.metadata,
+    Column("macchina_id", Integer, ForeignKey("macchine.id", ondelete="CASCADE"), primary_key=True),
+    Column("reparto_id", Integer, ForeignKey("reparti.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class Reparto(Base):
     __tablename__ = "reparti"
@@ -32,6 +52,8 @@ class Reparto(Base):
     organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
 
     membri = relationship("Utente", secondary=membro_reparto, back_populates="reparti")
-    # Se elimino il reparto i progetti NON spariscono: tornano "generali"
-    # (reparto_id a NULL). Cancellare un reparto non deve distruggere lavoro vero.
-    progetti = relationship("Progetto", back_populates="reparto")
+    # Eliminando il reparto spariscono solo le righe delle tabelle-ponte: progetti
+    # e macchine restano, e tornano "generali". Cancellare un reparto non deve
+    # distruggere lavoro vero.
+    progetti = relationship("Progetto", secondary=progetto_reparto, back_populates="reparti")
+    macchine = relationship("Macchina", secondary=macchina_reparto, back_populates="reparti")

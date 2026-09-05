@@ -314,7 +314,10 @@ input, select, textarea { font-family: var(--sans); }
 .ruolo-mio { color: var(--tenue); font-style: italic; font-family: var(--mono); font-size: 0.82rem; }
 
 /* Reparti */
-.riga-reparto { margin-bottom: 0.7rem; }
+.riga-reparto { margin-bottom: 0.7rem; display: flex; flex-wrap: wrap;
+  gap: 0.35rem; align-items: center; }
+.etichetta-reparti { font-family: var(--mono); font-size: 0.66rem; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--tenue-2); margin-right: 0.2rem; }
 .reparto-select, .reparto-chip {
   font-family: var(--mono); font-size: 0.72rem; padding: 3px 8px; border-radius: 4px;
   background: var(--pannello-2); border: 1px solid var(--linea); color: var(--tenue);

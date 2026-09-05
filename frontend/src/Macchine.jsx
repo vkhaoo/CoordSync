@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "./api.js";
+import SelettoreReparti from "./SelettoreReparti.jsx";
 
 // Etichette dei tipi di voce. "informazione" e' a parte: non e' un fatto
 // avvenuto in una data, e' sapere di riferimento che resta valido.
@@ -209,24 +210,13 @@ export default function Macchine({ io, reparti }) {
                 <p className="sottotitolo">{scheda.descrizione}</p>
               )}
 
-              {reparti.length > 0 && (
-                <div className="riga-reparto">
-                  {gestisco ? (
-                    <select className="reparto-select" value={scheda.reparto_id ?? ""}
-                            title="Chi vede questa macchina"
-                            onChange={(e) => azione(() => api.modificaMacchina(scheda.id, {
-                              reparto_id: e.target.value === "" ? null : Number(e.target.value),
-                            }))}>
-                      <option value="">Tutta l'azienda</option>
-                      {reparti.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-                    </select>
-                  ) : (
-                    <span className="reparto-chip">
-                      {reparti.find((r) => r.id === scheda.reparto_id)?.nome ?? "Tutta l'azienda"}
-                    </span>
-                  )}
-                </div>
-              )}
+              <SelettoreReparti reparti={reparti}
+                                selezionati={scheda.reparti}
+                                modificabile={gestisco}
+                                onCambia={(ids) => azione(async () => {
+                                  await api.modificaMacchina(scheda.id, { reparti_ids: ids });
+                                  await caricaMacchine();   // potrei non vederla piu'
+                                })} />
 
               <Allegati allegati={scheda.allegati}
                         onAggiungi={(d) => azione(() => api.allegaMacchina(scheda.id, d))}

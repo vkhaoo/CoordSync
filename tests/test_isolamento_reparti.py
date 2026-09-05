@@ -41,9 +41,9 @@ def _scenario(client):
     client.post(f"/reparti/{digitale['id']}/membri",
                 json={"utente_id": _id_utente(client, admin, "dino@a.it")}, headers=admin)
 
-    p_auto = client.post("/progetti", json={"nome": "Quadro", "reparto_id": automazione["id"]},
+    p_auto = client.post("/progetti", json={"nome": "Quadro", "reparti_ids": [automazione["id"]]},
                          headers=admin).json()
-    p_digi = client.post("/progetti", json={"nome": "Sito", "reparto_id": digitale["id"]},
+    p_digi = client.post("/progetti", json={"nome": "Sito", "reparti_ids": [digitale["id"]]},
                          headers=admin).json()
     p_gen = client.post("/progetti", json={"nome": "Generale"}, headers=admin).json()
 
@@ -91,16 +91,16 @@ def test_non_posso_toccare_il_progetto_di_un_altro_reparto(client):
 
 def test_non_posso_mettere_un_progetto_in_un_reparto_non_mio(client):
     s = _scenario(client)
-    r = client.post("/progetti", json={"nome": "Furbata", "reparto_id": s["digitale"]["id"]},
+    r = client.post("/progetti", json={"nome": "Furbata", "reparti_ids": [s["digitale"]["id"]]},
                     headers=s["anna"])
     assert r.status_code == 404
 
 
 def test_admin_puo_usare_qualsiasi_reparto(client):
     s = _scenario(client)
-    r = client.post("/progetti", json={"nome": "Nuovo", "reparto_id": s["digitale"]["id"]},
+    r = client.post("/progetti", json={"nome": "Nuovo", "reparti_ids": [s["digitale"]["id"]]},
                     headers=s["admin"])
-    assert r.status_code == 201 and r.json()["reparto_id"] == s["digitale"]["id"]
+    assert r.status_code == 201 and [x["id"] for x in r.json()["reparti"]] == [s["digitale"]["id"]]
 
 
 # ---------- LAVORI, COMMENTI, CHECKLIST ----------
@@ -185,7 +185,7 @@ def test_eliminare_un_reparto_non_cancella_i_progetti(client):
     # Il progetto resta, ed e' tornato "generale" (senza reparto).
     progetti = client.get("/progetti", headers=s["admin"]).json()
     quadro = [p for p in progetti if p["nome"] == "Quadro"]
-    assert len(quadro) == 1 and quadro[0]["reparto_id"] is None
+    assert len(quadro) == 1 and quadro[0]["reparti"] == []
 
 
 def test_reparti_isolati_fra_aziende_diverse(client):
@@ -211,3 +211,101 @@ def test_non_posso_mettere_nel_reparto_uno_di_un_altra_azienda(client):
     r = client.post(f"/reparti/{s['automazione']['id']}/membri",
                     json={"utente_id": suo["id"]}, headers=s["admin"])
     assert r.status_code == 404
+
+
+# ---------- PROGETTI E MACCHINE IN PIU' REPARTI ----------
+
+def test_progetto_condiviso_fra_due_reparti_si_vede_da_entrambi(client):
+    """Una linea seguita sia da Automazione sia da Digitale non appartiene a
+    uno solo dei due: la vedono tutti e due."""
+    s = _scenario(client)
+    condiviso = client.post("/progetti", json={
+        "nome": "Linea condivisa",
+        "reparti_ids": [s["automazione"]["id"], s["digitale"]["id"]],
+    }, headers=s["admin"])
+    assert condiviso.status_code == 201
+    assert len(condiviso.json()["reparti"]) == 2
+
+    for chi in ("anna", "dino"):
+        nomi = [p["nome"] for p in client.get("/progetti", headers=s[chi]).json()]
+        assert "Linea condivisa" in nomi
+        # e compare UNA VOLTA SOLA, non una per reparto in comune
+        assert nomi.count("Linea condivisa") == 1
+
+
+def test_chi_e_in_entrambi_i_reparti_non_vede_doppioni(client):
+    s = _scenario(client)
+    # Anna entra anche in Digitale, poi creo un progetto in entrambi i reparti.
+    client.post(f"/reparti/{s['digitale']['id']}/membri",
+                json={"utente_id": _id_utente(client, s["admin"], "anna@a.it")}, headers=s["admin"])
+    client.post("/progetti", json={"nome": "Doppio",
+                                   "reparti_ids": [s["automazione"]["id"], s["digitale"]["id"]]},
+                headers=s["admin"])
+
+    nomi = [p["nome"] for p in client.get("/progetti", headers=s["anna"]).json()]
+    assert nomi.count("Doppio") == 1
+
+
+def test_aggiungere_e_togliere_reparti_a_un_progetto(client):
+    s = _scenario(client)
+    pid = s["p_auto"]["id"]
+
+    # aggiungo anche Digitale: ora lo vede pure Dino
+    r = client.patch(f"/progetti/{pid}", json={
+        "reparti_ids": [s["automazione"]["id"], s["digitale"]["id"]]}, headers=s["admin"])
+    assert r.status_code == 200 and len(r.json()["reparti"]) == 2
+    assert "Quadro" in {p["nome"] for p in client.get("/progetti", headers=s["dino"]).json()}
+
+    # lista vuota = torna generale, lo vedono tutti
+    r = client.patch(f"/progetti/{pid}", json={"reparti_ids": []}, headers=s["admin"])
+    assert r.json()["reparti"] == []
+    solo = _crea_utente(client, s["admin"], "Solo", "solo@a.it", "operatore")
+    assert "Quadro" in {p["nome"] for p in client.get("/progetti", headers=solo).json()}
+
+
+def test_basta_un_reparto_non_mio_per_rifiutare_tutto(client):
+    """Se nella lista c'e' anche un solo reparto che non e' mio, rifiuto:
+    non voglio accettare a meta' e lasciare il progetto dove non deve stare."""
+    s = _scenario(client)
+    r = client.post("/progetti", json={
+        "nome": "Meta e meta",
+        "reparti_ids": [s["automazione"]["id"], s["digitale"]["id"]],
+    }, headers=s["anna"])   # Anna e' solo in Automazione
+    assert r.status_code == 404
+    assert "Meta e meta" not in {p["nome"] for p in client.get("/progetti", headers=s["admin"]).json()}
+
+
+def test_macchina_condivisa_fra_due_reparti(client):
+    s = _scenario(client)
+    m = client.post("/macchine", json={
+        "nome": "Linea 3",
+        "reparti_ids": [s["automazione"]["id"], s["digitale"]["id"]],
+    }, headers=s["admin"])
+    assert m.status_code == 201 and len(m.json()["reparti"]) == 2
+
+    for chi in ("anna", "dino"):
+        nomi = [x["nome"] for x in client.get("/macchine", headers=s[chi]).json()]
+        assert nomi.count("Linea 3") == 1
+
+
+def test_reparto_di_un_altra_azienda_rifiutato(client):
+    s = _scenario(client)
+    altra = registra(client, "Azienda B", "Bruno", "bruno@b.it")
+    suo = client.post("/reparti", json={"nome": "Loro"}, headers=altra).json()
+    r = client.post("/progetti", json={"nome": "X", "reparti_ids": [suo["id"]]}, headers=s["admin"])
+    assert r.status_code == 404
+
+
+def test_eliminare_un_reparto_lo_toglie_solo_da_dove_serve(client):
+    """Il progetto condiviso resta, e conserva l'altro reparto."""
+    s = _scenario(client)
+    p = client.post("/progetti", json={
+        "nome": "Condiviso",
+        "reparti_ids": [s["automazione"]["id"], s["digitale"]["id"]],
+    }, headers=s["admin"]).json()
+
+    assert client.delete(f"/reparti/{s['digitale']['id']}", headers=s["admin"]).status_code == 204
+
+    rimasti = client.get("/progetti", headers=s["admin"]).json()
+    condiviso = [x for x in rimasti if x["nome"] == "Condiviso"][0]
+    assert [r["nome"] for r in condiviso["reparti"]] == ["Automazione"]

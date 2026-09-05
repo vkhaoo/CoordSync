@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.models.assegnazione import assegnazione
 from app.models.lavoro import Lavoro
 from app.models.progetto import Progetto
+from app.models.reparto import Reparto
 from app.models.utente import Utente, RuoloUtente
 
 
@@ -22,12 +23,15 @@ def condizione_progetti_visibili(db: Session, current: Utente):
     """La condizione SQL "questo progetto posso vederlo".
 
     - admin: tutta la sua azienda, senza distinzioni di reparto;
-    - tutti gli altri: i progetti dei propri reparti, piu' quelli SENZA reparto
-      (i "generali", visibili a tutta l'azienda), piu' quelli dove sono
-      assegnato a un lavoro.
+    - tutti gli altri: i progetti che condividono almeno un reparto con me,
+      piu' quelli SENZA alcun reparto (i "generali", visibili a tutta
+      l'azienda), piu' quelli dove sono assegnato a un lavoro.
 
     L'ultima clausola e' una rete di sicurezza voluta: se un caposquadra ti da'
     un lavoro su un progetto di un altro reparto, non ha senso nascondertelo.
+
+    Uso .any() (che diventa un EXISTS) e non una join: con i reparti multipli
+    una join restituirebbe lo stesso progetto una volta per reparto in comune.
     """
     if current.ruolo == RuoloUtente.admin:
         return true()
@@ -40,8 +44,8 @@ def condizione_progetti_visibili(db: Session, current: Utente):
         .scalar_subquery()
     )
     return or_(
-        Progetto.reparto_id.is_(None),
-        Progetto.reparto_id.in_(ids_reparti),
+        ~Progetto.reparti.any(),                              # nessun reparto = generale
+        Progetto.reparti.any(Reparto.id.in_(ids_reparti)),    # almeno uno in comune
         Progetto.id.in_(progetti_dove_sono_assegnato),
     )
 
@@ -90,8 +94,8 @@ def macchine_visibili(db: Session, current: Utente):
 
     ids_reparti = [r.id for r in current.reparti]
     return query.filter(or_(
-        Macchina.reparto_id.is_(None),
-        Macchina.reparto_id.in_(ids_reparti),
+        ~Macchina.reparti.any(),
+        Macchina.reparti.any(Reparto.id.in_(ids_reparti)),
     ))
 
 
@@ -101,26 +105,42 @@ def macchina_visibile(db: Session, current: Utente, macchina_id: int):
     return macchine_visibili(db, current).filter(Macchina.id == macchina_id).first()
 
 
-def reparto_assegnabile(db: Session, current: Utente, reparto_id: int | None) -> bool:
-    """Posso mettere un progetto in questo reparto?
+def reparti_assegnabili(db: Session, current: Utente, reparti_ids: list[int] | None) -> bool:
+    """Posso mettere un progetto o una macchina in QUESTI reparti?
 
-    Solo reparti della mia azienda. L'admin puo' usarli tutti; gli altri solo
-    quelli di cui fanno parte, altrimenti un caposquadra potrebbe spostare un
-    progetto in un reparto che non e' suo (e magari perderlo di vista).
-    None significa "progetto generale": sempre ammesso.
+    Devono essere tutti della mia azienda. L'admin puo' usarli tutti; gli altri
+    solo quelli di cui fanno parte, altrimenti un caposquadra potrebbe spostare
+    un progetto in un reparto che non e' suo (e magari perderlo di vista).
+    Lista vuota o None significa "generale": sempre ammesso.
     """
-    if reparto_id is None:
+    if not reparti_ids:
         return True
 
-    from app.models.reparto import Reparto
-    reparto = (
-        db.query(Reparto)
-        .filter(Reparto.id == reparto_id,
-                Reparto.organizzazione_id == current.organizzazione_id)
-        .first()
+    from app.models.reparto import Reparto as R
+    trovati = (
+        db.query(R)
+        .filter(R.id.in_(set(reparti_ids)),
+                R.organizzazione_id == current.organizzazione_id)
+        .all()
     )
-    if reparto is None:
+    # Se anche uno solo non e' della mia azienda, rifiuto tutto.
+    if len(trovati) != len(set(reparti_ids)):
         return False
     if current.ruolo == RuoloUtente.admin:
         return True
-    return any(r.id == reparto_id for r in current.reparti)
+
+    miei = {r.id for r in current.reparti}
+    return all(r.id in miei for r in trovati)
+
+
+def carica_reparti(db: Session, current: Utente, reparti_ids: list[int]):
+    """Gli oggetti Reparto da collegare, gia' verificati come assegnabili.
+    Da usare SEMPRE dopo reparti_assegnabili()."""
+    if not reparti_ids:
+        return []
+    return (
+        db.query(Reparto)
+        .filter(Reparto.id.in_(set(reparti_ids)),
+                Reparto.organizzazione_id == current.organizzazione_id)
+        .all()
+    )

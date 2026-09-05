@@ -11,6 +11,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from app.schemas.allegato import AllegatoRead
+from app.schemas.reparto import RepartoRead
 
 
 class ProgettoBase(BaseModel):
@@ -23,7 +24,8 @@ class ProgettoBase(BaseModel):
 class ProgettoCreate(ProgettoBase):
     """Cosa serve per CREARE un progetto (input).
     NB: l'organizzazione NON si passa piu': viene presa dall'utente loggato."""
-    reparto_id: int | None = None   # None = progetto "generale" di tutta l'azienda
+    # Lista vuota = progetto "generale", visibile a tutta l'azienda.
+    reparti_ids: list[int] = []
     macchina_id: int | None = None  # collegamento facoltativo a una macchina
 
 
@@ -32,8 +34,8 @@ class ProgettoUpdate(BaseModel):
     nome: str | None = None
     descrizione: str | None = None
     link_documento: str | None = None
-    # None esplicito = riporta il progetto fra i "generali".
-    reparto_id: int | None = None
+    # Lista vuota esplicita = riporta il progetto fra i "generali".
+    reparti_ids: list[int] | None = None
     macchina_id: int | None = None
 
 
@@ -41,7 +43,7 @@ class ProgettoRead(ProgettoBase):
     """Cosa l'API RESTITUISCE (output): include i campi generati dal DB."""
     id: int
     organizzazione_id: int
-    reparto_id: int | None = None
+    reparti: list[RepartoRead] = []
     macchina_id: int | None = None
     creato_il: datetime
     allegati: list[AllegatoRead] = []

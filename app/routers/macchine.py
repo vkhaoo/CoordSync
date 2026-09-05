@@ -28,7 +28,8 @@ from app.schemas.macchina import (
     AllegatoCreate, AllegatoRead,
 )
 from app.dependencies import get_current_user, richiedi_ruolo
-from app.visibilita import macchine_visibili, macchina_visibile, reparto_assegnabile
+from app.visibilita import (macchine_visibili, macchina_visibile,
+                            reparti_assegnabili, carica_reparti)
 
 router = APIRouter(tags=["macchine"])
 
@@ -64,15 +65,15 @@ def _voce_o_404(db, current, voce_id) -> VoceMacchina:
 @router.post("/macchine", response_model=MacchinaRead, status_code=201)
 def crea_macchina(dati: MacchinaCreate, db: Session = Depends(get_db),
                   current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
-    if not reparto_assegnabile(db, current, dati.reparto_id):
+    if not reparti_assegnabili(db, current, dati.reparti_ids):
         raise HTTPException(status_code=404, detail="Reparto non trovato")
 
     macchina = Macchina(
         nome=dati.nome,
         descrizione=dati.descrizione,
         organizzazione_id=current.organizzazione_id,
-        reparto_id=dati.reparto_id,
     )
+    macchina.reparti = carica_reparti(db, current, dati.reparti_ids)
     db.add(macchina)
     db.commit()
     db.refresh(macchina)
@@ -97,10 +98,13 @@ def modifica_macchina(macchina_id: int, dati: MacchinaUpdate, db: Session = Depe
                       current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
     macchina = _macchina_o_404(db, current, macchina_id)
     forniti = dati.model_dump(exclude_unset=True)
-    if "reparto_id" in forniti and not reparto_assegnabile(db, current, forniti["reparto_id"]):
+    reparti_ids = forniti.pop("reparti_ids", None)
+    if reparti_ids is not None and not reparti_assegnabili(db, current, reparti_ids):
         raise HTTPException(status_code=404, detail="Reparto non trovato")
     for campo, valore in forniti.items():
         setattr(macchina, campo, valore)
+    if reparti_ids is not None:
+        macchina.reparti = carica_reparti(db, current, reparti_ids)
     db.commit()
     db.refresh(macchina)
     return macchina
