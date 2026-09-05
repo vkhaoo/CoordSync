@@ -135,7 +135,8 @@ Ogni volta che pubblico una migrazione te lo scrivo. Nei log del backend su
 Render deve comparire una riga `Running upgrade ... -> ...`. Se non c'è, la
 migrazione non è passata e il resto non funzionerà.
 
-Migrazioni pubblicate finora (16). Le ultime:
+Migrazioni pubblicate finora (17). Le ultime:
+- `f465708f9686` — secondo fattore facoltativo (colonne nuove, spente per tutti)
 - `bed5b1f2f4ae` — inviti in attesa (aggiunge una colonna con valore di riempimento)
 - `2bd91f251225` — appartenenze, un utente in più aziende (**sposta dati**:
   ogni utente diventa membro della sua azienda. Se nei log non compare, gli
@@ -162,6 +163,19 @@ un problema che sta solo in locale.
 Se vuoi chiuderlo: su Render → Static Site → Environment aggiungi
 `NODE_VERSION` = `20.19.0` (o `22`), verifica che il deploy passi, e poi dimmelo
 che aggiorno vite.
+
+### [?] Vuoi accendere il secondo fattore sul tuo account?
+
+C'è, è **spento per tutti** e si accende uno per uno dal menu del proprio nome.
+Se lo accendi, per entrare serviranno la password e il codice del telefono.
+
+**Prima di accenderlo, sappi due cose.** Ti verranno mostrati otto codici di
+recupero **una volta sola**: sono l'unica via se perdi il telefono, e nel
+database restano solo le loro impronte — non posso rimostrarteli né io né
+nessun altro. Segnali su carta, non nello stesso telefono.
+
+E finché sei l'unico amministratore, se perdi telefono *e* codici resti fuori
+dalla tua azienda. Con un secondo amministratore il rischio si dimezza.
 
 ### [ ] Prova l'app come farebbe un operatore
 

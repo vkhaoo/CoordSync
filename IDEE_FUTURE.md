@@ -304,12 +304,15 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
 - **Sicurezza e GDPR.** Fatti: **limite ai tentativi di accesso** (10 in 15
   minuti, per email e per indirizzo) ed **esportazione dei propri dati** (dal
   menu del proprio nome, in JSON). Fatta anche la **cancellazione dell'account** (deciso: anonimizzare — il lavoro
-  resta alla squadra, l'identità sparisce). Resta il **secondo fattore** (TOTP),
-  che è un capitolo a sé. La parte legale
+  resta alla squadra, l'identità sparisce). ~~Resta il **secondo fattore** (TOTP).~~ **FATTO** il 5 settembre 2026:
+  facoltativo e spento di default, con otto codici di recupero mostrati una
+  volta sola (chi perde il telefono deve avere una via d'uscita). Non si
+  accende senza prima aver dimostrato che il telefono genera codici giusti. La parte legale
   (informativa, base giuridica) vuole una consulenza vera.
 - **Token in cookie httpOnly** invece che in localStorage: più robusto contro
   XSS, ma è un intervento trasversale (CORS con credenziali, gestione lato
-  backend). Da valutare quando ci saranno clienti.
+  backend) che può rompere l'accesso in produzione. È rimasta l'ultima voce
+  grossa del parcheggio: da fare con calma, e con te che guardi.
 - ~~**Un utente in più aziende.**~~ FATTO il 5 settembre 2026, in tre strati:
   la tessera di appartenenza (con il travaso dei dati, a comportamento
   invariato), poi l'azienda attiva nel token con il cambio azienda, poi
