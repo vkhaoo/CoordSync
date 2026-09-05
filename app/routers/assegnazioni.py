@@ -23,6 +23,36 @@ from app.models.notifica import TipoAvviso
 router = APIRouter(prefix="/lavori/{lavoro_id}/assegnati", tags=["assegnazioni"])
 
 
+def _avvisa_via_email(chi_assegna: Utente, destinatario: Utente, lavoro) -> None:
+    """Manda l'email dell'assegnazione, senza far fallire l'assegnazione se
+    l'invio non riesce.
+
+    Il lavoro e' gia' stato salvato: se il servizio email e' giu' o l'indirizzo
+    e' sbagliato, meglio un'email persa che un'assegnazione persa. L'avviso
+    nella campanella c'e' comunque.
+    """
+    if not destinatario.email:
+        return
+    if destinatario.id == chi_assegna.id:
+        return   # assegnarsi un lavoro da soli non merita un'email da se stessi
+    try:
+        from app.config import settings
+        from app.email_templates import assegnazione_lavoro
+        from app.notifiche import invia_email
+
+        scadenza = lavoro.data_scadenza.strftime("%d/%m/%Y") if lavoro.data_scadenza else None
+        oggetto, testo, html = assegnazione_lavoro(
+            destinatario.nome, chi_assegna.nome, lavoro.titolo,
+            lavoro.progetto.nome if lavoro.progetto else "-",
+            scadenza, settings.frontend_url)
+        invia_email(destinatario=destinatario.email, oggetto=oggetto,
+                    corpo=testo, corpo_html=html)
+    except Exception:
+        import logging
+        logging.getLogger("coordsync").exception(
+            "Assegnazione salvata ma email non inviata a %s", destinatario.email)
+
+
 class AssegnaRichiesta(BaseModel):
     utente_id: int
 
@@ -53,6 +83,9 @@ def assegna(lavoro_id: int, dati: AssegnaRichiesta, db: Session = Depends(get_db
                mittente=current, lavoro_id=lavoro.id)
         db.commit()
         db.refresh(lavoro)
+        # ...e, solo per questo evento, anche via email: e' l'unica cosa che
+        # non ci si puo' permettere di non vedere se non si apre l'app.
+        _avvisa_via_email(current, utente, lavoro)
     return lavoro
 
 

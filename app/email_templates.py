@@ -175,3 +175,38 @@ def promemoria_impegno(nome: str, titolo: str, quando: str, luogo: str | None,
     html = _layout(titolo=f"Ciao {nome}, un promemoria", righe_html=righe,
                    cta_testo="Apri l'agenda", cta_link=link)
     return oggetto, testo, html
+
+
+def assegnazione_lavoro(nome: str, chi_assegna: str, titolo: str,
+                        progetto: str, scadenza: str | None, link: str):
+    """Avviso via email quando qualcuno ti mette su un lavoro.
+
+    E' l'UNICO evento che manda un'email oltre alla campanella: e' quello che
+    davvero non ci si puo' permettere di non vedere. Commenti e riunioni
+    restano dentro l'app, altrimenti le email di servizio diventano rumore e
+    finiscono ignorate (o nello spam, indebolendo anche quelle importanti).
+    """
+    oggetto = f"Ti hanno assegnato: {titolo}"
+
+    parti = [
+        f"Ciao {nome},",
+        "",
+        f"{chi_assegna} ti ha assegnato un lavoro:",
+        "",
+        titolo,
+        f"Progetto: {progetto}",
+    ]
+    if scadenza:
+        parti.append(f"Da fare entro: {scadenza}")
+    parti += ["", "Lo trovi qui:", link, "", "Il team di CoordSync"]
+    testo = "\n".join(parti)
+
+    righe = _riga(f"<strong>{chi_assegna}</strong> ti ha assegnato un lavoro:")
+    righe += _riga(f'<span style="font-size:17px; color:{_ACCIAIO};"><strong>{titolo}</strong></span>')
+    righe += _riga(f"Progetto: {progetto}")
+    if scadenza:
+        righe += _riga(f"Da fare entro: <strong>{scadenza}</strong>")
+
+    html = _layout(titolo=f"Ciao {nome}, un lavoro per te", righe_html=righe,
+                   cta_testo="Apri CoordSync", cta_link=link)
+    return oggetto, testo, html
