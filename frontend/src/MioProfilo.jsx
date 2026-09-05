@@ -5,7 +5,7 @@ import { temaCorrente, impostaTema } from "./tema.js";
 // Il menu del proprio account, aperto cliccando il nome nella barra.
 // Sta qui e non nel pannello Utenti (che e' solo per l'admin) perche'
 // scaricare i propri dati e' un diritto di chiunque, non un privilegio.
-export default function MioProfilo({ io }) {
+export default function MioProfilo({ io, onLogout }) {
   const [aperto, setAperto] = useState(false);
   const [tema, setTema] = useState(temaCorrente);
   const [errore, setErrore] = useState(null);
@@ -39,6 +39,29 @@ export default function MioProfilo({ io }) {
       URL.revokeObjectURL(url);
     } catch (err) { setErrore(err.message); }
     finally { setScaricando(false); }
+  }
+
+  // Andarsene e' irreversibile: chiedo conferma DUE volte, e la seconda
+  // obbliga a scrivere il proprio nome. Un clic distratto non deve bastare.
+  async function cancellaAccount() {
+    if (!window.confirm(
+      "Vuoi cancellare il tuo account?\n\n" +
+      "Non potrai più entrare. Quello che hai scritto (commenti, voci di " +
+      "storico, lavori) resta alla squadra, ma senza il tuo nome."
+    )) return;
+
+    const scritto = window.prompt(
+      `Per confermare, scrivi il tuo nome esattamente cosi': ${io.nome}`);
+    if (scritto !== io.nome) {
+      if (scritto !== null) setErrore("Il nome non corrisponde: non ho cancellato niente.");
+      return;
+    }
+
+    setErrore(null);
+    try {
+      await api.cancellaMioAccount();
+      onLogout();          // il token non vale piu': fuori
+    } catch (err) { setErrore(err.message); }
   }
 
   if (!io) return null;
@@ -77,6 +100,16 @@ export default function MioProfilo({ io }) {
             <button className="principale piccolo" onClick={scarica} disabled={scaricando}>
               {scaricando ? "Preparo il file…" : "Scarica i miei dati"}
             </button>
+
+            <div className="zona-pericolo">
+              <p className="vuoto piccolo">
+                Puoi anche andartene del tutto. Quello che hai scritto resta alla
+                squadra, ma senza il tuo nome, e non potrai più entrare.
+              </p>
+              <button className="bottone-pericolo" onClick={cancellaAccount}>
+                Cancella il mio account
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -262,10 +262,9 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
 
 - **Sicurezza e GDPR.** Fatti: **limite ai tentativi di accesso** (10 in 15
   minuti, per email e per indirizzo) ed **esportazione dei propri dati** (dal
-  menu del proprio nome, in JSON). Restano: **cancellazione dell'account**, che
-  vuole prima una decisione su cosa succede ai lavori creati e assegnati
-  (riassegnare? anonimizzare l'autore?) e quindi non si può fare senza deciderlo;
-  e il **secondo fattore** (TOTP), che è un capitolo a sé. La parte legale
+  menu del proprio nome, in JSON). Fatta anche la **cancellazione dell'account** (deciso: anonimizzare — il lavoro
+  resta alla squadra, l'identità sparisce). Resta il **secondo fattore** (TOTP),
+  che è un capitolo a sé. La parte legale
   (informativa, base giuridica) vuole una consulenza vera.
 - **Token in cookie httpOnly** invece che in localStorage: più robusto contro
   XSS, ma è un intervento trasversale (CORS con credenziali, gestione lato

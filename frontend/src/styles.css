@@ -667,3 +667,13 @@ input, select, textarea { font-family: var(--sans); }
 :root[data-tema="scuro"] .checklist-toggle:hover,
 :root[data-tema="scuro"] .sez:hover,
 :root[data-tema="scuro"] .tabs button:hover { color: var(--inchiostro); }
+
+/* Zona pericolo: le azioni irreversibili si distinguono a colpo d'occhio */
+.zona-pericolo { margin-top: 0.9rem; padding-top: 0.8rem;
+  border-top: 1px solid var(--linea-2); }
+.zona-pericolo .vuoto { margin: 0 0 0.6rem; line-height: 1.5; }
+.bottone-pericolo { width: 100%; padding: 0.55rem; border-radius: var(--raggio-sm);
+  border: 1px solid var(--errore); background: transparent; color: var(--errore);
+  font-family: var(--sans); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: all .15s ease; }
+.bottone-pericolo:hover { background: var(--errore); color: #fff; }

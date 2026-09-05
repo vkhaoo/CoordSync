@@ -340,3 +340,30 @@ def esporta_i_miei_dati(db: Session = Depends(get_db),
             for n in avvisi
         ],
     }
+
+
+# ---------- CANCELLAZIONE DEL PROPRIO ACCOUNT ----------
+
+@router.delete("/me", status_code=204)
+def cancella_il_mio_account(db: Session = Depends(get_db),
+                            current: Utente = Depends(get_current_user)):
+    """Chiunque puo' andarsene. E' il diritto alla cancellazione.
+
+    Il lavoro che ha fatto resta alla squadra, attribuito a "Utente eliminato";
+    quello che sparisce e' l'identita' (vedi app/cancellazione.py).
+
+    Unica eccezione: l'ultimo admin di un'azienda. Lasciarla senza timone
+    significherebbe che nessuno puo' piu' gestire utenti e permessi, e non c'e'
+    modo di rimediare dall'interno. Prima si nomina un altro admin.
+    """
+    from app.cancellazione import anonimizza, e_ultimo_admin
+
+    if e_ultimo_admin(db, current):
+        raise HTTPException(
+            status_code=409,
+            detail="Sei l'ultimo amministratore: nomina prima qualcun altro, "
+                   "altrimenti l'azienda resta senza nessuno che possa gestirla.",
+        )
+
+    anonimizza(db, current)
+    db.commit()

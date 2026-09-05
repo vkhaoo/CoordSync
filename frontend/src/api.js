@@ -56,6 +56,8 @@ export const api = {
   resetPassword: (token, nuova_password) => richiesta("POST", "/auth/reset-password", { token, nuova_password }),
   accettaInvito: (token, password) => richiesta("POST", "/auth/accetta-invito", { token, password }),
   esportaMieiDati: () => richiesta("GET", "/auth/me/export"),
+  cancellaMioAccount: () => richiesta("DELETE", "/auth/me"),
+  eliminaUtente: (id) => richiesta("DELETE", `/utenti/${id}`),
   cambiaPassword: (vecchia_password, nuova_password) => richiesta("POST", "/auth/cambia-password", { vecchia_password, nuova_password }),
   progetti: ()     => richiesta("GET", "/progetti"),
   lavori:   (progettoId, q = "") => richiesta("GET",

@@ -232,7 +232,7 @@ export default function Dashboard({ onLogout }) {
         </div>
         <div className="barra-destra">
           <Campanella onVaiAlLavoro={vaiAlLavoro} />
-          <MioProfilo io={io} />
+          <MioProfilo io={io} onLogout={onLogout} />
           <button className="esci" onClick={onLogout}>Esci</button>
         </div>
       </header>

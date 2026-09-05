@@ -108,3 +108,38 @@ def cambia_ruolo(utente_id: int, dati: CambioRuolo, db: Session = Depends(get_db
     db.commit()
     db.refresh(utente)
     return utente
+
+
+@router.delete("/{utente_id}", status_code=204)
+def elimina_utente(utente_id: int, db: Session = Depends(get_db),
+                   current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin))):
+    """L'admin fa uscire un collega dall'azienda.
+
+    Stessa regola di quando uno se ne va da solo: il lavoro resta, l'identita'
+    sparisce. Per cancellare se stesso c'e' DELETE /auth/me, cosi' non capita
+    per sbaglio dall'elenco degli utenti.
+    """
+    from app.cancellazione import anonimizza, e_ultimo_admin
+
+    if utente_id == current.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Per cancellare il tuo account usa la voce nel tuo profilo.",
+        )
+
+    utente = (
+        db.query(Utente)
+        .filter(Utente.id == utente_id,
+                Utente.organizzazione_id == current.organizzazione_id)
+        .first()
+    )
+    if utente is None:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if utente.password_hash is None and utente.nome == "Utente eliminato":
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if e_ultimo_admin(db, utente):
+        raise HTTPException(status_code=409,
+                            detail="E' l'ultimo amministratore: nominane un altro prima.")
+
+    anonimizza(db, utente)
+    db.commit()

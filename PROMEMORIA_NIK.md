@@ -105,7 +105,7 @@ Le tengo scritte qui così non si perdono e non te le richiedo.
 
 | Domanda | Risposta |
 |---|---|
-| Cancellazione di un account | **Anonimizza l'autore**: il lavoro resta, il nome diventa "utente eliminato" |
+| Cancellazione di un account | **Anonimizza l'autore** — FATTA: il lavoro resta, il nome diventa "Utente eliminato" |
 | Su cosa lavorare | **Robustezza e visibilità** (errori, gestione guasti, test sui casi limite) |
 | Piano Render | **Non ancora deciso**: non costruisco niente che dipenda dal piano a pagamento |
 | Notifiche via email | **Solo per le assegnazioni**, il resto resta nella campanella |
