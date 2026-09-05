@@ -8,6 +8,7 @@ import Agenda from "./Agenda.jsx";
 import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
+import Tendina from "./Tendina.jsx";
 import Campanella from "./Campanella.jsx";
 import MioProfilo from "./MioProfilo.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
@@ -42,6 +43,9 @@ export default function Dashboard({ onLogout }) {
 
   // Campi dei form di creazione
   const [nuovoProgetto, setNuovoProgetto] = useState("");
+  // Il modulo del nuovo lavoro parte chiuso: quasi sempre si apre l'app per
+  // guardare come va, non per aggiungere qualcosa.
+  const [creaLavoroAperto, setCreaLavoroAperto] = useState(false);
   const [nuovoTitolo, setNuovoTitolo] = useState("");
   const [nuovaPriorita, setNuovaPriorita] = useState("normale");
   const [nuovaScadenza, setNuovaScadenza] = useState("");   // "" = senza scadenza
@@ -297,41 +301,54 @@ export default function Dashboard({ onLogout }) {
         <Agenda io={io} utenti={utenti} />
       ) : (
       <div className="corpo">
-        <aside className="colonna-progetti">
-          <h2 className="titolo-colonna">Progetti</h2>
-          {progetti.length > 6 && (
-            <CampoRicerca valore={filtroProgetti} onCambia={setFiltroProgetti}
-                          segnaposto="Filtra progetti…" attesa={0} />
-          )}
-          {progetti.length === 0 && <p className="vuoto">Nessun progetto ancora.</p>}
-          <ul className="lista-progetti">
-            {progetti
-              .filter((p) => p.nome.toLowerCase().includes(filtroProgetti.toLowerCase()))
-              .map((p) => (
-              <li key={p.id}>
-                <button
-                  className={p.id === selezionato ? "voce attiva" : "voce"}
-                  onClick={() => setSelezionato(p.id)}
-                >{p.nome}</button>
-              </li>
-            ))}
-          </ul>
-
-          {/* Form: nuovo progetto — solo per chi può creare */}
-          {puoCreare && (
-            <form className="form-inline" onSubmit={aggiungiProgetto}>
-              <input
-                placeholder="Nuovo progetto…"
-                value={nuovoProgetto}
-                onChange={(e) => setNuovoProgetto(e.target.value)}
-                required
-              />
-              <button type="submit" className="mini">+</button>
-            </form>
-          )}
-        </aside>
-
         <main className="area-lavori">
+          {/* La scelta del progetto: un menu, non piu' una colonna sempre
+              aperta. Il modulo per crearne uno sta dentro lo stesso menu:
+              scegliere un progetto e farne uno nuovo sono lo stesso gesto,
+              e cosi' non occupa spazio quando si sta solo guardando. */}
+          <div className="barra-scelte">
+            <Tendina etichetta="Progetto"
+                     valore={progettoCorrente ? progettoCorrente.nome : null}
+                     vuoto={progetti.length ? "Scegli un progetto" : "Nessun progetto"}>
+              {(chiudi) => (
+                <>
+                  {progetti.length > 6 && (
+                    <CampoRicerca valore={filtroProgetti} onCambia={setFiltroProgetti}
+                                  segnaposto="Filtra progetti…" attesa={0} />
+                  )}
+                  {progetti.length === 0 && (
+                    <p className="vuoto piccolo">Nessun progetto ancora.</p>
+                  )}
+                  <ul className="lista-progetti">
+                    {progetti
+                      .filter((p) => p.nome.toLowerCase().includes(filtroProgetti.toLowerCase()))
+                      .map((p) => (
+                        <li key={p.id}>
+                          <button
+                            className={p.id === selezionato ? "voce attiva" : "voce"}
+                            onClick={() => { setSelezionato(p.id); chiudi(); }}
+                          >{p.nome}</button>
+                        </li>
+                      ))}
+                  </ul>
+
+                  {puoCreare && (
+                    <div className="separatore-tendina">
+                      <form className="form-inline" onSubmit={async (e) => {
+                        await aggiungiProgetto(e);
+                        chiudi();   // il nuovo progetto e' gia' selezionato
+                      }}>
+                        <input placeholder="Crea progetto…" value={nuovoProgetto}
+                               onChange={(e) => setNuovoProgetto(e.target.value)} required />
+                        <button type="submit" className="mini">+</button>
+                      </form>
+                    </div>
+                  )}
+                </>
+              )}
+            </Tendina>
+          </div>
+
           {progettoCorrente ? (
             <>
               <div className="intestazione-progetto">
@@ -416,9 +433,16 @@ export default function Dashboard({ onLogout }) {
                           }} />
               </div>
 
-              {/* Form: nuovo lavoro — solo per chi può creare */}
-              {puoCreare && (
-                <form className="form-lavoro" onSubmit={aggiungiLavoro}>
+              {/* Nuovo lavoro: dietro un pulsante, non piu' sempre aperto */}
+              {puoCreare && !creaLavoroAperto && (
+                <button className="principale piccolo bottone-crea"
+                        onClick={() => setCreaLavoroAperto(true)}>+ Nuovo lavoro</button>
+              )}
+              {puoCreare && creaLavoroAperto && (
+                <form className="form-lavoro" onSubmit={async (e) => {
+                  await aggiungiLavoro(e);
+                  setCreaLavoroAperto(false);
+                }}>
                   <input
                     placeholder="Titolo del lavoro…"
                     value={nuovoTitolo}
@@ -431,6 +455,8 @@ export default function Dashboard({ onLogout }) {
                   <input type="date" title="Scadenza (facoltativa)" value={nuovaScadenza}
                          onChange={(e) => setNuovaScadenza(e.target.value)} />
                   <button type="submit" className="principale piccolo">Aggiungi</button>
+                  <button type="button" className="mini annulla" title="Chiudi"
+                          onClick={() => setCreaLavoroAperto(false)}>×</button>
                 </form>
               )}
 

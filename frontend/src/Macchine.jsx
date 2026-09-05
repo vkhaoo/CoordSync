@@ -3,6 +3,7 @@ import { api } from "./api.js";
 import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
+import Tendina from "./Tendina.jsx";
 import { dalServer } from "./date.js";
 
 // Etichette dei tipi di voce. "informazione" e' a parte: non e' un fatto
@@ -32,6 +33,8 @@ export default function Macchine({ io, reparti }) {
   // Form
   const [nuovaMacchina, setNuovaMacchina] = useState("");
   const [nuovaSezione, setNuovaSezione] = useState("");
+  // Anche qui: si apre la scheda per leggere lo storico, non per scriverci.
+  const [creaVoceAperta, setCreaVoceAperta] = useState(false);
   const [vTipo, setVTipo] = useState("lavoro");
   const [vTitolo, setVTitolo] = useState("");
   const [vTesto, setVTesto] = useState("");
@@ -139,34 +142,50 @@ export default function Macchine({ io, reparti }) {
 
   return (
     <div className="corpo">
-      <aside className="colonna-progetti">
-        <h2 className="titolo-colonna">Macchine</h2>
-        {macchine.length > 6 && (
-          <CampoRicerca valore={filtroMacchine} onCambia={setFiltroMacchine}
-                        segnaposto="Filtra macchine…" attesa={0} />
-        )}
-        {macchine.length === 0 && <p className="vuoto">Nessuna macchina ancora.</p>}
-        <ul className="lista-progetti">
-          {macchine
-            .filter((m) => m.nome.toLowerCase().includes(filtroMacchine.toLowerCase()))
-            .map((m) => (
-            <li key={m.id}>
-              <button className={m.id === selezionata ? "voce attiva" : "voce"}
-                      onClick={() => setSelezionata(m.id)}>{m.nome}</button>
-            </li>
-          ))}
-        </ul>
-        {gestisco && (
-          <form className="form-inline" onSubmit={aggiungiMacchina}>
-            <input placeholder="Nuova macchina…" value={nuovaMacchina}
-                   onChange={(e) => setNuovaMacchina(e.target.value)} required />
-            <button type="submit" className="mini">+</button>
-          </form>
-        )}
-      </aside>
-
       <main className="area-lavori">
         {errore && <p className="errore">{errore}</p>}
+
+        {/* Scelta della macchina: un menu, con dentro anche il modo di
+            aggiungerne una. Prima era una colonna sempre aperta. */}
+        <div className="barra-scelte">
+          <Tendina etichetta="Macchina"
+                   valore={scheda ? scheda.nome : null}
+                   vuoto={macchine.length ? "Scegli una macchina" : "Nessuna macchina"}>
+            {(chiudi) => (
+              <>
+                {macchine.length > 6 && (
+                  <CampoRicerca valore={filtroMacchine} onCambia={setFiltroMacchine}
+                                segnaposto="Filtra macchine…" attesa={0} />
+                )}
+                {macchine.length === 0 && (
+                  <p className="vuoto piccolo">Nessuna macchina ancora.</p>
+                )}
+                <ul className="lista-progetti">
+                  {macchine
+                    .filter((m) => m.nome.toLowerCase().includes(filtroMacchine.toLowerCase()))
+                    .map((m) => (
+                      <li key={m.id}>
+                        <button className={m.id === selezionata ? "voce attiva" : "voce"}
+                                onClick={() => { setSelezionata(m.id); chiudi(); }}>{m.nome}</button>
+                      </li>
+                    ))}
+                </ul>
+                {gestisco && (
+                  <div className="separatore-tendina">
+                    <form className="form-inline" onSubmit={async (e) => {
+                      await aggiungiMacchina(e);
+                      chiudi();
+                    }}>
+                      <input placeholder="Crea macchina…" value={nuovaMacchina}
+                             onChange={(e) => setNuovaMacchina(e.target.value)} required />
+                      <button type="submit" className="mini">+</button>
+                    </form>
+                  </div>
+                )}
+              </>
+            )}
+          </Tendina>
+        </div>
 
         {!scheda ? (
           <p className="vuoto">Seleziona una macchina, o creane una.</p>
@@ -209,43 +228,72 @@ export default function Macchine({ io, reparti }) {
                         onElimina={(id) => azione(() => api.eliminaAllegato(id))} />
             </div>
 
-            {/* Sezioni della macchina: fanno anche da filtro */}
-            <div className="barra-sezioni">
-              <button className={filtroSezione === "" ? "sez attiva" : "sez"}
-                      onClick={() => setFiltroSezione("")}>Tutta la macchina</button>
-              {scheda.sezioni.map((s, i) => (
-                <span key={s.id} className="sez-gruppo">
-                  {gestisco && scheda.sezioni.length > 1 && (
-                    <button className="chip-sposta" title="Sposta a sinistra"
-                            disabled={i === 0}
-                            onClick={() => spostaSezione(i, -1)}>‹</button>
-                  )}
-                  <button className={String(filtroSezione) === String(s.id) ? "sez attiva" : "sez"}
-                          onClick={() => setFiltroSezione(s.id)}>{s.nome}</button>
-                  {gestisco && scheda.sezioni.length > 1 && (
-                    <button className="chip-sposta" title="Sposta a destra"
-                            disabled={i === scheda.sezioni.length - 1}
-                            onClick={() => spostaSezione(i, +1)}>›</button>
-                  )}
-                  {gestisco && (
-                    <button className="chip-x" title="Elimina sezione (le voci restano)"
-                            onClick={() => {
-                              if (window.confirm(`Eliminare la sezione "${s.nome}"? Le voci restano nella macchina.`))
-                                azione(() => api.eliminaSezione(s.id));
-                            }}>×</button>
-                  )}
-                </span>
-              ))}
-              {gestisco && (
-                <form className="form-inline form-sezione" onSubmit={(e) => {
-                  e.preventDefault();
-                  azione(async () => { await api.creaSezione(scheda.id, { nome: nuovaSezione }); setNuovaSezione(""); });
-                }}>
-                  <input placeholder="Nuova sezione…" value={nuovaSezione}
-                         onChange={(e) => setNuovaSezione(e.target.value)} required />
-                  <button type="submit" className="mini">+</button>
-                </form>
-              )}
+            {/* Sezioni della macchina: sono anche il filtro dello storico.
+                Dentro lo stesso menu c'e' tutto quello che le riguarda:
+                sceglierne una, spostarle, crearne una, eliminarne una. */}
+            <div className="barra-scelte">
+              <Tendina etichetta="Sezione"
+                       valore={filtroSezione === ""
+                         ? "Tutta la macchina"
+                         : (scheda.sezioni.find((s) => String(s.id) === String(filtroSezione)) || {}).nome}>
+                {(chiudi) => (
+                  <>
+                    <ul className="lista-progetti">
+                      <li>
+                        <button className={filtroSezione === "" ? "voce attiva" : "voce"}
+                                onClick={() => { setFiltroSezione(""); chiudi(); }}>
+                          Tutta la macchina
+                        </button>
+                      </li>
+                      {scheda.sezioni.map((s, i) => (
+                        <li key={s.id} className="riga-sezione">
+                          <button className={String(filtroSezione) === String(s.id) ? "voce attiva" : "voce"}
+                                  onClick={() => { setFiltroSezione(s.id); chiudi(); }}>{s.nome}</button>
+                          {gestisco && (
+                            <span className="comandi-sezione">
+                              {scheda.sezioni.length > 1 && (
+                                <>
+                                  <button className="chip-sposta" title="Sposta prima"
+                                          disabled={i === 0}
+                                          onClick={() => spostaSezione(i, -1)}>‹</button>
+                                  <button className="chip-sposta" title="Sposta dopo"
+                                          disabled={i === scheda.sezioni.length - 1}
+                                          onClick={() => spostaSezione(i, +1)}>›</button>
+                                </>
+                              )}
+                              <button className="chip-x" title="Elimina sezione (le voci restano)"
+                                      onClick={() => {
+                                        if (window.confirm(`Eliminare la sezione "${s.nome}"? Le voci restano nella macchina.`)) {
+                                          if (String(filtroSezione) === String(s.id)) setFiltroSezione("");
+                                          azione(() => api.eliminaSezione(s.id));
+                                        }
+                                      }}>×</button>
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {gestisco && (
+                      <div className="separatore-tendina">
+                        <form className="form-inline" onSubmit={(e) => {
+                          e.preventDefault();
+                          azione(async () => {
+                            await api.creaSezione(scheda.id, { nome: nuovaSezione });
+                            setNuovaSezione("");
+                          });
+                          // Il menu resta aperto: le sezioni si creano quasi
+                          // sempre a raffica, una dietro l'altra.
+                        }}>
+                          <input placeholder="Crea sezione…" value={nuovaSezione}
+                                 onChange={(e) => setNuovaSezione(e.target.value)} required />
+                          <button type="submit" className="mini">+</button>
+                        </form>
+                      </div>
+                    )}
+                  </>
+                )}
+              </Tendina>
             </div>
 
             {/* Quando sono dentro una sezione: i link di QUELLA sezione.
@@ -286,8 +334,17 @@ export default function Macchine({ io, reparti }) {
               </div>
             )}
 
-            {/* Nuova voce */}
-            <form className="form-voce" onSubmit={aggiungiVoce}>
+            {/* Nuova voce: dietro un pulsante, era il blocco piu' ingombrante
+                della pagina e stava aperto anche quando si leggeva soltanto. */}
+            {!creaVoceAperta && (
+              <button className="principale piccolo bottone-crea"
+                      onClick={() => setCreaVoceAperta(true)}>+ Nuova voce</button>
+            )}
+            {creaVoceAperta && (
+            <form className="form-voce" onSubmit={async (e) => {
+              await aggiungiVoce(e);
+              setCreaVoceAperta(false);
+            }}>
               <div className="riga-voce">
                 <select value={vTipo} onChange={(e) => setVTipo(e.target.value)}>
                   {Object.entries(TIPI).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -316,8 +373,11 @@ export default function Macchine({ io, reparti }) {
                   </label>
                 ))}
                 <button type="submit" className="principale piccolo">Aggiungi</button>
+                <button type="button" className="mini annulla" title="Chiudi"
+                        onClick={() => setCreaVoceAperta(false)}>×</button>
               </div>
             </form>
+            )}
 
             {/* Storico */}
             {cronologia.length === 0 ? (
