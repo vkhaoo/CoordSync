@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.osservabilita import prepara_log, prepara_sentry, traccia_richieste
+from app.config import controlla_configurazione
 
 from app import models  # noqa: F401  (importa i modelli cosi' vengono registrati)
 from app.routers import auth
@@ -30,6 +31,11 @@ from app.routers import notifiche_app
 # Prima di costruire l'app: log leggibili e avvisi sugli errori.
 prepara_log()
 prepara_sentry()   # senza SENTRY_DSN non fa niente e non si lamenta
+
+# Poi il controllo di sicurezza: se la produzione gira con la chiave di
+# esempio, qui l'avvio si ferma. Meglio un deploy fallito e visibile che
+# un'app in piedi con i token falsificabili.
+controlla_configurazione()
 
 app = FastAPI(title="CoordSync", version="0.1.0")
 

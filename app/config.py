@@ -7,6 +7,12 @@ o le variabili impostate sulla piattaforma di hosting in produzione).
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# La chiave che c'e' quando nessuno ne ha messa una. E' scritta qui, quindi e'
+# pubblica: chiunque legga il codice su GitHub potrebbe firmarsi dei token e
+# entrare come chi vuole. Va bene solo per sviluppare in locale.
+CHIAVE_DI_RIPIEGO = "CAMBIAMI-in-produzione-con-una-chiave-lunga-e-casuale"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -16,7 +22,9 @@ class Settings(BaseSettings):
 
     # Chiave segreta per firmare i token JWT. In produzione DEVE essere
     # impostata come variabile d'ambiente (lunga e casuale).
-    secret_key: str = "CAMBIAMI-in-produzione-con-una-chiave-lunga-e-casuale"
+    # Vedi controlla_configurazione(): con questo valore l'app in produzione
+    # si rifiuta di partire.
+    secret_key: str = CHIAVE_DI_RIPIEGO
     token_durata_minuti: int = 60 * 24  # 24 ore
 
     # Origini permesse per il CORS (chi puo' chiamare l'API dal browser).
@@ -78,3 +86,33 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+class ConfigurazioneInsicura(RuntimeError):
+    """L'app e' configurata in modo che non si puo' accettare in produzione."""
+
+
+def controlla_configurazione(impostazioni: Settings = None) -> None:
+    """Si arrabbia all'avvio se la produzione gira con la chiave di ripiego.
+
+    Perche' fermare tutto invece di scrivere un avviso nei log: con quella
+    chiave chiunque puo' fabbricarsi un token valido per qualsiasi account, e
+    un avviso nei log non lo legge nessuno finche' non e' troppo tardi. Un
+    deploy che fallisce si nota subito; un'app aperta a chiunque no.
+
+    "Siamo in produzione" si riconosce dal database PostgreSQL (in locale e'
+    SQLite) oppure da AMBIENTE impostato a mano. Non si usa solo AMBIENTE
+    perche' e' facoltativa: se qualcuno dimentica di impostarla, il controllo
+    si spegnerebbe proprio dove serve.
+    """
+    imp = impostazioni or settings
+    in_produzione = (
+        imp.db_url_normalizzato.startswith("postgresql")
+        or imp.ambiente.lower().startswith("produzione")
+    )
+    if in_produzione and imp.secret_key == CHIAVE_DI_RIPIEGO:
+        raise ConfigurazioneInsicura(
+            "SECRET_KEY non e' impostata: l'app userebbe la chiave di esempio "
+            "scritta nel codice, e chiunque potrebbe fabbricarsi un accesso. "
+            "Imposta SECRET_KEY (lunga e casuale) fra le variabili d'ambiente."
+        )
