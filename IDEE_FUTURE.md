@@ -259,7 +259,7 @@ FAZ") e sotto tutto quello che lo riguarda, in ordine di tempo.
 La migrazione aggiunge una colonna che nasce vuota: tutte le voci esistenti
 restano dove sono, come argomenti a sé stanti.
 
-### E · Piu' aziende: la schermata di scelta
+### E · Piu' aziende: la schermata di scelta — IN PARTE FATTO
 
 Quando arrivera' il multi-azienda (oggi in parcheggio), all'apertura dell'app
 compare una **fila orizzontale scorrevole di riquadri arrotondati**, uno per
@@ -269,10 +269,16 @@ E cambia anche il funzionamento degli **inviti**: se si invita un indirizzo che
 ha gia' un account, invece di creare un utente nuovo gli arriva un avviso in
 questa schermata; premendo il **+** puo' **accettare o rifiutare**.
 
-*Nota tecnica:* e' un miglioramento vero rispetto a oggi, dove invitare
-un'email gia' registrata da un errore di conflitto. Ma dipende dal multi-azienda,
-che e' il refactor piu' pesante in lista: l'appartenenza a una sola azienda e'
-l'assunzione su cui poggia tutto l'isolamento.
+*Fatto il 5 settembre 2026:* invitare un'email già registrata non dà più un
+errore di conflitto — parte un invito che quella persona accetta con un clic
+dalla sua casella, e allora l'azienda si aggiunge alle sue. Il cambio azienda
+c'è, nel menu del proprio nome.
+
+**Resta da fare la parte visiva che avevi descritto:** la fila orizzontale di
+riquadri arrotondati all'apertura dell'app, con il **+** in fondo per unirsi a
+una nuova azienda e per accettare o rifiutare gli inviti in attesa. Oggi
+l'invito si accetta solo dal link email, e il cambio azienda è una voce di
+menu: funziona, ma non è la schermata che avevi in mente.
 
 ### Come lo affronterei
 
@@ -294,10 +300,11 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
 - **Token in cookie httpOnly** invece che in localStorage: più robusto contro
   XSS, ma è un intervento trasversale (CORS con credenziali, gestione lato
   backend). Da valutare quando ci saranno clienti.
-- **Un utente in più aziende.** Oggi l'appartenenza è singola. Diventerebbe un
-  molti-a-molti con il ruolo per azienda, più il concetto di "azienda attiva"
-  nel token. Cambio strutturale, non un ritocco. Alternativa già adottata: due
-  account separati.
+- ~~**Un utente in più aziende.**~~ FATTO il 5 settembre 2026, in tre strati:
+  la tessera di appartenenza (con il travaso dei dati, a comportamento
+  invariato), poi l'azienda attiva nel token con il cambio azienda, poi
+  l'invito a chi ha già un account. Il ruolo vale per azienda. Il selettore
+  compare solo a chi ne ha più d'una.
 - ~~**Dark mode.**~~ FATTO: interruttore nel menu del proprio nome, preferenza
   salvata in questo dispositivo (sul telefono lo si può volere scuro e sul fisso
   no). Il tema si applica prima che la pagina venga dipinta, così non c'è il
