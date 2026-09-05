@@ -349,3 +349,62 @@ def test_allegati_spariscono_con_la_macchina(client):
     client.delete(f"/macchine/{m['id']}", headers=a)
     # Niente righe orfane: l'allegato non c'e' piu'.
     assert client.delete(f"/allegati/{alle['id']}", headers=a).status_code == 404
+
+
+# ---------- MODIFICA DI MACCHINE E SEZIONI ----------
+
+def test_rinominare_una_macchina(client):
+    """Le macchine cambiano nome davvero: arriva un modello nuovo, o quello
+    scritto in fretta il primo giorno non e' quello che usa la squadra."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a, "Pressa vechia")
+
+    r = client.patch(f"/macchine/{m['id']}",
+                     json={"nome": "Pressa Schiavi 800t"}, headers=a)
+    assert r.status_code == 200
+    assert r.json()["nome"] == "Pressa Schiavi 800t"
+    assert [x["nome"] for x in client.get("/macchine", headers=a).json()] == ["Pressa Schiavi 800t"]
+
+
+def test_modificare_una_macchina_non_svuota_il_resto(client):
+    """Mandando solo il nome, la descrizione non deve sparire: si aggiorna
+    quello che arriva, non tutto il resto a vuoto."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a, "Pressa", descrizione="Matricola 12345")
+
+    r = client.patch(f"/macchine/{m['id']}", json={"nome": "Pressa 2"}, headers=a)
+    assert r.json()["descrizione"] == "Matricola 12345"
+
+
+def test_operatore_e_estranei_non_modificano_le_macchine(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a)
+    op = _crea_utente(client, a, "Op", "op@a.it", "operatore")
+    altra = registra(client, "Azienda B", "Bruno", "bruno@b.it")
+
+    assert client.patch(f"/macchine/{m['id']}", json={"nome": "X"}, headers=op).status_code == 403
+    assert client.patch(f"/macchine/{m['id']}", json={"nome": "X"}, headers=altra).status_code == 404
+    assert client.get(f"/macchine/{m['id']}", headers=a).json()["nome"] == "Pressa 1"
+
+
+def test_rinominare_una_sezione(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a)
+    s = client.post(f"/macchine/{m['id']}/sezioni", json={"nome": "Confezione"},
+                    headers=a).json()
+
+    r = client.patch(f"/sezioni/{s['id']}", json={"nome": "Confezionamento"}, headers=a)
+    assert r.status_code == 200
+    scheda = client.get(f"/macchine/{m['id']}", headers=a).json()
+    assert [x["nome"] for x in scheda["sezioni"]] == ["Confezionamento"]
+
+
+def test_estraneo_non_rinomina_le_sezioni(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a)
+    s = client.post(f"/macchine/{m['id']}/sezioni", json={"nome": "Confezione"},
+                    headers=a).json()
+    altra = registra(client, "Azienda B", "Bruno", "bruno@b.it")
+
+    assert client.patch(f"/sezioni/{s['id']}", json={"nome": "Rubata"},
+                        headers=altra).status_code == 404

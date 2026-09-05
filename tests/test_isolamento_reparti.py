@@ -309,3 +309,59 @@ def test_eliminare_un_reparto_lo_toglie_solo_da_dove_serve(client):
     rimasti = client.get("/progetti", headers=s["admin"]).json()
     condiviso = [x for x in rimasti if x["nome"] == "Condiviso"][0]
     assert [r["nome"] for r in condiviso["reparti"]] == ["Automazione"]
+
+
+# ---------- TOGLIERE QUALCUNO DA UN REPARTO ----------
+
+def test_togliere_un_membro_gli_toglie_anche_la_vista(client):
+    """Non basta che sparisca dall'elenco del reparto: da quel momento non
+    deve piu' vedere i progetti che vedeva grazie a quel reparto. E' lo
+    stesso controllo dell'ingresso, guardato al contrario."""
+    s = _scenario(client)
+    anna_id = _id_utente(client, s["admin"], "anna@a.it")
+
+    # prima: Anna vede il progetto di Automazione
+    assert "Quadro" in {p["nome"] for p in client.get("/progetti", headers=s["anna"]).json()}
+
+    r = client.delete(f"/reparti/{s['automazione']['id']}/membri/{anna_id}",
+                      headers=s["admin"])
+    assert r.status_code == 200
+
+    # non risulta piu' fra i reparti di Anna...
+    anna = [u for u in client.get("/utenti", headers=s["admin"]).json()
+            if u["email"] == "anna@a.it"][0]
+    assert anna["reparti"] == []
+
+    # ...e dopo, le resta solo il generale
+    assert {p["nome"] for p in client.get("/progetti", headers=s["anna"]).json()} == {"Generale"}
+
+
+def test_togliere_due_volte_non_da_errore(client):
+    """Ripetere l'operazione porta allo stesso risultato: non e' un guasto,
+    e' gia' fatto. Utile se qualcuno clicca due volte."""
+    s = _scenario(client)
+    anna_id = _id_utente(client, s["admin"], "anna@a.it")
+    percorso = f"/reparti/{s['automazione']['id']}/membri/{anna_id}"
+
+    assert client.delete(percorso, headers=s["admin"]).status_code == 200
+    assert client.delete(percorso, headers=s["admin"]).status_code == 200
+
+
+def test_solo_l_admin_toglie_dai_reparti(client):
+    """Un caposquadra coordina il lavoro, non decide chi sta in che reparto."""
+    s = _scenario(client)
+    dino_id = _id_utente(client, s["admin"], "dino@a.it")
+
+    r = client.delete(f"/reparti/{s['digitale']['id']}/membri/{dino_id}", headers=s["anna"])
+    assert r.status_code == 403
+    # e Dino e' ancora dentro
+    assert "Sito" in {p["nome"] for p in client.get("/progetti", headers=s["dino"]).json()}
+
+
+def test_non_si_toccano_i_reparti_di_un_altra_azienda(client):
+    s = _scenario(client)
+    anna_id = _id_utente(client, s["admin"], "anna@a.it")
+    altra = registra(client, "Azienda B", "Bruno", "bruno@b.it")
+
+    r = client.delete(f"/reparti/{s['automazione']['id']}/membri/{anna_id}", headers=altra)
+    assert r.status_code == 404
