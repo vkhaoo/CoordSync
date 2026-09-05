@@ -880,3 +880,26 @@ input, select, textarea { font-family: var(--sans); }
 .nome-invito { display: flex; flex-direction: column; gap: 1px; min-width: 0;
   font-size: 0.87rem; color: var(--inchiostro); }
 .azioni-invito { display: flex; gap: 0.25rem; flex: 0 0 auto; }
+
+/* Il campo delle sei cifre: grande e spaziato, si scrive guardando il telefono. */
+.campo-codice {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  letter-spacing: 0.4em;
+  text-align: center;
+  padding: 0.6rem;
+}
+
+/* --- Secondo fattore, nel menu del proprio nome -------------------------- */
+.blocco-2fa { margin: 0.8rem 0; padding-top: 0.7rem; border-top: 1px solid var(--linea-2); }
+.segreto-2fa { display: block; margin: 0.4rem 0; padding: 0.45rem 0.6rem;
+  font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.06em;
+  word-break: break-all; background: var(--pannello-2);
+  border: 1px solid var(--linea); border-radius: 4px; color: var(--inchiostro); }
+/* I codici di recupero si vedono una volta sola: vanno letti e copiati a mano,
+   quindi grandi, spaziati e in colonna. */
+.codici-recupero ul { list-style: none; margin: 0.5rem 0; padding: 0.6rem;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem;
+  background: var(--pannello-2); border: 1px solid var(--ambra); border-radius: 5px; }
+.codici-recupero li { font-family: var(--mono); font-size: 0.85rem;
+  letter-spacing: 0.05em; color: var(--inchiostro); }

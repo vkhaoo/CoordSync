@@ -26,6 +26,10 @@ export default function App() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Secondo passo dell'accesso: chi ha acceso il 2FA riceve dal login un
+  // token di passaggio che da solo non apre niente, e deve mettere il codice.
+  const [attesa2fa, setAttesa2fa] = useState(null);
+  const [codice2fa, setCodice2fa] = useState("");
 
   // Se arrivo dal link dell'email, mostro la pagina per la nuova password.
   if (tokenReset) {
@@ -61,11 +65,68 @@ export default function App() {
       } else {
         risposta = await api.login({ email, password });
       }
+      if (risposta.token_type === "attesa_2fa") {
+        // Password giusta, ma manca il codice: NON si salva questo token,
+        // che non e' una credenziale valida.
+        setAttesa2fa(risposta.access_token);
+        setPassword("");
+        return;
+      }
       setToken(risposta.access_token);   // salvo il token per le chiamate successive
       setConnesso(true);
     } catch (err) {
       setErrore(err.message);            // mostro il messaggio del backend
     }
+  }
+
+  async function inviaCodice(e) {
+    e.preventDefault();
+    setErrore(null);
+    try {
+      const risposta = await api.verificaDueFattori(attesa2fa, codice2fa);
+      setToken(risposta.access_token);
+      setConnesso(true);
+    } catch (err) {
+      setErrore(err.message);
+      setCodice2fa("");
+    }
+  }
+
+  // Secondo passo: il codice del telefono (o uno di recupero).
+  if (attesa2fa && !connesso) {
+    return (
+      <>
+        <AvvisoRete />
+        <div className="schermata">
+          <form className="card" onSubmit={inviaCodice}>
+            <div className="marchio">CoordSync</div>
+            <p className="sottotitolo">
+              Apri l'app dei codici sul telefono e scrivi le sei cifre.
+            </p>
+            <input
+              className="campo-codice"
+              placeholder="000000"
+              value={codice2fa}
+              onChange={(e) => setCodice2fa(e.target.value)}
+              autoFocus
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              required
+            />
+            {errore && <p className="errore">{errore}</p>}
+            <button type="submit" className="principale">Entra</button>
+            <p className="vuoto piccolo">
+              Telefono perso o cambiato? Scrivi qui uno dei codici di recupero
+              che avevi salvato: vale una volta sola.
+            </p>
+            <button type="button" className="link-testo"
+                    onClick={() => { setAttesa2fa(null); setCodice2fa(""); setErrore(null); }}>
+              Torna indietro
+            </button>
+          </form>
+        </div>
+      </>
+    );
   }
 
   // Se sono connesso, mostro la dashboard vera.

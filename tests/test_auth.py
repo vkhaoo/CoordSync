@@ -40,3 +40,23 @@ def test_registrazione_rifiuta_password_debole(client):
         "email": "marco@a.it", "password": "abc",
     })
     assert r.status_code == 422
+
+
+def test_un_token_di_scopo_non_vale_come_accesso(client):
+    """Buco chiuso il 5 settembre 2026.
+
+    I link di invito, reset password e verifica email portano un token
+    firmato con la stessa chiave dei token di accesso. Senza un controllo
+    esplicito, quel token apriva l'account per intero: un invito, che vive
+    sette giorni, valeva quanto una password. Ora chi ha uno "scopo" viene
+    rifiutato dalla guardia.
+    """
+    from app.security import crea_token_scopo
+
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    io = client.get("/auth/me", headers=a).json()
+
+    for scopo in ("invito", "reset_password", "verifica_email", "attesa_2fa"):
+        finto = crea_token_scopo(io["id"], scopo, 60)
+        r = client.get("/auth/me", headers={"Authorization": f"Bearer {finto}"})
+        assert r.status_code == 401, f"il token di scopo '{scopo}' apre l'account"

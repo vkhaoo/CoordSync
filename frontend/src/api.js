@@ -152,6 +152,14 @@ export const api = {
     richiesta("POST", "/auth/inviti/rifiuta", { organizzazione_id }),
   cancellaMioAccount: () => richiesta("DELETE", "/auth/me"),
   eliminaUtente: (id) => richiesta("DELETE", `/utenti/${id}`),
+  // Secondo fattore
+  verificaDueFattori: (token, codice) =>
+    richiesta("POST", "/auth/2fa/verifica", { token, codice }),
+  statoDueFattori: () => richiesta("GET", "/auth/2fa/stato"),
+  preparaDueFattori: () => richiesta("POST", "/auth/2fa/prepara"),
+  attivaDueFattori: (codice) => richiesta("POST", "/auth/2fa/attiva", { codice }),
+  disattivaDueFattori: (password) =>
+    richiesta("POST", "/auth/2fa/disattiva", { password }),
   cambiaPassword: (vecchia_password, nuova_password) => richiesta("POST", "/auth/cambia-password", { vecchia_password, nuova_password }),
   // Ricerca unica: una parola, cinque tipi di risultato.
   cercaDappertutto: (q) => richiesta("GET", `/ricerca?q=${encodeURIComponent(q)}`),

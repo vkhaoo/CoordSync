@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api, setToken } from "./api.js";
 import { temaCorrente, impostaTema } from "./tema.js";
+import DueFattori from "./DueFattori.jsx";
 
 // Il menu del proprio account, aperto cliccando il nome nella barra.
 // Sta qui e non nel pannello Utenti (che e' solo per l'admin) perche'
@@ -174,6 +175,8 @@ export default function MioProfilo({ io, onLogout }) {
             <button className="principale piccolo" onClick={scarica} disabled={scaricando}>
               {scaricando ? "Preparo il file…" : "Scarica i miei dati"}
             </button>
+
+            <DueFattori />
 
             <div className="zona-pericolo">
               <p className="vuoto piccolo">

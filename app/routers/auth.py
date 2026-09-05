@@ -25,7 +25,7 @@ from app.security import (
 from app.schemas.validators import PasswordStr
 from app.dependencies import get_current_user
 from app.notifiche import invia_email
-from app import limiti
+from app import due_fattori, limiti
 from app.email_templates import (
     verifica_email as email_verifica_template,
     reset_password as email_reset_template,
@@ -34,6 +34,10 @@ from app.email_templates import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 SCOPO_VERIFICA = "verifica_email"
+# Token di passaggio fra la password e il codice del secondo fattore: vale
+# pochi minuti e NON apre niente da solo.
+SCOPO_2FA = "attesa_2fa"
+MINUTI_ATTESA_2FA = 5
 
 
 def _invia_verifica(utente: Utente) -> None:
@@ -125,9 +129,76 @@ def login(dati: LoginRichiesta, richiesta: Request, db: Session = Depends(get_db
         raise HTTPException(status_code=401, detail="Credenziali non valide")
 
     limiti.azzera(dati.email, ip)   # chi entra davvero riparte pulito
+
+    # Chi ha acceso il secondo fattore non ha ancora finito: la password da
+    # sola non basta piu'. Si restituisce un token di PASSAGGIO che non apre
+    # niente e vale cinque minuti, giusto il tempo di leggere il codice dal
+    # telefono.
+    if utente.totp_attivo:
+        return TokenRisposta(
+            access_token=crea_token_scopo(utente.id, SCOPO_2FA, MINUTI_ATTESA_2FA),
+            token_type="attesa_2fa",
+        )
+
     # Si entra nell'azienda di casa: da li' si potra' cambiare senza
     # rifare l'accesso (POST /auth/cambia-azienda).
     return TokenRisposta(access_token=crea_token(utente.id, utente.organizzazione_id))
+
+
+class VerificaDueFattori(BaseModel):
+    token: str        # quello di passaggio ricevuto dal login
+    codice: str       # sei cifre dal telefono, oppure un codice di recupero
+
+
+@router.post("/2fa/verifica", response_model=TokenRisposta)
+def verifica_due_fattori(dati: VerificaDueFattori, richiesta: Request,
+                         db: Session = Depends(get_db)):
+    """Secondo passo dell'accesso: il codice che cambia ogni 30 secondi.
+
+    Accetta anche un codice di RECUPERO, che pero' brucia: chi ha perso il
+    telefono deve poter rientrare, ma un codice letto una volta non deve
+    valere per sempre.
+
+    I tentativi qui contano come quelli della password: senza, il secondo
+    fattore sarebbe sei cifre da indovinare a raffica.
+    """
+    ip = richiesta.client.host if richiesta.client else "sconosciuto"
+
+    utente_id = leggi_token_scopo(dati.token, SCOPO_2FA)
+    if utente_id is None:
+        raise HTTPException(status_code=401,
+                            detail="Sessione scaduta: rifai l'accesso.")
+
+    utente = db.query(Utente).filter(Utente.id == int(utente_id)).first()
+    if utente is None or not utente.totp_attivo:
+        raise HTTPException(status_code=401, detail="Codice non valido")
+
+    attesa = limiti.attesa_richiesta(utente.email, ip)
+    if attesa is not None:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Troppi tentativi. Riprova fra {attesa} secondi.",
+            headers={"Retry-After": str(attesa)},
+        )
+
+    if due_fattori.codice_valido(utente.totp_segreto, dati.codice):
+        limiti.azzera(utente.email, ip)
+        return TokenRisposta(
+            access_token=crea_token(utente.id, utente.organizzazione_id))
+
+    # Non era il codice del telefono: forse e' uno di recupero.
+    rimasti = due_fattori.consuma_codice_recupero(
+        (utente.totp_recupero or "").split(",") if utente.totp_recupero else [],
+        dati.codice)
+    if rimasti is not None:
+        utente.totp_recupero = ",".join(rimasti)
+        db.commit()
+        limiti.azzera(utente.email, ip)
+        return TokenRisposta(
+            access_token=crea_token(utente.id, utente.organizzazione_id))
+
+    limiti.registra_fallimento(utente.email, ip)
+    raise HTTPException(status_code=401, detail="Codice non valido")
 
 
 @router.get("/me", response_model=UtenteRead)
@@ -319,6 +390,100 @@ def accetta_invito_azienda(dati: AccettaInvitoAzienda, db: Session = Depends(get
     iscrivi(db, utente, org_id, ruolo)
     db.commit()
     return EsitoInvitoAzienda(azienda=org.nome, ruolo=ruolo)
+
+
+# ---------- SECONDO FATTORE: accendere e spegnere ----------
+
+class PreparaDueFattori(BaseModel):
+    segreto: str
+    uri: str
+
+
+@router.post("/2fa/prepara", response_model=PreparaDueFattori)
+def prepara_due_fattori(db: Session = Depends(get_db),
+                        current: Utente = Depends(get_current_user)):
+    """Primo passo per accendere il secondo fattore: genera il segreto.
+
+    NON lo accende ancora. Prima l'utente deve dimostrare di riuscire a
+    generare un codice giusto (vedi /2fa/attiva): accenderlo subito
+    significherebbe rischiare di chiudere fuori chi ha configurato male il
+    telefono.
+    """
+    if current.totp_attivo:
+        raise HTTPException(status_code=409,
+                            detail="Il secondo fattore e' gia' acceso.")
+
+    current.totp_segreto = due_fattori.nuovo_segreto()
+    db.commit()
+    return PreparaDueFattori(
+        segreto=current.totp_segreto,
+        uri=due_fattori.uri_configurazione(current.totp_segreto, current.email),
+    )
+
+
+class AttivaDueFattori(BaseModel):
+    codice: str
+
+
+class CodiciRecupero(BaseModel):
+    codici: list[str]
+
+
+@router.post("/2fa/attiva", response_model=CodiciRecupero)
+def attiva_due_fattori(dati: AttivaDueFattori, db: Session = Depends(get_db),
+                       current: Utente = Depends(get_current_user)):
+    """Accende il secondo fattore, dopo la prova che il telefono funziona.
+
+    Restituisce i codici di recupero **una volta sola**: da qui in poi nel
+    database ci sono solo le loro impronte, e nemmeno noi possiamo rileggerli.
+    Chi non se li segna e perde il telefono resta fuori.
+    """
+    if current.totp_attivo:
+        raise HTTPException(status_code=409,
+                            detail="Il secondo fattore e' gia' acceso.")
+    if not current.totp_segreto:
+        raise HTTPException(status_code=400,
+                            detail="Prima prepara il secondo fattore.")
+    if not due_fattori.codice_valido(current.totp_segreto, dati.codice):
+        raise HTTPException(status_code=400,
+                            detail="Il codice non corrisponde: controlla l'ora del telefono e riprova.")
+
+    codici = due_fattori.genera_codici_recupero()
+    current.totp_recupero = ",".join(due_fattori.impronte(codici))
+    current.totp_attivo = True
+    db.commit()
+    return CodiciRecupero(codici=codici)
+
+
+class SpegniDueFattori(BaseModel):
+    password: str
+
+
+@router.post("/2fa/disattiva", status_code=204)
+def disattiva_due_fattori(dati: SpegniDueFattori, db: Session = Depends(get_db),
+                          current: Utente = Depends(get_current_user)):
+    """Spegne il secondo fattore. Serve la password.
+
+    Chiederla non e' un fastidio inutile: se qualcuno si siede al posto tuo
+    mentre sei collegato, non deve poter togliere la protezione con un clic.
+    """
+    if not current.password_hash or not verifica_password(dati.password, current.password_hash):
+        raise HTTPException(status_code=401, detail="Password non corretta")
+
+    current.totp_attivo = False
+    current.totp_segreto = None
+    current.totp_recupero = None
+    db.commit()
+
+
+@router.get("/2fa/stato")
+def stato_due_fattori(current: Utente = Depends(get_current_user)):
+    """Se e' acceso, e quanti codici di recupero restano.
+
+    Il conto serve a dire "te ne restano due" prima che finiscano, non dopo.
+    """
+    rimasti = len(current.totp_recupero.split(",")) if current.totp_recupero else 0
+    return {"attivo": current.totp_attivo, "codici_recupero_rimasti": rimasti}
 
 
 # ---------- LE MIE AZIENDE ----------

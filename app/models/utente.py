@@ -1,7 +1,7 @@
 """Modello Utente: tu e i colleghi."""
 import enum
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SAEnum, Boolean
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Enum as SAEnum, Boolean
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -31,6 +31,16 @@ class Utente(Base):
     # True per gli utenti creati dall'admin con password: al primo accesso devono
     # sceglierne una loro (l'admin non deve conoscere la password di nessuno).
     deve_cambiare_password = Column(Boolean, default=False, nullable=False)
+
+    # --- Secondo fattore (facoltativo, spento di default) --------------------
+    # Il segreto condiviso col telefono. NULL = non l'ha mai preparato.
+    totp_segreto = Column(String, nullable=True)
+    # Acceso solo dopo che l'utente ha dimostrato di saper generare un codice
+    # giusto: cosi' non ci si chiude fuori da soli configurandolo male.
+    totp_attivo = Column(Boolean, default=False, nullable=False)
+    # I codici di recupero, come impronte separate da virgola. Sono l'unica via
+    # d'uscita se il telefono si perde.
+    totp_recupero = Column(Text, nullable=True)
 
     # L'azienda "di casa": quella dove l'account e' nato. Resta il punto di
     # partenza quando si entra, ma non e' piu' l'unica a cui si puo'

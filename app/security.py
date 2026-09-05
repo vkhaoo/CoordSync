@@ -56,6 +56,15 @@ def leggi_token(token: str) -> tuple[int, int | None] | None:
     """
     try:
         contenuto = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITMO])
+        # Un token che ha uno SCOPO non e' un token di accesso: e' quello del
+        # link di invito, del reset password, della verifica email o del
+        # passaggio al secondo fattore. Firmati con la stessa chiave, quindi
+        # senza questo controllo passerebbero come credenziali valide — e un
+        # invito, che vive sette giorni, diventerebbe di fatto un accesso
+        # completo all'account. Serve a poco proteggere il resto se poi la
+        # porta di servizio resta aperta.
+        if "scopo" in contenuto:
+            return None
         org = contenuto.get("org")
         return int(contenuto["sub"]), (int(org) if org is not None else None)
     except (jwt.InvalidTokenError, KeyError, ValueError):
