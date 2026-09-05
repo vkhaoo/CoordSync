@@ -166,9 +166,15 @@ I caratteri jolly di LIKE (`%` e `_`) vengono neutralizzati: cercare "50%" deve
 trovare la percentuale, non restituire tutto. C'è un test apposta, e un altro
 che verifica che cercare non aggiri i reparti.
 
-**Fatto anche:** la ricerca guarda dentro i commenti e le voci di checklist.
-**Resta:** una ricerca unica che attraversi progetti, macchine e agenda
-insieme, dalla barra in alto.
+**Fatto anche:** la ricerca guarda dentro i commenti e le voci di checklist, e
+la **ricerca unica** dalla barra in alto (`GET /ricerca`), che attraversa
+progetti, lavori, macchine, storico e agenda insieme e riporta cinque risultati
+per tipo, ognuno con scritto dove sta.
+
+*Limite noto:* si cerca il testo com'è scritto, quindi "valvola" non trova
+"valvole". Andare oltre vorrebbe dire la ricerca a tutto testo di PostgreSQL,
+che in locale (SQLite) non esiste: sviluppo e produzione si comporterebbero in
+modo diverso e i test smetterebbero di dire la verità.
 
 ---
 
