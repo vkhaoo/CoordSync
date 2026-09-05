@@ -175,3 +175,63 @@ def test_non_cerco_nelle_macchine_che_non_vedo(client):
     m, _ = _macchina_con_storico(client, a)
     altra = registra(client, "Azienda B", "Bruno", "bruno@b.it")
     assert client.get(f"/macchine/{m['id']}/voci?q=inverter", headers=altra).status_code == 404
+
+
+# ---------- RICERCA DENTRO COMMENTI E CHECKLIST ----------
+
+def test_trovo_un_lavoro_da_una_frase_scritta_nei_commenti(client):
+    """Spesso non si ricorda il titolo, ma una frase scritta in un commento."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "Intervento generico",
+                                     "progetto_id": p["id"]}, headers=a).json()
+    client.post("/lavori", json={"titolo": "Altro", "progetto_id": p["id"]}, headers=a)
+    client.post(f"/lavori/{l['id']}/commenti",
+                json={"testo": "Sostituita la guarnizione del riduttore"}, headers=a)
+
+    trovati = client.get(f"/lavori?progetto_id={p['id']}&q=riduttore", headers=a).json()
+    assert [x["titolo"] for x in trovati] == ["Intervento generico"]
+
+
+def test_trovo_un_lavoro_da_una_voce_di_checklist(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "Intervento generico",
+                                     "progetto_id": p["id"]}, headers=a).json()
+    client.post("/lavori", json={"titolo": "Altro", "progetto_id": p["id"]}, headers=a)
+    client.post(f"/lavori/{l['id']}/sotto-attivita",
+                json={"testo": "Verificare la taratura del pressostato"}, headers=a)
+
+    trovati = client.get(f"/lavori?progetto_id={p['id']}&q=pressostato", headers=a).json()
+    assert [x["titolo"] for x in trovati] == ["Intervento generico"]
+
+
+def test_niente_doppioni_con_piu_commenti_che_corrispondono(client):
+    """Tre commenti che contengono la parola non devono far comparire il
+    lavoro tre volte."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    l = client.post("/lavori", json={"titolo": "Uno solo", "progetto_id": p["id"]},
+                    headers=a).json()
+    for i in range(3):
+        client.post(f"/lavori/{l['id']}/commenti",
+                    json={"testo": f"nota {i} sulla valvola"}, headers=a)
+    client.post(f"/lavori/{l['id']}/sotto-attivita",
+                json={"testo": "controllare valvola"}, headers=a)
+
+    trovati = client.get(f"/lavori?progetto_id={p['id']}&q=valvola", headers=a).json()
+    assert len(trovati) == 1
+
+
+def test_cercare_nei_commenti_rispetta_i_reparti(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    dino = _crea_utente(client, a, "Dino", "dino@a.it", "caposquadra")
+    rep = client.post("/reparti", json={"nome": "Riservato"}, headers=a).json()
+    p = client.post("/progetti", json={"nome": "Segreto", "reparti_ids": [rep["id"]]},
+                    headers=a).json()
+    l = client.post("/lavori", json={"titolo": "X", "progetto_id": p["id"]}, headers=a).json()
+    client.post(f"/lavori/{l['id']}/commenti",
+                json={"testo": "parola riservatissima"}, headers=a)
+
+    assert client.get("/lavori?q=riservatissima", headers=dino).json() == []
+    assert len(client.get("/lavori?q=riservatissima", headers=a).json()) == 1

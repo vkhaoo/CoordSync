@@ -11,6 +11,9 @@ from app.dependencies import get_current_user, richiedi_ruolo
 from app.visibilita import (lavori_visibili, lavoro_visibile, progetto_visibile,
                             macchina_visibile)
 from app.ricerca import condizione_testo
+from app.models.commento import Commento
+from app.models.sotto_attivita import SottoAttivita
+from sqlalchemy import or_
 from app.models.allegato import Allegato
 from app.schemas.allegato import AllegatoCreate, AllegatoRead
 
@@ -56,16 +59,33 @@ def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = No
                   q: str | None = None,
                   db: Session = Depends(get_db),
                   current: Utente = Depends(get_current_user)):
-    """I lavori che posso vedere. 'q' cerca nel titolo e nella descrizione:
-    serve quando un progetto ne accumula troppi per scorrerli a occhio."""
+    """I lavori che posso vedere.
+
+    'q' cerca nel titolo, nella descrizione, nei COMMENTI e nelle voci di
+    CHECKLIST: spesso quello che si ricorda non e' il titolo del lavoro ma una
+    frase scritta in un commento ("dove avevo scritto di quella valvola?").
+    """
     query = lavori_visibili(db, current)
     if progetto_id is not None:
         query = query.filter(Lavoro.progetto_id == progetto_id)
     if stato is not None:
         query = query.filter(Lavoro.stato == stato)
+
     cerca = condizione_testo([Lavoro.titolo, Lavoro.descrizione], q)
     if cerca is not None:
-        query = query.filter(cerca)
+        # Sottoquery invece di join: una join farebbe tornare lo stesso lavoro
+        # una volta per ogni commento che corrisponde.
+        nei_commenti = (
+            db.query(Commento.lavoro_id)
+            .filter(condizione_testo([Commento.testo], q)).scalar_subquery()
+        )
+        nella_checklist = (
+            db.query(SottoAttivita.lavoro_id)
+            .filter(condizione_testo([SottoAttivita.testo], q)).scalar_subquery()
+        )
+        query = query.filter(or_(cerca,
+                                 Lavoro.id.in_(nei_commenti),
+                                 Lavoro.id.in_(nella_checklist)))
     return query.all()
 
 
