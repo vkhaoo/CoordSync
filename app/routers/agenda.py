@@ -18,7 +18,8 @@ vedere: l'agenda non e' una scorciatoia per aggirare i reparti.
 """
 from datetime import datetime, date, time
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -271,3 +272,82 @@ def elimina_impegno(impegno_id: int, db: Session = Depends(get_db),
     impegno = _impegno_mio_o_404(db, current, impegno_id)
     db.delete(impegno)
     db.commit()
+
+
+# ---------- PROMEMORIA ----------
+#
+# Chi li fa partire: NON l'app da sola. Il piano gratuito di Render addormenta
+# il servizio dopo 15 minuti e non offre lavori programmati, quindi qualcuno
+# deve bussare da fuori (una GitHub Action schedulata, vedi
+# .github/workflows/promemoria.yml). Questo endpoint e' quella porta.
+#
+# Finche' CHIAVE_PROMEMORIA non e' impostata, l'endpoint RIFIUTA di funzionare:
+# meglio inerte che aperto a chiunque sappia l'indirizzo.
+
+class EsitoPromemoria(BaseModel):
+    inviati: int
+    destinatari: int
+
+
+def _fra_quanto(minuti: int) -> str:
+    """"1 ora", "30 minuti", "1 giorno": come dirlo in italiano."""
+    if minuti % 1440 == 0:
+        giorni = minuti // 1440
+        return "1 giorno" if giorni == 1 else f"{giorni} giorni"
+    if minuti % 60 == 0:
+        ore = minuti // 60
+        return "1 ora" if ore == 1 else f"{ore} ore"
+    return f"{minuti} minuti"
+
+
+@router.post("/promemoria/invia", response_model=EsitoPromemoria)
+def invia_promemoria(richiesta: Request, db: Session = Depends(get_db)):
+    """Manda i promemoria dovuti adesso. Da chiamare ogni tanto dall'esterno.
+
+    Un impegno viene avvisato quando mancano meno dei minuti scelti, non e'
+    ancora passato, e il promemoria non e' gia' partito. Il segno di "gia'
+    mandato" viene messo SUBITO: se l'invio di una email fallisse, meglio un
+    promemoria perso che dieci copie dello stesso.
+    """
+    from app.config import settings
+    from app.email_templates import promemoria_impegno
+    from app.notifiche import invia_email
+
+    chiave = settings.chiave_promemoria
+    if not chiave:
+        raise HTTPException(status_code=503,
+                            detail="Invio promemoria non configurato")
+    if richiesta.headers.get("X-Chiave-Promemoria") != chiave:
+        raise HTTPException(status_code=401, detail="Chiave non valida")
+
+    adesso = datetime.now()
+    dovuti = (
+        db.query(Impegno)
+        .filter(Impegno.promemoria_minuti.isnot(None),
+                Impegno.promemoria_inviato_il.is_(None),
+                Impegno.inizio > adesso)
+        .all()
+    )
+
+    inviati = 0
+    destinatari = 0
+    for impegno in dovuti:
+        manca = (impegno.inizio - adesso).total_seconds() / 60
+        if manca > impegno.promemoria_minuti:
+            continue          # troppo presto, sara' per la prossima passata
+
+        impegno.promemoria_inviato_il = adesso    # segno prima di spedire
+        inviati += 1
+        quando = impegno.inizio.strftime("%d/%m/%Y alle %H:%M")
+        for persona in impegno.partecipanti:
+            if not persona.email:
+                continue
+            oggetto, testo, html = promemoria_impegno(
+                persona.nome, impegno.titolo, quando, impegno.luogo,
+                _fra_quanto(impegno.promemoria_minuti), settings.frontend_url)
+            invia_email(destinatario=persona.email, oggetto=oggetto,
+                        corpo=testo, corpo_html=html)
+            destinatari += 1
+
+    db.commit()
+    return EsitoPromemoria(inviati=inviati, destinatari=destinatari)

@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # es. il reset password dove digita la nuova password).
     frontend_url: str = "http://localhost:5173"
 
+    # Chiave per far partire l'invio dei promemoria dall'esterno (es. una
+    # GitHub Action schedulata). Finche' resta VUOTA l'endpoint rifiuta di
+    # funzionare: meglio inerte che aperto a chiunque.
+    chiave_promemoria: str = ""
+
     # --- Invio email ---
     # Mittente (deve essere un indirizzo/dominio VERIFICATO presso il provider).
     mittente_email: str = ""

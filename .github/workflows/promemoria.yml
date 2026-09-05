@@ -1,0 +1,55 @@
+# Fa partire i promemoria dell'agenda.
+#
+# PERCHE' ESISTE: il piano gratuito di Render addormenta il servizio dopo 15
+# minuti e non offre lavori programmati, quindi l'app da sola non riesce a
+# mandare un promemoria alle 8 di martedi'. Questa azione bussa dall'esterno
+# ogni quarto d'ora, sveglia il servizio e gli dice di spedire quello che e'
+# dovuto. E' gratis e usa GitHub, che c'e' gia' per i test.
+#
+# COME ACCENDERLA (finche' non lo fai, non manda niente e non sbaglia niente):
+#   1. Scegli una frase lunga e casuale come chiave.
+#   2. Su Render, backend -> Environment: aggiungi CHIAVE_PROMEMORIA con quella frase.
+#      Aggiungi anche BASE_URL se non c'e' gia'.
+#   3. Su GitHub, Settings -> Secrets and variables -> Actions:
+#      - secret CHIAVE_PROMEMORIA con la stessa frase
+#      - secret URL_BACKEND con l'indirizzo del backend (es. https://...onrender.com)
+#
+# NOTA: GitHub non garantisce la puntualita' al minuto sui lavori programmati,
+# e puo' sospenderli se il repository resta fermo a lungo. Per un promemoria
+# di lavoro va benissimo; per una sveglia al secondo, no.
+
+name: Promemoria agenda
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # ogni quarto d'ora
+  workflow_dispatch:          # e a mano, per provarla
+
+jobs:
+  invia:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chiedi al backend di mandare i promemoria dovuti
+        env:
+          URL_BACKEND: ${{ secrets.URL_BACKEND }}
+          CHIAVE: ${{ secrets.CHIAVE_PROMEMORIA }}
+        run: |
+          if [ -z "$URL_BACKEND" ] || [ -z "$CHIAVE" ]; then
+            echo "Promemoria non configurati: manca URL_BACKEND o CHIAVE_PROMEMORIA."
+            echo "Non e' un errore, l'azione semplicemente non fa niente."
+            exit 0
+          fi
+
+          # --max-time: il servizio gratuito puo' metterci a svegliarsi.
+          risposta=$(curl -sS --max-time 90 -w "\n%{http_code}" \
+            -X POST "$URL_BACKEND/agenda/promemoria/invia" \
+            -H "X-Chiave-Promemoria: $CHIAVE")
+
+          codice=$(echo "$risposta" | tail -n1)
+          corpo=$(echo "$risposta" | sed '$d')
+          echo "Risposta ($codice): $corpo"
+
+          if [ "$codice" != "200" ]; then
+            echo "::error::Il backend ha risposto $codice"
+            exit 1
+          fi

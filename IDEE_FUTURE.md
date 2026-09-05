@@ -119,13 +119,19 @@ caposquadra.
 Le scadenze mostrate sono solo quelle dei lavori già visibili: l'agenda non è
 una scorciatoia per aggirare i reparti (c'è un test apposta).
 
-**Promemoria — resta da fare la parte che avvisa davvero.** Oggi c'è il blocco
-"i tuoi prossimi 7 giorni" all'apertura dell'agenda, che funziona senza
-infrastruttura, e il campo `promemoria_minuti` è già salvato sull'impegno.
-Manca l'invio vero, che richiede qualcosa di sempre acceso: il piano gratuito di
-Render addormenta il servizio dopo 15 minuti e non offre lavori programmati.
-Due strade: una **GitHub Action schedulata** che chiama un endpoint che manda le
-email (gratis, e le Actions ci sono già per i test), oppure il piano a pagamento.
+**Promemoria — FATTI, ma vanno accesi.** Ci sono due livelli: il blocco "i tuoi
+prossimi 7 giorni" all'apertura dell'agenda, che funziona sempre, e l'**invio
+per email**, che richiede qualcosa di sempre acceso (Render gratuito dorme dopo
+15 minuti e non offre lavori programmati).
+
+La strada scelta è una **GitHub Action schedulata**
+(`.github/workflows/promemoria.yml`) che ogni quarto d'ora bussa all'endpoint
+`POST /agenda/promemoria/invia`. È gratis e usa GitHub, che c'è già per i test.
+
+**Resta da fare a mano, una volta sola:** impostare `CHIAVE_PROMEMORIA` su
+Render e i due secret `CHIAVE_PROMEMORIA` e `URL_BACKEND` su GitHub. Finché non
+si fa, l'endpoint risponde 503 e l'azione non manda niente senza dare errore:
+inerte è meglio che aperto a chiunque.
 
 ### 5 · Notifiche in-app — FATTE
 

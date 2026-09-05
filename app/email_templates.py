@@ -146,3 +146,32 @@ def reset_password(nome: str, link: str):
         1,
     )
     return oggetto, testo, html
+
+
+def promemoria_impegno(nome: str, titolo: str, quando: str, luogo: str | None,
+                       fra_quanto: str, link: str):
+    """Il promemoria di un impegno in agenda, mandato poco prima che arrivi."""
+    oggetto = f"Promemoria: {titolo} - {quando}"
+
+    parti = [
+        f"Ciao {nome},",
+        "",
+        f"ti ricordo che fra {fra_quanto} hai in agenda:",
+        "",
+        titolo,
+        f"Quando: {quando}",
+    ]
+    if luogo:
+        parti.append(f"Dove: {luogo}")
+    parti += ["", "Puoi vedere l'agenda completa qui:", link, "", "Il team di CoordSync"]
+    testo = "\n".join(parti)
+
+    righe = _riga(f"Ti ricordo che <strong>fra {fra_quanto}</strong> hai in agenda:")
+    righe += _riga(f'<span style="font-size:17px; color:{_ACCIAIO};"><strong>{titolo}</strong></span>')
+    righe += _riga(f"Quando: {quando}")
+    if luogo:
+        righe += _riga(f"Dove: {luogo}")
+
+    html = _layout(titolo=f"Ciao {nome}, un promemoria", righe_html=righe,
+                   cta_testo="Apri l'agenda", cta_link=link)
+    return oggetto, testo, html
