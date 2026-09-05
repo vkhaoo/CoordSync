@@ -12,12 +12,24 @@ from app.schemas.reparto import RepartoRead
 
 class SezioneCreate(BaseModel):
     nome: str
-    ordine: int = 0
+    # Non indicato = in fondo. Lo calcola il server: il conteggio che aveva il
+    # browser sbaglia appena si cancella una sezione (restano dei buchi).
+    ordine: int | None = None
 
 
 class SezioneUpdate(BaseModel):
     nome: str | None = None
     ordine: int | None = None
+
+
+class OrdineSezioni(BaseModel):
+    """L'ordine nuovo, per intero: la lista degli id come devono comparire.
+
+    Si manda tutta la lista invece di "sposta questa su di uno" perche' cosi'
+    il riordino e' UN'operazione sola: non ci sono stati intermedi in cui due
+    sezioni hanno lo stesso numero, e se i numeri erano gia' incasinati (tutti
+    zero, buchi, doppioni) il salvataggio li rimette a posto da solo."""
+    sezioni_ids: list[int]
 
 
 class SezioneRead(BaseModel):

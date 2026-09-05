@@ -14,6 +14,7 @@ Visibilita': la macchina segue il reparto, esattamente come i progetti.
 La regola vive in visibilita.py, qui non si riscrive.
 """
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -23,7 +24,7 @@ from app.models.voce_macchina import VoceMacchina, TipoVoce
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.macchina import (
     MacchinaCreate, MacchinaUpdate, MacchinaRead, MacchinaDettaglio,
-    SezioneCreate, SezioneUpdate, SezioneRead,
+    SezioneCreate, SezioneUpdate, SezioneRead, OrdineSezioni,
     VoceCreate, VoceUpdate, VoceRead,
     AllegatoCreate, AllegatoRead,
 )
@@ -127,7 +128,15 @@ def elimina_macchina(macchina_id: int, db: Session = Depends(get_db),
 def crea_sezione(macchina_id: int, dati: SezioneCreate, db: Session = Depends(get_db),
                  current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
     _macchina_o_404(db, current, macchina_id)
-    sezione = SezioneMacchina(nome=dati.nome, ordine=dati.ordine, macchina_id=macchina_id)
+    ordine = dati.ordine
+    if ordine is None:
+        ultimo = (
+            db.query(func.max(SezioneMacchina.ordine))
+            .filter(SezioneMacchina.macchina_id == macchina_id)
+            .scalar()
+        )
+        ordine = 0 if ultimo is None else ultimo + 1
+    sezione = SezioneMacchina(nome=dati.nome, ordine=ordine, macchina_id=macchina_id)
     db.add(sezione)
     db.commit()
     db.refresh(sezione)
@@ -143,6 +152,47 @@ def modifica_sezione(sezione_id: int, dati: SezioneUpdate, db: Session = Depends
     db.commit()
     db.refresh(sezione)
     return sezione
+
+
+@router.put("/macchine/{macchina_id}/sezioni/ordine", response_model=list[SezioneRead])
+def riordina_sezioni(macchina_id: int, dati: OrdineSezioni, db: Session = Depends(get_db),
+                     current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra))):
+    """Rimette le sezioni nell'ordine indicato.
+
+    L'ordine di una macchina non e' alfabetico: e' quello in cui i pezzi stanno
+    sull'impianto, o quello in cui si guardano quando si cerca un guasto. Solo
+    chi la usa sa qual e'.
+
+    Si riceve la lista COMPLETA degli id. Deve corrispondere esattamente alle
+    sezioni di questa macchina: se ne manca una o ne arriva una di un'altra
+    macchina si rifiuta tutto, invece di salvare un ordine a meta'.
+    """
+    _macchina_o_404(db, current, macchina_id)
+
+    sezioni = (
+        db.query(SezioneMacchina)
+        .filter(SezioneMacchina.macchina_id == macchina_id)
+        .all()
+    )
+    per_id = {s.id: s for s in sezioni}
+    if len(dati.sezioni_ids) != len(set(dati.sezioni_ids)):
+        raise HTTPException(status_code=400, detail="Ci sono sezioni ripetute nell'ordine")
+    if set(dati.sezioni_ids) != set(per_id):
+        raise HTTPException(
+            status_code=400,
+            detail="L'ordine deve contenere tutte e sole le sezioni di questa macchina",
+        )
+
+    for posto, sezione_id in enumerate(dati.sezioni_ids):
+        per_id[sezione_id].ordine = posto
+    db.commit()
+    # Rileggo dal database: cosi' l'ordine che torna e' quello davvero salvato.
+    return (
+        db.query(SezioneMacchina)
+        .filter(SezioneMacchina.macchina_id == macchina_id)
+        .order_by(SezioneMacchina.ordine)
+        .all()
+    )
 
 
 @router.delete("/sezioni/{sezione_id}", status_code=204)

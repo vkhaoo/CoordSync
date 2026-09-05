@@ -76,6 +76,70 @@ def test_sezioni_con_nomi_liberi(client):
     assert [s["nome"] for s in scheda["sezioni"]] == ["Confezione", "Finizione", "FAZ"]
 
 
+def test_le_sezioni_nuove_vanno_in_fondo(client):
+    """Senza indicare l'ordine la sezione si accoda: il browser non deve
+    contarle da solo, perche' dopo una cancellazione sbaglierebbe."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a)
+    for nome in ["Confezione", "Finizione", "FAZ"]:
+        client.post(f"/macchine/{m['id']}/sezioni", json={"nome": nome}, headers=a)
+
+    scheda = client.get(f"/macchine/{m['id']}", headers=a).json()
+    assert [s["nome"] for s in scheda["sezioni"]] == ["Confezione", "Finizione", "FAZ"]
+
+
+def test_riordinare_le_sezioni(client):
+    """A, B, C -> A, C, B: l'ordine e' quello dell'impianto, non alfabetico."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a)
+    sezioni = [
+        client.post(f"/macchine/{m['id']}/sezioni", json={"nome": nome}, headers=a).json()
+        for nome in ["A", "B", "C"]
+    ]
+    per_nome = {s["nome"]: s["id"] for s in sezioni}
+
+    r = client.put(f"/macchine/{m['id']}/sezioni/ordine", headers=a,
+                   json={"sezioni_ids": [per_nome["A"], per_nome["C"], per_nome["B"]]})
+    assert r.status_code == 200
+    assert [s["nome"] for s in r.json()] == ["A", "C", "B"]
+
+    # E resta cosi' anche rileggendo la scheda.
+    scheda = client.get(f"/macchine/{m['id']}", headers=a).json()
+    assert [s["nome"] for s in scheda["sezioni"]] == ["A", "C", "B"]
+
+
+def test_riordino_rifiutato_se_la_lista_non_torna(client):
+    """Meglio nessun cambiamento che un ordine salvato a meta'."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a)
+    uno = client.post(f"/macchine/{m['id']}/sezioni", json={"nome": "Uno"}, headers=a).json()
+    due = client.post(f"/macchine/{m['id']}/sezioni", json={"nome": "Due"}, headers=a).json()
+
+    def ordina(ids):
+        return client.put(f"/macchine/{m['id']}/sezioni/ordine",
+                          json={"sezioni_ids": ids}, headers=a)
+
+    assert ordina([uno["id"]]).status_code == 400                    # ne manca una
+    assert ordina([uno["id"], uno["id"]]).status_code == 400          # doppione
+    assert ordina([uno["id"], due["id"], 9999]).status_code == 400    # una che non c'e'
+
+    # Nulla e' cambiato.
+    scheda = client.get(f"/macchine/{m['id']}", headers=a).json()
+    assert [s["nome"] for s in scheda["sezioni"]] == ["Uno", "Due"]
+
+
+def test_riordino_solo_per_chi_gestisce_e_solo_sulla_propria_macchina(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a)
+    s1 = client.post(f"/macchine/{m['id']}/sezioni", json={"nome": "Uno"}, headers=a).json()
+    op = _crea_utente(client, a, "Op", "op@a.it", "operatore")
+    altra = registra(client, "Azienda B", "Bruno", "bruno@b.it")
+
+    corpo = {"sezioni_ids": [s1["id"]]}
+    assert client.put(f"/macchine/{m['id']}/sezioni/ordine", json=corpo, headers=op).status_code == 403
+    assert client.put(f"/macchine/{m['id']}/sezioni/ordine", json=corpo, headers=altra).status_code == 404
+
+
 def test_eliminare_una_sezione_non_cancella_le_voci(client):
     a = registra(client, "Azienda A", "Marco", "marco@a.it")
     m = _macchina(client, a)
