@@ -14,7 +14,7 @@ from app.database import get_db
 from app.models.reparto import Reparto
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.reparto import RepartoCreate, RepartoRead, RepartoUpdate
-from app.dependencies import get_current_user, richiedi_ruolo
+from app.dependencies import richiedi_azienda, richiedi_ruolo
 
 router = APIRouter(prefix="/reparti", tags=["reparti"])
 
@@ -41,7 +41,7 @@ def crea_reparto(dati: RepartoCreate, db: Session = Depends(get_db),
 
 @router.get("", response_model=list[RepartoRead])
 def elenca_reparti(db: Session = Depends(get_db),
-                   current: Utente = Depends(get_current_user)):
+                   current: Utente = Depends(richiedi_azienda)):
     return (
         db.query(Reparto)
         .filter(Reparto.organizzazione_id == current.org_attiva_id)

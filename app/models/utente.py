@@ -42,10 +42,14 @@ class Utente(Base):
     # d'uscita se il telefono si perde.
     totp_recupero = Column(Text, nullable=True)
 
-    # L'azienda "di casa": quella dove l'account e' nato. Resta il punto di
-    # partenza quando si entra, ma non e' piu' l'unica a cui si puo'
+    # L'azienda "di casa": la prima di cui si e' entrati a far parte. Resta il
+    # punto di partenza quando si entra, ma non e' piu' l'unica a cui si puo'
     # appartenere: le altre stanno nelle appartenenze qui sotto.
-    organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
+    #
+    # PUO' ESSERE VUOTA: da quando iscriversi e creare un'azienda sono due
+    # gesti separati, un account puo' esistere prima di appartenere a
+    # qualunque posto — appena registrato, o in attesa di accettare un invito.
+    organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=True)
     organizzazione = relationship("Organizzazione", back_populates="utenti")
 
     # Tutte le aziende di cui faccio parte, con il ruolo che ho in ognuna.
@@ -68,15 +72,20 @@ class Utente(Base):
     _ruolo_attivo = None
 
     @property
-    def org_attiva_id(self) -> int:
-        """L'azienda dentro cui sto lavorando adesso.
+    def org_attiva_id(self) -> int | None:
+        """L'azienda dentro cui sto lavorando adesso, o None se non ne ho.
 
         Ogni query che filtra per azienda deve usare QUESTA, non
-        organizzazione_id: quella dice solo dov'e' nato l'account."""
-        return self._org_attiva_id or self.organizzazione_id
+        organizzazione_id: quella dice solo dov'e' nato l'account.
+
+        None e' un caso vero, non un errore: chi si e' appena iscritto non fa
+        ancora parte di niente. Restituire l'azienda di casa come ripiego
+        sarebbe pericoloso, perche' verrebbe usata SENZA che nessuno abbia
+        verificato la tessera."""
+        return self._org_attiva_id
 
     @property
-    def ruolo_attivo(self) -> RuoloUtente:
+    def ruolo_attivo(self) -> RuoloUtente | None:
         """Il ruolo che ho NELL'AZIENDA ATTIVA: si puo' essere amministratori
-        da una parte e operatori dall'altra."""
-        return self._ruolo_attivo or self.ruolo
+        da una parte e operatori dall'altra. None se azienda non ce n'e'."""
+        return self._ruolo_attivo

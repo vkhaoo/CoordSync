@@ -22,7 +22,6 @@ export default function App() {
   const [messaggio, setMessaggio] = useState(null);
 
   // Campi del form
-  const [nomeAzienda, setNomeAzienda] = useState("");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,7 +60,7 @@ export default function App() {
       }
       let risposta;
       if (modo === "registra") {
-        risposta = await api.registra({ nome_azienda: nomeAzienda, nome, email, password });
+        risposta = await api.registra({ nome, email, password });
       } else {
         risposta = await api.login({ email, password });
       }
@@ -148,7 +147,7 @@ export default function App() {
             <button type="button" className={modo === "login" ? "attivo" : ""}
                     onClick={() => setModo("login")}>Accedi</button>
             <button type="button" className={modo === "registra" ? "attivo" : ""}
-                    onClick={() => setModo("registra")}>Registra azienda</button>
+                    onClick={() => setModo("registra")}>Crea un account</button>
           </div>
         )}
 
@@ -158,9 +157,10 @@ export default function App() {
 
         {modo === "registra" && (
           <>
-            <label>Nome azienda
-              <input value={nomeAzienda} onChange={(e) => setNomeAzienda(e.target.value)} required />
-            </label>
+            <p className="vuoto piccolo">
+              L'azienda si crea dopo, da dentro. Se ti hanno invitato in una,
+              non devi crearne nessuna: ti bastera' accettare l'invito.
+            </p>
             <label>Il tuo nome
               <input value={nome} onChange={(e) => setNome(e.target.value)} required />
             </label>
@@ -180,7 +180,7 @@ export default function App() {
         {messaggio && <p className="ok" style={{ fontSize: "0.9rem" }}>{messaggio}</p>}
 
         <button type="submit" className="principale">
-          {modo === "registra" ? "Crea azienda e accedi"
+          {modo === "registra" ? "Crea l'account"
             : modo === "recupero" ? "Invia link di recupero"
             : "Accedi"}
         </button>

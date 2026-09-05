@@ -28,7 +28,7 @@ from app.schemas.macchina import (
     VoceCreate, VoceUpdate, VoceRead,
     AllegatoCreate, AllegatoRead,
 )
-from app.dependencies import get_current_user, richiedi_ruolo
+from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import (macchine_visibili, macchina_visibile,
                             reparti_assegnabili, carica_reparti)
 from app.ricerca import condizione_testo
@@ -84,13 +84,13 @@ def crea_macchina(dati: MacchinaCreate, db: Session = Depends(get_db),
 
 @router.get("/macchine", response_model=list[MacchinaRead])
 def elenca_macchine(db: Session = Depends(get_db),
-                    current: Utente = Depends(get_current_user)):
+                    current: Utente = Depends(richiedi_azienda)):
     return macchine_visibili(db, current).all()
 
 
 @router.get("/macchine/{macchina_id}", response_model=MacchinaDettaglio)
 def leggi_macchina(macchina_id: int, db: Session = Depends(get_db),
-                   current: Utente = Depends(get_current_user)):
+                   current: Utente = Depends(richiedi_azienda)):
     """La scheda completa in una chiamata sola: sezioni, voci e allegati."""
     return _macchina_o_404(db, current, macchina_id)
 
@@ -274,7 +274,7 @@ def _controlla_genitore(db: Session, macchina_id: int, genitore_id: int | None,
 
 @router.post("/macchine/{macchina_id}/voci", response_model=VoceRead, status_code=201)
 def crea_voce(macchina_id: int, dati: VoceCreate, db: Session = Depends(get_db),
-              current: Utente = Depends(get_current_user)):
+              current: Utente = Depends(richiedi_azienda)):
     """Scrivere nel taccuino lo puo' fare chiunque veda la macchina."""
     _macchina_o_404(db, current, macchina_id)
     _controlla_genitore(db, macchina_id, dati.genitore_id)
@@ -301,7 +301,7 @@ def crea_voce(macchina_id: int, dati: VoceCreate, db: Session = Depends(get_db),
 def elenca_voci(macchina_id: int, tipo: TipoVoce | None = None,
                 sezione_id: int | None = None, q: str | None = None,
                 db: Session = Depends(get_db),
-                current: Utente = Depends(get_current_user)):
+                current: Utente = Depends(richiedi_azienda)):
     """Le voci della macchina. Senza filtri e' lo storico completo, in ordine
     di tempo: e' la vista "cosa e' successo su questo impianto".
 
@@ -322,7 +322,7 @@ def elenca_voci(macchina_id: int, tipo: TipoVoce | None = None,
 
 @router.patch("/voci/{voce_id}", response_model=VoceRead)
 def modifica_voce(voce_id: int, dati: VoceUpdate, db: Session = Depends(get_db),
-                  current: Utente = Depends(get_current_user)):
+                  current: Utente = Depends(richiedi_azienda)):
     voce = _voce_o_404(db, current, voce_id)
     # La modifica una voce chi l'ha scritta, oppure chi gestisce.
     if voce.autore_id != current.id and not _gestisce(current):
@@ -348,7 +348,7 @@ def modifica_voce(voce_id: int, dati: VoceUpdate, db: Session = Depends(get_db),
 
 @router.delete("/voci/{voce_id}", status_code=204)
 def elimina_voce(voce_id: int, db: Session = Depends(get_db),
-                 current: Utente = Depends(get_current_user)):
+                 current: Utente = Depends(richiedi_azienda)):
     voce = _voce_o_404(db, current, voce_id)
     if voce.autore_id != current.id and not _gestisce(current):
         raise HTTPException(status_code=403, detail="Puoi eliminare solo le voci che hai scritto")
@@ -369,28 +369,28 @@ def _crea_allegato(db, current, dati: AllegatoCreate, **genitore) -> Allegato:
 
 @router.post("/macchine/{macchina_id}/allegati", response_model=AllegatoRead, status_code=201)
 def allega_a_macchina(macchina_id: int, dati: AllegatoCreate, db: Session = Depends(get_db),
-                      current: Utente = Depends(get_current_user)):
+                      current: Utente = Depends(richiedi_azienda)):
     _macchina_o_404(db, current, macchina_id)
     return _crea_allegato(db, current, dati, macchina_id=macchina_id)
 
 
 @router.post("/sezioni/{sezione_id}/allegati", response_model=AllegatoRead, status_code=201)
 def allega_a_sezione(sezione_id: int, dati: AllegatoCreate, db: Session = Depends(get_db),
-                     current: Utente = Depends(get_current_user)):
+                     current: Utente = Depends(richiedi_azienda)):
     _sezione_o_404(db, current, sezione_id)
     return _crea_allegato(db, current, dati, sezione_id=sezione_id)
 
 
 @router.post("/voci/{voce_id}/allegati", response_model=AllegatoRead, status_code=201)
 def allega_a_voce(voce_id: int, dati: AllegatoCreate, db: Session = Depends(get_db),
-                  current: Utente = Depends(get_current_user)):
+                  current: Utente = Depends(richiedi_azienda)):
     _voce_o_404(db, current, voce_id)
     return _crea_allegato(db, current, dati, voce_id=voce_id)
 
 
 @router.delete("/allegati/{allegato_id}", status_code=204)
 def elimina_allegato(allegato_id: int, db: Session = Depends(get_db),
-                     current: Utente = Depends(get_current_user)):
+                     current: Utente = Depends(richiedi_azienda)):
     allegato = db.query(Allegato).filter(Allegato.id == allegato_id).first()
     if allegato is None:
         raise HTTPException(status_code=404, detail="Allegato non trovato")

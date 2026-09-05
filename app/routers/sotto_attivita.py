@@ -18,7 +18,7 @@ from app.models.utente import Utente, RuoloUtente
 from app.schemas.sotto_attivita import (
     SottoAttivitaCreate, SottoAttivitaUpdate, SottoAttivitaRead,
 )
-from app.dependencies import get_current_user, richiedi_ruolo
+from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import lavoro_visibile, condizione_progetti_visibili
 
 router = APIRouter(tags=["sotto-attivita"])
@@ -44,7 +44,7 @@ def _puo_aggiornare(lavoro, current) -> bool:
 
 @router.get("/lavori/{lavoro_id}/sotto-attivita", response_model=list[SottoAttivitaRead])
 def elenca(lavoro_id: int, db: Session = Depends(get_db),
-           current: Utente = Depends(get_current_user)):
+           current: Utente = Depends(richiedi_azienda)):
     lavoro = lavoro_visibile(db, current, lavoro_id)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
@@ -66,7 +66,7 @@ def crea(lavoro_id: int, dati: SottoAttivitaCreate, db: Session = Depends(get_db
 
 @router.patch("/sotto-attivita/{sotto_id}", response_model=SottoAttivitaRead)
 def modifica(sotto_id: int, dati: SottoAttivitaUpdate, db: Session = Depends(get_db),
-             current: Utente = Depends(get_current_user)):
+             current: Utente = Depends(richiedi_azienda)):
     voce = _sotto_mia(db, sotto_id, current)
     if voce is None:
         raise HTTPException(status_code=404, detail="Sotto-attivita' non trovata")

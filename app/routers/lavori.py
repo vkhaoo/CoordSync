@@ -7,7 +7,7 @@ from app.models.lavoro import Lavoro, StatoLavoro
 from app.models.progetto import Progetto
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.lavoro import LavoroCreate, LavoroRead, LavoroUpdateStato, LavoroUpdate
-from app.dependencies import get_current_user, richiedi_ruolo
+from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import (lavori_visibili, lavoro_visibile, progetto_visibile,
                             macchina_visibile)
 from app.ricerca import condizione_testo
@@ -58,7 +58,7 @@ def crea_lavoro(dati: LavoroCreate, db: Session = Depends(get_db),
 def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = None,
                   q: str | None = None,
                   db: Session = Depends(get_db),
-                  current: Utente = Depends(get_current_user)):
+                  current: Utente = Depends(richiedi_azienda)):
     """I lavori che posso vedere.
 
     'q' cerca nel titolo, nella descrizione, nei COMMENTI e nelle voci di
@@ -92,7 +92,7 @@ def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = No
 @router.patch("/{lavoro_id}/stato", response_model=LavoroRead)
 def cambia_stato(lavoro_id: int, dati: LavoroUpdateStato,
                  db: Session = Depends(get_db),
-                 current: Utente = Depends(get_current_user)):
+                 current: Utente = Depends(richiedi_azienda)):
     lavoro = lavoro_visibile(db, current, lavoro_id)
     if lavoro is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
@@ -157,7 +157,7 @@ def elimina_lavoro(lavoro_id: int, db: Session = Depends(get_db),
 
 @router.post("/{lavoro_id}/allegati", response_model=AllegatoRead, status_code=201)
 def allega_a_lavoro(lavoro_id: int, dati: AllegatoCreate, db: Session = Depends(get_db),
-                    current: Utente = Depends(get_current_user)):
+                    current: Utente = Depends(richiedi_azienda)):
     """Un link appeso al lavoro (foto dal campo, schema, documentazione)."""
     if lavoro_visibile(db, current, lavoro_id) is None:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")

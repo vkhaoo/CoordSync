@@ -7,7 +7,7 @@ from app.models.progetto import Progetto
 from app.models.utente import Utente
 from app.schemas.progetto import ProgettoCreate, ProgettoRead, ProgettoUpdate
 from app.models.utente import RuoloUtente
-from app.dependencies import get_current_user, richiedi_ruolo
+from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import (progetti_visibili, progetto_visibile,
                             reparti_assegnabili, carica_reparti, macchina_visibile)
 from app.models.allegato import Allegato
@@ -97,7 +97,7 @@ def elimina_progetto(
 @router.get("", response_model=list[ProgettoRead])
 def elenca_progetti(
     db: Session = Depends(get_db),
-    current: Utente = Depends(get_current_user),
+    current: Utente = Depends(richiedi_azienda),
 ):
     # Azienda + reparto: la regola sta tutta in visibilita.py.
     return progetti_visibili(db, current).all()
@@ -105,7 +105,7 @@ def elenca_progetti(
 
 @router.post("/{progetto_id}/allegati", response_model=AllegatoRead, status_code=201)
 def allega_a_progetto(progetto_id: int, dati: AllegatoCreate, db: Session = Depends(get_db),
-                      current: Utente = Depends(get_current_user)):
+                      current: Utente = Depends(richiedi_azienda)):
     """Un link appeso al progetto (foglio, cartella, documentazione)."""
     if progetto_visibile(db, current, progetto_id) is None:
         raise HTTPException(status_code=404, detail="Progetto non trovato")

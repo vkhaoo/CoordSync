@@ -6,7 +6,7 @@ import DueFattori from "./DueFattori.jsx";
 // Il menu del proprio account, aperto cliccando il nome nella barra.
 // Sta qui e non nel pannello Utenti (che e' solo per l'admin) perche'
 // scaricare i propri dati e' un diritto di chiunque, non un privilegio.
-export default function MioProfilo({ io, onLogout }) {
+export default function MioProfilo({ io, onLogout, onCambiaAzienda }) {
   const [aperto, setAperto] = useState(false);
   const [tema, setTema] = useState(temaCorrente);
   const [errore, setErrore] = useState(null);
@@ -125,6 +125,11 @@ export default function MioProfilo({ io, onLogout }) {
             {aziende.filter((a) => !a.invito).length > 1 && (
               <div className="blocco-aziende">
                 <span className="etichetta-tendina">Stai lavorando in</span>
+                {onCambiaAzienda && (
+                  <button className="link-testo" onClick={onCambiaAzienda}>
+                    Vedi tutte a riquadri
+                  </button>
+                )}
                 <ul className="lista-aziende">
                   {aziende.filter((a) => !a.invito).map((az) => (
                     <li key={az.id}>

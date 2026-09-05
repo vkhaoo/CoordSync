@@ -32,7 +32,7 @@ from app.models.utente import Utente, RuoloUtente
 from app.schemas.impegno import (
     ImpegnoCreate, ImpegnoUpdate, ImpegnoRead, ScadenzaRead, AgendaRead,
 )
-from app.dependencies import get_current_user
+from app.dependencies import richiedi_azienda
 from app.visibilita import lavori_visibili, lavoro_visibile, macchina_visibile
 from app.avvisi import avvisa
 from app.models.notifica import TipoAvviso
@@ -153,7 +153,7 @@ def _controlla_collegamenti(db, current, forniti: dict) -> None:
 
 @router.post("", response_model=ImpegnoRead, status_code=201)
 def crea_impegno(dati: ImpegnoCreate, db: Session = Depends(get_db),
-                 current: Utente = Depends(get_current_user)):
+                 current: Utente = Depends(richiedi_azienda)):
     if dati.fine is not None and dati.fine < dati.inizio:
         raise HTTPException(status_code=422, detail="La fine non puo' venire prima dell'inizio")
 
@@ -183,7 +183,7 @@ def crea_impegno(dati: ImpegnoCreate, db: Session = Depends(get_db),
 def leggi_agenda(dal: date, al: date,
                  ambito: str = Query("miei", pattern="^(miei|reparto|azienda)$"),
                  db: Session = Depends(get_db),
-                 current: Utente = Depends(get_current_user)):
+                 current: Utente = Depends(richiedi_azienda)):
     """Impegni e scadenze di un intervallo di giorni, in una chiamata sola."""
     if al < dal:
         raise HTTPException(status_code=422, detail="Intervallo di date non valido")
@@ -224,7 +224,7 @@ def leggi_agenda(dal: date, al: date,
 @router.get("/prossimi", response_model=list[ImpegnoRead])
 def prossimi_impegni(giorni: int = Query(7, ge=1, le=60),
                      db: Session = Depends(get_db),
-                     current: Utente = Depends(get_current_user)):
+                     current: Utente = Depends(richiedi_azienda)):
     """I miei impegni in arrivo. Serve a mostrarli all'apertura dell'app:
     e' il promemoria che funziona senza dipendere da un servizio schedulato."""
     from datetime import timedelta
@@ -241,7 +241,7 @@ def prossimi_impegni(giorni: int = Query(7, ge=1, le=60),
 
 @router.patch("/{impegno_id}", response_model=ImpegnoRead)
 def modifica_impegno(impegno_id: int, dati: ImpegnoUpdate, db: Session = Depends(get_db),
-                     current: Utente = Depends(get_current_user)):
+                     current: Utente = Depends(richiedi_azienda)):
     impegno = _impegno_mio_o_404(db, current, impegno_id)
     forniti = dati.model_dump(exclude_unset=True)
     partecipanti_ids = forniti.pop("partecipanti_ids", None)
@@ -269,7 +269,7 @@ def modifica_impegno(impegno_id: int, dati: ImpegnoUpdate, db: Session = Depends
 
 @router.delete("/{impegno_id}", status_code=204)
 def elimina_impegno(impegno_id: int, db: Session = Depends(get_db),
-                    current: Utente = Depends(get_current_user)):
+                    current: Utente = Depends(richiedi_azienda)):
     impegno = _impegno_mio_o_404(db, current, impegno_id)
     db.delete(impegno)
     db.commit()

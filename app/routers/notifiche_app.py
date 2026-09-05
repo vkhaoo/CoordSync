@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.notifica import Notifica, TipoAvviso
 from app.models.utente import Utente
-from app.dependencies import get_current_user
+from app.dependencies import richiedi_azienda
 
 router = APIRouter(prefix="/notifiche", tags=["notifiche"])
 
@@ -58,7 +58,7 @@ def _componi(db: Session, current: Utente, solo_non_lette: bool = False,
 
 @router.get("", response_model=ElencoAvvisi)
 def elenca(solo_non_lette: bool = False, limite: int = Query(30, ge=1, le=100),
-           db: Session = Depends(get_db), current: Utente = Depends(get_current_user)):
+           db: Session = Depends(get_db), current: Utente = Depends(richiedi_azienda)):
     """I miei avvisi, dal piu' recente. Il conteggio dei non letti e' sempre
     quello TOTALE, anche quando la lista e' tagliata dal limite."""
     return _componi(db, current, solo_non_lette, limite)
@@ -66,7 +66,7 @@ def elenca(solo_non_lette: bool = False, limite: int = Query(30, ge=1, le=100),
 
 @router.patch("/{notifica_id}", response_model=NotificaRead)
 def segna_letta(notifica_id: int, db: Session = Depends(get_db),
-                current: Utente = Depends(get_current_user)):
+                current: Utente = Depends(richiedi_azienda)):
     avviso = _mie(db, current).filter(Notifica.id == notifica_id).first()
     if avviso is None:
         raise HTTPException(status_code=404, detail="Avviso non trovato")
@@ -78,7 +78,7 @@ def segna_letta(notifica_id: int, db: Session = Depends(get_db),
 
 @router.post("/segna-tutte-lette", response_model=ElencoAvvisi)
 def segna_tutte_lette(db: Session = Depends(get_db),
-                      current: Utente = Depends(get_current_user)):
+                      current: Utente = Depends(richiedi_azienda)):
     """Azzera la campanella in un colpo solo."""
     _mie(db, current).filter(Notifica.letta.is_(False)).update(
         {Notifica.letta: True}, synchronize_session=False)
@@ -88,7 +88,7 @@ def segna_tutte_lette(db: Session = Depends(get_db),
 
 @router.delete("/{notifica_id}", status_code=204)
 def elimina(notifica_id: int, db: Session = Depends(get_db),
-            current: Utente = Depends(get_current_user)):
+            current: Utente = Depends(richiedi_azienda)):
     avviso = _mie(db, current).filter(Notifica.id == notifica_id).first()
     if avviso is None:
         raise HTTPException(status_code=404, detail="Avviso non trovato")

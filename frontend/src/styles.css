@@ -903,3 +903,54 @@ input, select, textarea { font-family: var(--sans); }
   background: var(--pannello-2); border: 1px solid var(--ambra); border-radius: 5px; }
 .codici-recupero li { font-family: var(--mono); font-size: 0.85rem;
   letter-spacing: 0.05em; color: var(--inchiostro); }
+
+/* --- Schermata di scelta dell'azienda ------------------------------------
+   Riquadri in fila, con il + in fondo. La fila scorre in orizzontale: chi
+   segue cinque aziende non deve ritrovarsi la pagina lunga il doppio. */
+.schermata-scelta { flex-direction: column; gap: 1.2rem; padding: 1.5rem; }
+.testa-scelta { text-align: center; max-width: 560px; }
+.testa-scelta .sottotitolo { margin-top: 0.4rem; line-height: 1.55; }
+
+.fila-aziende {
+  display: flex;
+  gap: 0.9rem;
+  overflow-x: auto;
+  padding: 0.4rem;
+  max-width: 100%;
+}
+.riquadro {
+  flex: 0 0 auto;
+  width: 175px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1rem;
+  text-align: left;
+  background: var(--pannello);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  box-shadow: var(--ombra-1);
+  cursor: pointer;
+  transition: border-color .12s ease, transform .12s ease;
+}
+.riquadro:hover { border-color: var(--ambra); transform: translateY(-2px); }
+.nome-riquadro { font-size: 1rem; font-weight: 600; color: var(--inchiostro);
+  overflow-wrap: anywhere; }
+.ruolo-riquadro { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--tenue); }
+/* Il riquadro del + e' tratteggiato: si vede che e' un posto vuoto da riempire,
+   non un'azienda che esiste gia'. */
+.riquadro-piu { align-items: center; justify-content: center;
+  border-style: dashed; background: transparent; }
+.segno-piu { font-size: 2rem; line-height: 1; color: var(--tenue-2); }
+.riquadro-piu:hover .segno-piu { color: var(--ambra-scuro); }
+.riquadro-nuovo { cursor: default; width: 210px; }
+.riquadro-nuovo:hover { transform: none; border-color: var(--ambra); }
+.riquadro-nuovo input { width: 100%; min-width: 0; }
+
+.fascia-inviti { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
+.riquadro-invito { width: auto; min-width: 260px; cursor: default; border-color: var(--ambra); }
+.riquadro-invito:hover { transform: none; }

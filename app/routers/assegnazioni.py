@@ -16,7 +16,7 @@ from app.models.progetto import Progetto
 from app.models.utente import Utente
 from app.schemas.lavoro import LavoroRead
 from app.models.utente import RuoloUtente
-from app.dependencies import get_current_user, richiedi_ruolo
+from app.dependencies import richiedi_ruolo
 from app.visibilita import lavoro_visibile
 from app.avvisi import avvisa
 from app.models.notifica import TipoAvviso

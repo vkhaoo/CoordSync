@@ -10,6 +10,7 @@ import Allegati from "./Allegati.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
 import Tendina from "./Tendina.jsx";
 import RicercaGlobale from "./RicercaGlobale.jsx";
+import SceltaAzienda from "./SceltaAzienda.jsx";
 import Campanella from "./Campanella.jsx";
 import MioProfilo from "./MioProfilo.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
@@ -50,6 +51,9 @@ export default function Dashboard({ onLogout }) {
   // Quale macchina aprire quando si arriva dalla ricerca: la vista Macchine
   // ha una sua selezione interna, e questo e' il modo di dirle dove andare.
   const [macchinaDaAprire, setMacchinaDaAprire] = useState(null);
+  // Vero quando si vuole vedere la schermata dei riquadri: sempre a chi non
+  // ha ancora nessuna azienda, a richiesta per gli altri.
+  const [scegliAzienda, setScegliAzienda] = useState(false);
   const [nuovoTitolo, setNuovoTitolo] = useState("");
   const [nuovaPriorita, setNuovaPriorita] = useState("normale");
   const [nuovaScadenza, setNuovaScadenza] = useState("");   // "" = senza scadenza
@@ -215,6 +219,15 @@ export default function Dashboard({ onLogout }) {
 
   if (caricando) return <div className="schermata"><p>Caricamento…</p></div>;
 
+  // Primo accesso: l'account c'e' ma non appartiene ancora a niente. Si apre
+  // la schermata di scelta, che in quel momento contiene solo il riquadro
+  // col + — e gli eventuali inviti ricevuti.
+  if ((io && !io.organizzazione_id) || scegliAzienda) {
+    return <SceltaAzienda
+             onEntrato={() => window.location.reload()}
+             onAnnulla={io && io.organizzazione_id ? () => setScegliAzienda(false) : null} />;
+  }
+
   // Il server non ha risposto all'avvio. Non e' un motivo per buttare fuori
   // l'utente: la sessione e' ancora buona, manca solo la risposta. Gli do un
   // bottone per riprovare invece di lasciarlo davanti a una pagina vuota.
@@ -276,7 +289,8 @@ export default function Dashboard({ onLogout }) {
             onVaiAllaMacchina={(id) => { setVista("macchine"); setMacchinaDaAprire(id); }}
             onVaiAllAgenda={() => setVista("agenda")} />
           <Campanella onVaiAlLavoro={vaiAlLavoro} />
-          <MioProfilo io={io} onLogout={onLogout} />
+          <MioProfilo io={io} onLogout={onLogout}
+                      onCambiaAzienda={() => setScegliAzienda(true)} />
           <button className="esci" onClick={onLogout}>Esci</button>
         </div>
       </header>

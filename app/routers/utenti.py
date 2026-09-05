@@ -15,7 +15,7 @@ from app.models.utente import Utente, RuoloUtente
 from app.schemas.utente import UtenteCreate, UtenteRead
 from app.appartenenze import condizione_membro, iscrivi
 from app.security import hash_password, crea_token_scopo
-from app.dependencies import get_current_user, richiedi_ruolo
+from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.notifiche import invia_email
 from app.email_templates import invito as email_invito_template
 from app.routers.auth import SCOPO_INVITO, SCOPO_INVITO_AZIENDA
@@ -162,7 +162,7 @@ def _invita_chi_ha_gia_un_account(db: Session, current: Utente, invitato: Utente
 
 @router.get("", response_model=list[UtenteRead])
 def elenca_utenti(db: Session = Depends(get_db),
-                  current: Utente = Depends(get_current_user)):
+                  current: Utente = Depends(richiedi_azienda)):
     """I colleghi dell'azienda in cui sto lavorando.
 
     Il ruolo che si legge qui e' quello che ognuno ha IN QUEST'AZIENDA, preso

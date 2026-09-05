@@ -141,6 +141,7 @@ export const api = {
   esportaMieiDati: () => richiesta("GET", "/auth/me/export"),
   // Le aziende di cui faccio parte, e il passaggio dall'una all'altra.
   mieAziende: () => richiesta("GET", "/auth/aziende"),
+  creaAzienda: (nome) => richiesta("POST", "/auth/aziende", { nome }),
   cambiaAzienda: (organizzazione_id) =>
     richiesta("POST", "/auth/cambia-azienda", { organizzazione_id }),
   accettaInvitoAzienda: (token) =>

@@ -25,8 +25,10 @@ class UtenteCreate(UtenteBase):
 
 class UtenteRead(UtenteBase):
     id: int
-    organizzazione_id: int
-    ruolo: RuoloUtente
+    # Vuoti finche' non si fa parte di nessuna azienda: e' lo stato di chi si
+    # e' appena iscritto e deve ancora crearne una o accettare un invito.
+    organizzazione_id: int | None = None
+    ruolo: RuoloUtente | None = None
     email_verificata: bool
     deve_cambiare_password: bool   # il frontend blocca l'accesso finche' e' True
     reparti: list[RepartoRead] = []   # i reparti di cui faccio parte

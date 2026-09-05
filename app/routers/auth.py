@@ -52,7 +52,6 @@ def _invia_verifica(utente: Utente) -> None:
 # ---------- REGISTRAZIONE ----------
 
 class RegisterRichiesta(BaseModel):
-    nome_azienda: str
     nome: str
     email: EmailStr
     password: PasswordStr
@@ -65,39 +64,77 @@ class TokenRisposta(BaseModel):
 
 @router.post("/register", response_model=TokenRisposta, status_code=201)
 def register(dati: RegisterRichiesta, db: Session = Depends(get_db)):
-    # L'email non deve essere gia' in uso.
+    """Crea un ACCOUNT. Non un'azienda.
+
+    Iscriversi e aprire un'azienda erano la stessa cosa, e non tornava: per
+    entrare in CoordSync invitato da qualcuno bisognava comunque farsi
+    un'azienda propria, che poi restava li' vuota. Adesso l'account nasce da
+    solo, e da dentro l'app si sceglie: creare la prima azienda, oppure
+    accettare l'invito di chi ti ha chiamato.
+
+    Il token che si riceve non punta a nessuna azienda: apre il proprio
+    profilo e la schermata di scelta, e basta (vedi dependencies.py).
+    """
     if db.query(Utente).filter(Utente.email == dati.email).first() is not None:
         raise HTTPException(status_code=409, detail="Email gia' registrata")
 
-    # 1) Creo l'azienda.
-    org = Organizzazione(nome=dati.nome_azienda)
-    db.add(org)
-    db.flush()   # assegna un id a org senza chiudere la transazione
-
-    # 2) Creo il primo utente, che diventa ADMIN dell'azienda.
-    admin = Utente(
+    utente = Utente(
         nome=dati.nome,
         email=dati.email,
         password_hash=hash_password(dati.password),
-        ruolo=RuoloUtente.admin,
-        organizzazione_id=org.id,
+        # Nessuna azienda, e nessun ruolo che valga da qualche parte: il ruolo
+        # vive sulle tessere, e tessere non ce ne sono ancora.
+        organizzazione_id=None,
     )
-    db.add(admin)
-    db.flush()   # serve l'id dell'utente per la tessera
-
-    # 3) La tessera di appartenenza: da qui in avanti e' quella che dice chi
-    #    lavora dove e con che ruolo (vedi app/appartenenze.py).
-    iscrivi(db, admin, org.id, RuoloUtente.admin)
-
+    db.add(utente)
     db.commit()
-    db.refresh(admin)
+    db.refresh(utente)
 
-    # Invio l'email di verifica (in sviluppo: link nei log).
-    _invia_verifica(admin)
+    _invia_verifica(utente)
+    return TokenRisposta(access_token=crea_token(utente.id))
 
-    # Lo loggo subito: gli restituisco un token gia' puntato sull'azienda
-    # che ha appena creato.
-    return TokenRisposta(access_token=crea_token(admin.id, org.id))
+
+class NuovaAzienda(BaseModel):
+    nome: str
+
+
+class AziendaCreata(BaseModel):
+    id: int
+    nome: str
+    access_token: str    # gia' puntato sull'azienda appena creata
+
+
+@router.post("/aziende", response_model=AziendaCreata, status_code=201)
+def crea_azienda(dati: NuovaAzienda, db: Session = Depends(get_db),
+                 current: Utente = Depends(get_current_user)):
+    """Apre una nuova azienda e ne fa amministratore chi la crea.
+
+    Passa da get_current_user e non da richiedi_azienda: e' il gesto che si fa
+    QUANDO di aziende non se ne ha nessuna, quindi pretenderne una sarebbe un
+    cerchio chiuso.
+
+    Si restituisce anche un token nuovo, gia' puntato qui: senza, chi ha
+    appena creato la sua prima azienda dovrebbe rifare l'accesso per
+    entrarci.
+    """
+    nome = dati.nome.strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="Il nome dell'azienda non puo' essere vuoto")
+
+    org = Organizzazione(nome=nome)
+    db.add(org)
+    db.flush()
+
+    iscrivi(db, current, org.id, RuoloUtente.admin)
+    # La prima azienda diventa anche quella "di casa": e' il punto di partenza
+    # quando si entra, finche' non se ne sceglie un'altra.
+    if current.organizzazione_id is None:
+        current.organizzazione_id = org.id
+        current.ruolo = RuoloUtente.admin
+    db.commit()
+
+    return AziendaCreata(id=org.id, nome=org.nome,
+                         access_token=crea_token(current.id, org.id))
 
 
 # ---------- LOGIN ----------

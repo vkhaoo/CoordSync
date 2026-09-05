@@ -101,9 +101,26 @@ def client():
 # --- piccoli aiutanti riutilizzabili dai test ---
 
 def registra(client, azienda, nome, email, password="password1"):
-    """Registra un'azienda+admin e restituisce gli header con il token pronti."""
+    """Crea un account E la sua prima azienda, e restituisce gli header pronti.
+
+    Da quando iscriversi e aprire un'azienda sono due gesti separati servono
+    due chiamate. Restano insieme qui perche' e' lo scenario di partenza di
+    quasi tutti i test: "c'e' un'azienda con dentro un amministratore".
+    """
     r = client.post("/auth/register", json={
-        "nome_azienda": azienda, "nome": nome, "email": email, "password": password,
+        "nome": nome, "email": email, "password": password,
     })
     token = r.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    creata = client.post("/auth/aziende", json={"nome": azienda},
+                         headers={"Authorization": f"Bearer {token}"})
+    # Il token nuovo punta gia' all'azienda appena creata.
+    return {"Authorization": f"Bearer {creata.json()['access_token']}"}
+
+
+def registra_solo_account(client, nome, email, password="password1"):
+    """Un account senza nessuna azienda: appena iscritto, non appartiene a
+    niente. E' lo stato in cui si apre la schermata di scelta."""
+    r = client.post("/auth/register", json={
+        "nome": nome, "email": email, "password": password,
+    })
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}

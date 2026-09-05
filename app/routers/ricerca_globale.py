@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import richiedi_azienda
 from app.models.impegno import Impegno
 from app.models.lavoro import Lavoro
 from app.models.macchina import Macchina
@@ -79,7 +79,7 @@ class Risultati(BaseModel):
 @router.get("", response_model=Risultati)
 def cerca_dappertutto(q: str = Query(..., min_length=2),
                       db: Session = Depends(get_db),
-                      current: Utente = Depends(get_current_user)):
+                      current: Utente = Depends(richiedi_azienda)):
     """Cerca la stessa parola in progetti, lavori, macchine, storico e agenda.
 
     Il minimo di due caratteri non e' un capriccio: con una lettera sola
