@@ -30,6 +30,7 @@ from app.schemas.macchina import (
 from app.dependencies import get_current_user, richiedi_ruolo
 from app.visibilita import (macchine_visibili, macchina_visibile,
                             reparti_assegnabili, carica_reparti)
+from app.ricerca import condizione_testo
 
 router = APIRouter(tags=["macchine"])
 
@@ -203,14 +204,20 @@ def crea_voce(macchina_id: int, dati: VoceCreate, db: Session = Depends(get_db),
 
 @router.get("/macchine/{macchina_id}/voci", response_model=list[VoceRead])
 def elenca_voci(macchina_id: int, tipo: TipoVoce | None = None,
-                sezione_id: int | None = None,
+                sezione_id: int | None = None, q: str | None = None,
                 db: Session = Depends(get_db),
                 current: Utente = Depends(get_current_user)):
     """Le voci della macchina. Senza filtri e' lo storico completo, in ordine
-    di tempo: e' la vista "cosa e' successo su questo impianto"."""
+    di tempo: e' la vista "cosa e' successo su questo impianto".
+
+    'q' cerca nel titolo e nel testo: con anni di storico e' l'unico modo
+    pratico per ritrovare quella volta che si era rotta la valvola."""
     _macchina_o_404(db, current, macchina_id)
 
     query = db.query(VoceMacchina).filter(VoceMacchina.macchina_id == macchina_id)
+    cerca = condizione_testo([VoceMacchina.titolo, VoceMacchina.testo], q)
+    if cerca is not None:
+        query = query.filter(cerca)
     if tipo is not None:
         query = query.filter(VoceMacchina.tipo == tipo)
     if sezione_id is not None:

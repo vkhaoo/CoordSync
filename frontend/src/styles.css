@@ -344,6 +344,11 @@ input, select, textarea { font-family: var(--sans); }
 .sez-gruppo { display: inline-flex; align-items: center; gap: 2px; }
 .form-sezione, .form-allegato { margin-top: 0; max-width: 340px; }
 
+.pannello-sezione { background: var(--pannello); border: 1px solid var(--linea);
+  border-left: 3px solid var(--ambra); border-radius: var(--raggio);
+  padding: 0.6rem 0.9rem; margin-bottom: 0.9rem; }
+.pannello-sezione .allegati { margin-top: 0.35rem; }
+
 .blocco-info { background: #fdf8ec; border: 1px solid #efd9a8; border-radius: var(--raggio);
   padding: 0.8rem 1rem; margin-bottom: 1rem; }
 .blocco-info .titolo-colonna { margin-bottom: 0.5rem; }
@@ -478,3 +483,15 @@ input, select, textarea { font-family: var(--sans); }
 /* Testa progetto: titolo + azioni */
 .testa-progetto { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.7rem; }
 .testa-progetto .titolo-progetto { margin: 0; }
+
+/* Campo di ricerca */
+.campo-ricerca { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.8rem;
+  background: var(--pannello); border: 1px solid var(--linea); border-radius: var(--raggio-sm);
+  padding: 0.1rem 0.55rem; transition: border-color .15s ease, box-shadow .15s ease; }
+.campo-ricerca:focus-within { border-color: var(--ambra); box-shadow: 0 0 0 3px rgba(230, 168, 23, .16); }
+.campo-ricerca .lente { color: var(--tenue-2); font-size: 1.05rem; line-height: 1; }
+.campo-ricerca input { flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+  padding: 0.5rem 0; font-family: var(--sans); font-size: 0.92rem; color: var(--testo); }
+.campo-ricerca input::-webkit-search-cancel-button { display: none; }
+.colonna-progetti .campo-ricerca { margin-bottom: 0.55rem; }
+.colonna-progetti .campo-ricerca input { font-size: 0.85rem; padding: 0.35rem 0; }

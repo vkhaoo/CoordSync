@@ -132,11 +132,28 @@ email (gratis, e le Actions ci sono già per i test), oppure il piano a pagament
 Campanella con contatore, avviso su assegnazione e nuovo commento. Guadagna
 molto se arriva dopo l'agenda, perché può avvisare anche delle scadenze vicine.
 
-### 6 · Allegati come link
+### 6 · Allegati come link — FATTI
 
-Campo link sulle voci (foto del quadro su Drive, PDF di schemi). Si sposa con lo
-storico macchine, dove serve davvero. L'upload di file veri richiede uno storage
-esterno: solo da prodotto maturo.
+Link su **macchina, sezione, voce, progetto e lavoro**. Solo link e non file
+veri: il piano gratuito di Render non ha storage persistente.
+
+### 7 · Ricerca — FATTA
+
+Ricerca testuale nei lavori di un progetto (titolo e descrizione) e nello
+storico di una macchina (titolo e testo), più un filtro sui nomi nelle colonne
+di progetti e macchine quando superano i sei elementi.
+
+La ricerca si fa nel **database**, non nel browser: uno storico cresce per anni,
+e scaricarlo tutto per filtrarlo sarebbe uno spreco che peggiora col tempo. Il
+campo aspetta la fine della digitazione prima di interrogare il server, così
+scrivere "valvola" non fa partire sette richieste.
+
+I caratteri jolly di LIKE (`%` e `_`) vengono neutralizzati: cercare "50%" deve
+trovare la percentuale, non restituire tutto. C'è un test apposta, e un altro
+che verifica che cercare non aggiri i reparti.
+
+**Possibile seguito:** cercare anche dentro commenti e voci di checklist, e una
+ricerca unica che attraversi progetti, macchine e agenda insieme.
 
 ---
 

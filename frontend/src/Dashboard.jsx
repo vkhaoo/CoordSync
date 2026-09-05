@@ -6,6 +6,8 @@ import GestioneReparti from "./GestioneReparti.jsx";
 import Macchine from "./Macchine.jsx";
 import Agenda from "./Agenda.jsx";
 import SelettoreReparti from "./SelettoreReparti.jsx";
+import Allegati from "./Allegati.jsx";
+import CampoRicerca from "./CampoRicerca.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
 
 const PRIORITA = ["bassa", "normale", "alta", "urgente"];
@@ -45,6 +47,9 @@ export default function Dashboard({ onLogout }) {
   const [linkBozza, setLinkBozza] = useState("");
   const [modificaNome, setModificaNome] = useState(false);   // sto rinominando il progetto?
   const [nomeBozza, setNomeBozza] = useState("");
+  // Ricerca: nei lavori la fa il server, sui nomi dei progetti basta il browser.
+  const [cercaLavori, setCercaLavori] = useState("");
+  const [filtroProgetti, setFiltroProgetti] = useState("");
 
   // Funzioni di caricamento (fuori dagli useEffect, cosi' le richiamo dopo le creazioni).
   async function caricaProgetti(selezionaId) {
@@ -55,9 +60,9 @@ export default function Dashboard({ onLogout }) {
     else if (selezionato == null && dati.length > 0) setSelezionato(dati[0].id);
   }
 
-  async function caricaLavori(progettoId) {
+  async function caricaLavori(progettoId, cerca = cercaLavori) {
     if (progettoId == null) { setLavori([]); return; }
-    setLavori(await api.lavori(progettoId));
+    setLavori(await api.lavori(progettoId, cerca));
   }
 
   // All'apertura: verifico chi sono. Se il token e' scaduto/invalido (401),
@@ -75,7 +80,7 @@ export default function Dashboard({ onLogout }) {
   // Ogni volta che cambia il progetto selezionato: ricarico i suoi lavori.
   useEffect(() => {
     caricaLavori(selezionato).catch((e) => setErrore(e.message));
-  }, [selezionato]);
+  }, [selezionato, cercaLavori]);
 
   // Colleghi e reparti si ricaricano ogni volta che torno alla vista lavori:
   // se ho appena creato un reparto o aggiunto un utente dai pannelli admin,
@@ -246,9 +251,15 @@ export default function Dashboard({ onLogout }) {
       <div className="corpo">
         <aside className="colonna-progetti">
           <h2 className="titolo-colonna">Progetti</h2>
+          {progetti.length > 6 && (
+            <CampoRicerca valore={filtroProgetti} onCambia={setFiltroProgetti}
+                          segnaposto="Filtra progetti…" attesa={0} />
+          )}
           {progetti.length === 0 && <p className="vuoto">Nessun progetto ancora.</p>}
           <ul className="lista-progetti">
-            {progetti.map((p) => (
+            {progetti
+              .filter((p) => p.nome.toLowerCase().includes(filtroProgetti.toLowerCase()))
+              .map((p) => (
               <li key={p.id}>
                 <button
                   className={p.id === selezionato ? "voce attiva" : "voce"}
@@ -344,6 +355,17 @@ export default function Dashboard({ onLogout }) {
                     </>
                   )}
                 </div>
+
+                {/* Altri link del progetto, oltre al documento principale */}
+                <Allegati allegati={progettoCorrente.allegati || []}
+                          onAggiungi={async (dati) => {
+                            await api.allegaProgetto(progettoCorrente.id, dati);
+                            await caricaProgetti(progettoCorrente.id);
+                          }}
+                          onElimina={async (id) => {
+                            await api.eliminaAllegato(id);
+                            await caricaProgetti(progettoCorrente.id);
+                          }} />
               </div>
 
               {/* Form: nuovo lavoro — solo per chi può creare */}
@@ -364,8 +386,15 @@ export default function Dashboard({ onLogout }) {
                 </form>
               )}
 
+              {/* Ricerca nei lavori: la fa il server, cosi' regge anche
+                  quando un progetto ne accumula centinaia. */}
+              <CampoRicerca valore={cercaLavori} onCambia={setCercaLavori}
+                            segnaposto="Cerca fra i lavori (titolo o descrizione)…" />
+
               {lavori.length === 0 ? (
-                <p className="vuoto">Nessun lavoro in questo progetto.</p>
+                <p className="vuoto">{cercaLavori
+                  ? `Nessun lavoro trovato per "${cercaLavori}".`
+                  : "Nessun lavoro in questo progetto."}</p>
               ) : (
                 <ul className="lista-lavori">
                   {ordinaLavori(lavori).map((l) => (

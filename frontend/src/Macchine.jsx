@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { api } from "./api.js";
 import SelettoreReparti from "./SelettoreReparti.jsx";
+import Allegati from "./Allegati.jsx";
+import CampoRicerca from "./CampoRicerca.jsx";
 
 // Etichette dei tipi di voce. "informazione" e' a parte: non e' un fatto
 // avvenuto in una data, e' sapere di riferimento che resta valido.
@@ -11,43 +13,6 @@ const TIPI = {
   informazione: "Informazione utile",
 };
 const STATI = { da_fare: "Da fare", in_corso: "In corso", fatto: "Fatto" };
-
-// Lista di link riutilizzabile: la stessa per macchina, sezione e voce.
-function Allegati({ allegati, onAggiungi, onElimina }) {
-  const [apri, setApri] = useState(false);
-  const [url, setUrl] = useState("");
-  const [titolo, setTitolo] = useState("");
-
-  async function invia(e) {
-    e.preventDefault();
-    await onAggiungi({ url, titolo: titolo || null });
-    setUrl(""); setTitolo(""); setApri(false);
-  }
-
-  return (
-    <div className="allegati">
-      {allegati.map((a) => (
-        <span key={a.id} className="chip allegato">
-          <a href={a.url} target="_blank" rel="noreferrer">🔗 {a.titolo || a.url}</a>
-          <button className="chip-x" title="Togli il link"
-                  onClick={() => onElimina(a.id)}>×</button>
-        </span>
-      ))}
-      {apri ? (
-        <form className="form-inline form-allegato" onSubmit={invia}>
-          <input placeholder="https://…" value={url}
-                 onChange={(e) => setUrl(e.target.value)} required />
-          <input placeholder="Etichetta (facoltativa)" value={titolo}
-                 onChange={(e) => setTitolo(e.target.value)} />
-          <button type="submit" className="mini">✓</button>
-          <button type="button" className="mini annulla" onClick={() => setApri(false)}>×</button>
-        </form>
-      ) : (
-        <button className="assegna-select" onClick={() => setApri(true)}>+ link</button>
-      )}
-    </div>
-  );
-}
 
 export default function Macchine({ io, reparti }) {
   const [macchine, setMacchine] = useState([]);
@@ -60,6 +25,8 @@ export default function Macchine({ io, reparti }) {
   // Filtri dello storico
   const [filtroTipo, setFiltroTipo] = useState("");      // "" = tutti
   const [filtroSezione, setFiltroSezione] = useState("");  // "" = tutta la macchina
+  const [cerca, setCerca] = useState("");                  // ricerca nello storico
+  const [filtroMacchine, setFiltroMacchine] = useState(""); // filtro sui nomi, in locale
 
   // Form
   const [nuovaMacchina, setNuovaMacchina] = useState("");
@@ -85,6 +52,7 @@ export default function Macchine({ io, reparti }) {
     const q = [];
     if (filtroTipo) q.push(`tipo=${filtroTipo}`);
     if (filtroSezione) q.push(`sezione_id=${filtroSezione}`);
+    if (cerca) q.push(`q=${encodeURIComponent(cerca)}`);
     const [s, v] = await Promise.all([
       api.macchina(id),
       api.voci(id, q.length ? `?${q.join("&")}` : ""),
@@ -99,7 +67,7 @@ export default function Macchine({ io, reparti }) {
 
   useEffect(() => {
     caricaScheda(selezionata).catch((e) => setErrore(e.message));
-  }, [selezionata, filtroTipo, filtroSezione]);
+  }, [selezionata, filtroTipo, filtroSezione, cerca]);
 
   async function azione(fn) {
     setErrore(null);
@@ -161,9 +129,15 @@ export default function Macchine({ io, reparti }) {
     <div className="corpo">
       <aside className="colonna-progetti">
         <h2 className="titolo-colonna">Macchine</h2>
+        {macchine.length > 6 && (
+          <CampoRicerca valore={filtroMacchine} onCambia={setFiltroMacchine}
+                        segnaposto="Filtra macchine…" attesa={0} />
+        )}
         {macchine.length === 0 && <p className="vuoto">Nessuna macchina ancora.</p>}
         <ul className="lista-progetti">
-          {macchine.map((m) => (
+          {macchine
+            .filter((m) => m.nome.toLowerCase().includes(filtroMacchine.toLowerCase()))
+            .map((m) => (
             <li key={m.id}>
               <button className={m.id === selezionata ? "voce attiva" : "voce"}
                       onClick={() => setSelezionata(m.id)}>{m.nome}</button>
@@ -252,6 +226,26 @@ export default function Macchine({ io, reparti }) {
               )}
             </div>
 
+            {/* Quando sono dentro una sezione: i link di QUELLA sezione.
+                Prima non c'era modo di appenderli, pur essendo previsti. */}
+            {filtroSezione !== "" && (() => {
+              const sez = scheda.sezioni.find((s) => String(s.id) === String(filtroSezione));
+              if (!sez) return null;
+              return (
+                <div className="pannello-sezione">
+                  <span className="etichetta-reparti">Link della sezione {sez.nome}</span>
+                  <Allegati allegati={sez.allegati}
+                            onAggiungi={(d) => azione(() => api.allegaSezione(sez.id, d))}
+                            onElimina={(id) => azione(() => api.eliminaAllegato(id))} />
+                </div>
+              );
+            })()}
+
+            {/* Ricerca nello storico: con anni di voci e' l'unico modo pratico
+                di ritrovare quella volta che si era rotta la valvola. */}
+            <CampoRicerca valore={cerca} onCambia={setCerca}
+                          segnaposto="Cerca nello storico (titolo o descrizione)…" />
+
             {/* Filtro per tipo */}
             <div className="barra-sezioni">
               <button className={filtroTipo === "" ? "sez attiva" : "sez"}
@@ -305,7 +299,9 @@ export default function Macchine({ io, reparti }) {
 
             {/* Storico */}
             {cronologia.length === 0 ? (
-              <p className="vuoto">Niente da mostrare con questi filtri.</p>
+              <p className="vuoto">{cerca
+                ? `Niente trovato per "${cerca}".`
+                : "Niente da mostrare con questi filtri."}</p>
             ) : (
               <ul className="lista-lavori">
                 {cronologia.map((v) => (

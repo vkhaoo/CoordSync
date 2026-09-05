@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "./api.js";
+import Allegati from "./Allegati.jsx";
 
 const ETICHETTA_STATO = {
   da_fare: "Da fare", in_corso: "In corso", in_attesa: "In attesa", fatto: "Fatto",
@@ -286,6 +287,17 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
           )}
         </div>
       )}
+
+      {/* Link appesi al lavoro (foto dal campo, schemi, documentazione) */}
+      <Allegati allegati={lavoro.allegati || []}
+                onAggiungi={async (dati) => {
+                  await api.allegaLavoro(lavoro.id, dati);
+                  onAssegnazioneCambiata();
+                }}
+                onElimina={async (id) => {
+                  await api.eliminaAllegato(id);
+                  onAssegnazioneCambiata();
+                }} />
 
       {/* Assegnatari: visibili a tutti; modificabili solo da chi gestisce */}
       <div className="assegnazione">
