@@ -16,6 +16,12 @@ __pycache__/
 # Build del frontend (la genera Render, non va su git)
 frontend/dist/
 
+# Le librerie di node NON vanno su git: le riscarica chi serve, a partire da
+# package-lock.json che invece e' versionato (fissa le versioni esatte).
+# Il comando di build su Render e' "npm install && npm run build", quindi se
+# le ricrea da solo a ogni pubblicazione.
+frontend/node_modules/
+
 # IDE e strumenti locali
 .vscode/
 .idea/
