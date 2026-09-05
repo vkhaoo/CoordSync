@@ -214,3 +214,24 @@ def test_non_si_cancella_due_volte(client):
 
     assert client.delete(f"/utenti/{luca_id}", headers=a).status_code == 204
     assert client.delete(f"/utenti/{luca_id}", headers=a).status_code == 404
+
+
+def test_chi_se_ne_va_non_e_piu_membro_di_nessuna_azienda(client):
+    """La tessera va tolta a mano: la riga dell'utente non viene cancellata,
+    quindi il database non la porta via da solo."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    luca = _crea_utente(client, a, "Luca", "luca@a.it")
+    luca_id = _id(client, a, "luca@a.it")
+
+    client.delete("/auth/me", headers=luca)
+
+    from app.models.appartenenza import Appartenenza
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        assert db.query(Appartenenza).filter(
+            Appartenenza.utente_id == luca_id).count() == 0
+        # e quella di Marco invece c'e' ancora
+        assert db.query(Appartenenza).count() == 1
+    finally:
+        db.close()

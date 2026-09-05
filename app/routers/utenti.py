@@ -13,6 +13,7 @@ from app.config import settings
 from app.database import get_db
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.utente import UtenteCreate, UtenteRead
+from app.appartenenze import iscrivi
 from app.security import hash_password, crea_token_scopo
 from app.dependencies import get_current_user, richiedi_ruolo
 from app.notifiche import invia_email
@@ -38,6 +39,8 @@ def crea_utente(dati: UtenteCreate, db: Session = Depends(get_db),
         deve_cambiare_password=True,
     )
     db.add(utente)
+    db.flush()
+    iscrivi(db, utente, current.organizzazione_id, dati.ruolo)
     db.commit()
     db.refresh(utente)
     return utente
@@ -65,6 +68,8 @@ def invita_utente(dati: InvitoRichiesta, db: Session = Depends(get_db),
         organizzazione_id=current.organizzazione_id,
     )
     db.add(utente)
+    db.flush()
+    iscrivi(db, utente, current.organizzazione_id, dati.ruolo)
     db.commit()
     db.refresh(utente)
 
@@ -105,6 +110,9 @@ def cambia_ruolo(utente_id: int, dati: CambioRuolo, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
     utente.ruolo = dati.ruolo
+    # Il ruolo vive sulla tessera dell'azienda in cui si sta lavorando: senza
+    # questa riga cambierebbe solo per finta.
+    iscrivi(db, utente, current.organizzazione_id, dati.ruolo)
     db.commit()
     db.refresh(utente)
     return utente

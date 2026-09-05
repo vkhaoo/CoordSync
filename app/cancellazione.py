@@ -19,6 +19,7 @@ reparti e le assegnazioni ai lavori.
 """
 from sqlalchemy.orm import Session
 
+from app.models.appartenenza import Appartenenza  # noqa: F401  (serve la relazione)
 from app.models.impegno import Impegno
 from app.models.notifica import Notifica
 from app.models.utente import Utente
@@ -46,9 +47,13 @@ def anonimizza(db: Session, utente: Utente) -> None:
         else:
             db.delete(impegno)
 
-    # 3) Non e' piu' responsabile di niente e non fa piu' parte di nessun reparto.
+    # 3) Non e' piu' responsabile di niente, non fa piu' parte di nessun
+    #    reparto e non e' piu' membro di nessuna azienda. Le tessere vanno
+    #    tolte a mano: la riga dell'utente non viene cancellata (si svuota
+    #    soltanto), quindi il CASCADE del database non scatta.
     utente.lavori = []
     utente.reparti = []
+    utente.appartenenze = []
 
     # 4) L'identita' se ne va. L'email deve restare unica (c'e' un vincolo), ma
     #    non deve piu' dire chi era: ci metto l'id, che non e' un dato personale.

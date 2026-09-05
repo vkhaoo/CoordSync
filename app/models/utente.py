@@ -32,9 +32,15 @@ class Utente(Base):
     # sceglierne una loro (l'admin non deve conoscere la password di nessuno).
     deve_cambiare_password = Column(Boolean, default=False, nullable=False)
 
-    # Ogni utente appartiene a un'organizzazione (il "tenant").
+    # L'azienda "di casa": quella dove l'account e' nato. Resta il punto di
+    # partenza quando si entra, ma non e' piu' l'unica a cui si puo'
+    # appartenere: le altre stanno nelle appartenenze qui sotto.
     organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id"), nullable=False)
     organizzazione = relationship("Organizzazione", back_populates="utenti")
+
+    # Tutte le aziende di cui faccio parte, con il ruolo che ho in ognuna.
+    appartenenze = relationship("Appartenenza", back_populates="utente",
+                                cascade="all, delete-orphan")
 
     # 'lavori' NON e' una colonna: e' una scorciatoia che, dato un utente,
     # ti da' la lista dei lavori a cui e' assegnato (via tabella-ponte).
@@ -42,3 +48,25 @@ class Utente(Base):
 
     # I reparti di cui faccio parte (un utente puo' starne in piu' d'uno).
     reparti = relationship("Reparto", secondary="membri_reparto", back_populates="membri")
+
+    # --- L'azienda attiva in QUESTA richiesta ---------------------------------
+    # Non sono colonne: le riempie get_current_user leggendo il token, e
+    # spariscono alla fine della richiesta. Devono restare fuori dal database,
+    # se no due dispositivi collegati su due aziende diverse si darebbero
+    # fastidio a vicenda (l'ultimo che cambia deciderebbe per tutti).
+    _org_attiva_id = None
+    _ruolo_attivo = None
+
+    @property
+    def org_attiva_id(self) -> int:
+        """L'azienda dentro cui sto lavorando adesso.
+
+        Ogni query che filtra per azienda deve usare QUESTA, non
+        organizzazione_id: quella dice solo dov'e' nato l'account."""
+        return self._org_attiva_id or self.organizzazione_id
+
+    @property
+    def ruolo_attivo(self) -> RuoloUtente:
+        """Il ruolo che ho NELL'AZIENDA ATTIVA: si puo' essere amministratori
+        da una parte e operatori dall'altra."""
+        return self._ruolo_attivo or self.ruolo

@@ -17,6 +17,7 @@ from app.database import get_db
 from app.models.organizzazione import Organizzazione
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.utente import UtenteRead
+from app.appartenenze import iscrivi
 from app.security import (
     verifica_password, crea_token, hash_password,
     crea_token_scopo, leggi_token_scopo,
@@ -78,6 +79,12 @@ def register(dati: RegisterRichiesta, db: Session = Depends(get_db)):
         organizzazione_id=org.id,
     )
     db.add(admin)
+    db.flush()   # serve l'id dell'utente per la tessera
+
+    # 3) La tessera di appartenenza: da qui in avanti e' quella che dice chi
+    #    lavora dove e con che ruolo (vedi app/appartenenze.py).
+    iscrivi(db, admin, org.id, RuoloUtente.admin)
+
     db.commit()
     db.refresh(admin)
 

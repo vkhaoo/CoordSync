@@ -16,6 +16,7 @@ from app.models.voce_macchina import VoceMacchina, TipoVoce, StatoVoce, voce_sez
 from app.models.allegato import Allegato
 from app.models.impegno import Impegno, partecipante_impegno
 from app.models.notifica import Notifica, TipoAvviso
+from app.models.appartenenza import Appartenenza
 
 __all__ = [
     "Utente", "Progetto", "Lavoro",
@@ -23,4 +24,5 @@ __all__ = [
     "Reparto", "membro_reparto", "progetto_reparto", "macchina_reparto",
     "Macchina", "SezioneMacchina", "VoceMacchina", "TipoVoce", "StatoVoce", "voce_sezione",
     "Allegato", "Impegno", "partecipante_impegno", "Notifica", "TipoAvviso",
+    "Appartenenza",
 ]
