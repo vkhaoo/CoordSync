@@ -9,10 +9,14 @@ __pycache__/
 # Database locale (quello dei test sta fuori dal progetto, vedi conftest.py)
 *.db
 *.sqlite3
+# Le copie di sicurezza del database: sono dati veri, non devono finire su
+# GitHub nemmeno per sbaglio.
+*.db.bak
 
 # Build del frontend (la genera Render, non va su git)
 frontend/dist/
 
-# IDE
+# IDE e strumenti locali
 .vscode/
 .idea/
+.claude/
