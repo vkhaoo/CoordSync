@@ -76,6 +76,17 @@ export default function Macchine({ io, reparti }) {
     catch (err) { setErrore(err.message); }
   }
 
+  // Sposta una sezione di un posto a sinistra (-1) o a destra (+1).
+  // Costruisco la lista nuova per intero e la mando cosi': il server la
+  // accetta tutta o la rifiuta tutta, senza ordini salvati a meta'.
+  function spostaSezione(indice, verso) {
+    const ids = scheda.sezioni.map((s) => s.id);
+    const arrivo = indice + verso;
+    if (arrivo < 0 || arrivo >= ids.length) return;
+    [ids[indice], ids[arrivo]] = [ids[arrivo], ids[indice]];
+    azione(() => api.riordinaSezioni(scheda.id, ids));
+  }
+
   async function aggiungiMacchina(e) {
     e.preventDefault();
     setErrore(null);
@@ -202,10 +213,20 @@ export default function Macchine({ io, reparti }) {
             <div className="barra-sezioni">
               <button className={filtroSezione === "" ? "sez attiva" : "sez"}
                       onClick={() => setFiltroSezione("")}>Tutta la macchina</button>
-              {scheda.sezioni.map((s) => (
+              {scheda.sezioni.map((s, i) => (
                 <span key={s.id} className="sez-gruppo">
+                  {gestisco && scheda.sezioni.length > 1 && (
+                    <button className="chip-sposta" title="Sposta a sinistra"
+                            disabled={i === 0}
+                            onClick={() => spostaSezione(i, -1)}>‹</button>
+                  )}
                   <button className={String(filtroSezione) === String(s.id) ? "sez attiva" : "sez"}
                           onClick={() => setFiltroSezione(s.id)}>{s.nome}</button>
+                  {gestisco && scheda.sezioni.length > 1 && (
+                    <button className="chip-sposta" title="Sposta a destra"
+                            disabled={i === scheda.sezioni.length - 1}
+                            onClick={() => spostaSezione(i, +1)}>›</button>
+                  )}
                   {gestisco && (
                     <button className="chip-x" title="Elimina sezione (le voci restano)"
                             onClick={() => {
@@ -218,7 +239,7 @@ export default function Macchine({ io, reparti }) {
               {gestisco && (
                 <form className="form-inline form-sezione" onSubmit={(e) => {
                   e.preventDefault();
-                  azione(async () => { await api.creaSezione(scheda.id, { nome: nuovaSezione, ordine: scheda.sezioni.length }); setNuovaSezione(""); });
+                  azione(async () => { await api.creaSezione(scheda.id, { nome: nuovaSezione }); setNuovaSezione(""); });
                 }}>
                   <input placeholder="Nuova sezione…" value={nuovaSezione}
                          onChange={(e) => setNuovaSezione(e.target.value)} required />

@@ -174,6 +174,10 @@ export const api = {
   eliminaMacchina: (id) => richiesta("DELETE", `/macchine/${id}`),
   creaSezione:  (macchinaId, dati) => richiesta("POST", `/macchine/${macchinaId}/sezioni`, dati),
   modificaSezione: (id, dati) => richiesta("PATCH", `/sezioni/${id}`, dati),
+  // Si manda la lista intera nell'ordine voluto, non "spostala di uno":
+  // il server salva tutto insieme o niente.
+  riordinaSezioni: (macchinaId, sezioni_ids) =>
+    richiesta("PUT", `/macchine/${macchinaId}/sezioni/ordine`, { sezioni_ids }),
   eliminaSezione: (id) => richiesta("DELETE", `/sezioni/${id}`),
   voci:         (macchinaId, q = "") => richiesta("GET", `/macchine/${macchinaId}/voci${q}`),
   creaVoce:     (macchinaId, dati) => richiesta("POST", `/macchine/${macchinaId}/voci`, dati),

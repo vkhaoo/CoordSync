@@ -694,3 +694,21 @@ input, select, textarea { font-family: var(--sans); }
   border-bottom: 1px solid var(--ambra-scuro);
   box-shadow: 0 2px 8px rgba(22, 33, 46, 0.18);
 }
+
+/* Frecce per riordinare le sezioni di una macchina. Volutamente piccole e
+   scolorite: servono a chi sistema la scheda, non devono rubare l'occhio a
+   chi la sta solo consultando. */
+.chip-sposta {
+  border: none;
+  background: transparent;
+  color: var(--tenue-2);
+  width: 15px;
+  height: 17px;
+  padding: 0;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.chip-sposta:hover:not(:disabled) { color: var(--acciaio-700); }
+/* Il primo e l'ultimo non hanno dove andare: resta il posto, sparisce l'invito. */
+.chip-sposta:disabled { opacity: 0.25; cursor: default; }
