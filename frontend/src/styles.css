@@ -375,6 +375,7 @@ input, select, textarea { font-family: var(--sans); }
 .testo-voce { margin: 0.5rem 0 0; font-size: 0.9rem; line-height: 1.55; color: var(--testo);
   white-space: pre-wrap; overflow-wrap: anywhere; }
 .chip.piccolo { font-size: 0.68rem; padding: 2px 8px; }
+.chip.piccolo.tu { background: #e3eefb; border-color: #bcd6f2; color: #17568f; font-weight: 600; }
 
 .allegati { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-top: 0.55rem; }
 .chip.allegato a { color: var(--st-incorso); text-decoration: none; }

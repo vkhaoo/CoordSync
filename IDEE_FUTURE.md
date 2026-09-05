@@ -106,8 +106,15 @@ successo su quella macchina in ordine di tempo, senza filtri.
 Calendario mensile con due livelli sovrapposti: gli **impegni** propri (con data
 e ora, perché "martedì alle 9 sono da questo cliente" è diverso da "entro
 quando") e, sullo sfondo, le **scadenze** dei lavori. Interruttore fra "i miei",
-"il mio reparto" e "tutta l'azienda". Chi coordina può mettere un impegno
-nell'agenda di un collega. Collegamenti facoltativi a lavoro e macchina.
+"il mio reparto" e "tutta l'azienda". Collegamenti facoltativi a lavoro e
+macchina.
+
+**Riunioni:** un impegno può avere più partecipanti, e allora è UNA cosa sola
+che compare nell'agenda di tutti. Spostandola si sposta per tutti, invece di
+avere copie che divergono alla prima modifica. Chi lo crea resta l'organizzatore
+ed è l'unico (con chi coordina) a poterlo modificare: un invitato non deve poter
+spostare la riunione agli altri. Invitare qualcuno è riservato ad admin e
+caposquadra.
 
 Le scadenze mostrate sono solo quelle dei lavori già visibili: l'agenda non è
 una scorciatoia per aggirare i reparti (c'è un test apposta).

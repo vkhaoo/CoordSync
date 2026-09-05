@@ -47,7 +47,7 @@ def test_creo_un_impegno_con_ora(client):
     assert r.status_code == 201
     assert r.json()["titolo"] == "Intervento cliente Rossi"
     assert r.json()["inizio"].startswith(str(DOMANI))
-    assert r.json()["utente"]["nome"] == "Marco"
+    assert r.json()["organizzatore"]["nome"] == "Marco"
 
 
 def test_fine_prima_dell_inizio_rifiutata(client):
@@ -91,8 +91,9 @@ def test_caposquadra_mette_un_impegno_a_un_collega(client):
     luca_id = _id_utente(client, a, "luca@a.it")
 
     r = client.post("/agenda", json={"titolo": "Vai dal cliente", "inizio": _quando(),
-                                     "utente_id": luca_id}, headers=a)
-    assert r.status_code == 201 and r.json()["utente"]["nome"] == "Luca"
+                                     "partecipanti_ids": [luca_id]}, headers=a)
+    assert r.status_code == 201
+    assert [p["nome"] for p in r.json()["partecipanti"]] == ["Luca"]
     # E Luca se lo ritrova nella SUA agenda.
     miei = client.get(f"/agenda?{_finestra()}&ambito=miei", headers=luca).json()
     assert [i["titolo"] for i in miei["impegni"]] == ["Vai dal cliente"]
@@ -103,7 +104,7 @@ def test_operatore_non_mette_impegni_ad_altri(client):
     luca = _crea_utente(client, a, "Luca", "luca@a.it", "operatore")
     marco_id = _id_utente(client, a, "marco@a.it")
     r = client.post("/agenda", json={"titolo": "X", "inizio": _quando(),
-                                     "utente_id": marco_id}, headers=luca)
+                                     "partecipanti_ids": [marco_id]}, headers=luca)
     assert r.status_code == 403
 
 
@@ -229,3 +230,103 @@ def test_collegamenti_solo_a_cose_che_vedo(client):
     ok = client.post("/agenda", json={"titolo": "Intervento sulla pressa",
                                       "inizio": _quando(), "macchina_id": m["id"]}, headers=a)
     assert ok.status_code == 201 and ok.json()["macchina_id"] == m["id"]
+
+
+# ---------- RIUNIONI: UN IMPEGNO, PIU' PARTECIPANTI ----------
+
+def test_riunione_compare_nell_agenda_di_tutti(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    anna = _crea_utente(client, a, "Anna", "anna@a.it", "caposquadra")
+    luca = _crea_utente(client, a, "Luca", "luca@a.it", "operatore")
+    ids = [_id_utente(client, a, e) for e in ("marco@a.it", "anna@a.it", "luca@a.it")]
+
+    r = client.post("/agenda", json={
+        "titolo": "Riunione di cantiere", "luogo": "Sala riunioni",
+        "inizio": _quando(ora=10), "partecipanti_ids": ids,
+    }, headers=a)
+    assert r.status_code == 201
+    assert {p["nome"] for p in r.json()["partecipanti"]} == {"Marco", "Anna", "Luca"}
+
+    # La stessa riunione, non tre copie: stesso id per tutti.
+    for chi in (a, anna, luca):
+        miei = client.get(f"/agenda?{_finestra()}&ambito=miei", headers=chi).json()["impegni"]
+        assert len(miei) == 1
+        assert miei[0]["id"] == r.json()["id"]
+        assert miei[0]["titolo"] == "Riunione di cantiere"
+
+
+def test_spostare_la_riunione_la_sposta_per_tutti(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    luca = _crea_utente(client, a, "Luca", "luca@a.it", "operatore")
+    ids = [_id_utente(client, a, e) for e in ("marco@a.it", "luca@a.it")]
+    riunione = client.post("/agenda", json={"titolo": "R", "inizio": _quando(ora=9),
+                                            "partecipanti_ids": ids}, headers=a).json()
+
+    client.patch(f"/agenda/{riunione['id']}", json={"inizio": _quando(ora=16)}, headers=a)
+    # Luca vede il nuovo orario senza che nessuno abbia toccato una sua copia.
+    suo = client.get(f"/agenda?{_finestra()}&ambito=miei", headers=luca).json()["impegni"][0]
+    assert suo["inizio"].endswith("16:00:00")
+
+
+def test_un_invitato_non_sposta_la_riunione_agli_altri(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    luca = _crea_utente(client, a, "Luca", "luca@a.it", "operatore")
+    ids = [_id_utente(client, a, e) for e in ("marco@a.it", "luca@a.it")]
+    riunione = client.post("/agenda", json={"titolo": "R", "inizio": _quando(),
+                                            "partecipanti_ids": ids}, headers=a).json()
+
+    assert client.patch(f"/agenda/{riunione['id']}", json={"titolo": "X"},
+                        headers=luca).status_code == 403
+    assert client.delete(f"/agenda/{riunione['id']}", headers=luca).status_code == 403
+
+
+def test_posso_aggiungere_e_togliere_partecipanti(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    _crea_utente(client, a, "Anna", "anna@a.it", "caposquadra")
+    luca = _crea_utente(client, a, "Luca", "luca@a.it", "operatore")
+    marco_id = _id_utente(client, a, "marco@a.it")
+    anna_id = _id_utente(client, a, "anna@a.it")
+    luca_id = _id_utente(client, a, "luca@a.it")
+
+    riunione = client.post("/agenda", json={"titolo": "R", "inizio": _quando(),
+                                            "partecipanti_ids": [marco_id]}, headers=a).json()
+    # aggiungo Anna e Luca
+    r = client.patch(f"/agenda/{riunione['id']}",
+                     json={"partecipanti_ids": [marco_id, anna_id, luca_id]}, headers=a)
+    assert len(r.json()["partecipanti"]) == 3
+    assert len(client.get(f"/agenda?{_finestra()}&ambito=miei", headers=luca).json()["impegni"]) == 1
+
+    # tolgo Luca: sparisce dalla sua agenda, la riunione resta agli altri
+    r = client.patch(f"/agenda/{riunione['id']}",
+                     json={"partecipanti_ids": [marco_id, anna_id]}, headers=a)
+    assert len(r.json()["partecipanti"]) == 2
+    assert client.get(f"/agenda?{_finestra()}&ambito=miei", headers=luca).json()["impegni"] == []
+
+
+def test_riunione_senza_partecipanti_rifiutata(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    i = client.post("/agenda", json={"titolo": "R", "inizio": _quando()}, headers=a).json()
+    assert client.patch(f"/agenda/{i['id']}", json={"partecipanti_ids": []},
+                        headers=a).status_code == 422
+
+
+def test_non_posso_invitare_uno_di_un_altra_azienda(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    registra(client, "Azienda B", "Bruno", "bruno@b.it")
+    tok = client.post("/auth/login", json={"email": "bruno@b.it", "password": "password1"}).json()["access_token"]
+    bruno = client.get("/auth/me", headers={"Authorization": f"Bearer {tok}"}).json()
+    marco_id = _id_utente(client, a, "marco@a.it")
+
+    r = client.post("/agenda", json={"titolo": "R", "inizio": _quando(),
+                                     "partecipanti_ids": [marco_id, bruno["id"]]}, headers=a)
+    assert r.status_code == 404
+    # e non e' stata creata a meta'
+    assert client.get(f"/agenda?{_finestra()}&ambito=azienda", headers=a).json()["impegni"] == []
+
+
+def test_senza_indicazioni_l_impegno_e_solo_mio(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    luca = _crea_utente(client, a, "Luca", "luca@a.it", "operatore")
+    r = client.post("/agenda", json={"titolo": "Solo mio", "inizio": _quando()}, headers=a)
+    assert [p["nome"] for p in r.json()["partecipanti"]] == ["Marco"]
+    assert client.get(f"/agenda?{_finestra()}&ambito=miei", headers=luca).json()["impegni"] == []

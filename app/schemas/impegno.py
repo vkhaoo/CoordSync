@@ -14,9 +14,10 @@ class ImpegnoBase(BaseModel):
 
 
 class ImpegnoCreate(ImpegnoBase):
-    # Se non lo dico, l'impegno e' mio. Metterlo in agenda a un collega e'
-    # riservato a chi coordina (admin e caposquadra).
-    utente_id: int | None = None
+    # Chi ci deve stare. Vuoto = solo io. Con piu' nomi diventa una riunione:
+    # UN impegno solo, che compare nell'agenda di tutti i partecipanti.
+    # Invitare qualcun altro e' riservato a chi coordina (admin e caposquadra).
+    partecipanti_ids: list[int] = []
     lavoro_id: int | None = None
     macchina_id: int | None = None
 
@@ -28,6 +29,7 @@ class ImpegnoUpdate(BaseModel):
     inizio: datetime | None = None
     fine: datetime | None = None
     promemoria_minuti: int | None = None
+    partecipanti_ids: list[int] | None = None
     lavoro_id: int | None = None
     macchina_id: int | None = None
 
@@ -40,7 +42,8 @@ class PersonaRead(BaseModel):
 
 class ImpegnoRead(ImpegnoBase):
     id: int
-    utente: PersonaRead
+    organizzatore: PersonaRead
+    partecipanti: list[PersonaRead] = []
     lavoro_id: int | None = None
     macchina_id: int | None = None
     model_config = ConfigDict(from_attributes=True)

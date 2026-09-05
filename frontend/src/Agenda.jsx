@@ -47,7 +47,7 @@ export default function Agenda({ io, utenti }) {
   const [luogo, setLuogo] = useState("");
   const [note, setNote] = useState("");
   const [promemoria, setPromemoria] = useState("");
-  const [perChi, setPerChi] = useState("");
+  const [partecipanti, setPartecipanti] = useState([]);   // [] = solo io
 
   const coordino = io && (io.ruolo === "admin" || io.ruolo === "caposquadra");
   const celle = celleDelMese(anno, mese);
@@ -100,9 +100,11 @@ export default function Agenda({ io, utenti }) {
         note: note || null,
         promemoria_minuti: promemoria ? Number(promemoria) : null,
       };
-      if (perChi) corpo.utente_id = Number(perChi);
+      // Vuoto = solo io. Con altri dentro diventa una riunione: un impegno
+      // solo, che compare nell'agenda di tutti.
+      if (partecipanti.length > 0) corpo.partecipanti_ids = [io.id, ...partecipanti];
       await api.creaImpegno(corpo);
-      setTitolo(""); setLuogo(""); setNote(""); setOraFine(""); setPerChi("");
+      setTitolo(""); setLuogo(""); setNote(""); setOraFine(""); setPartecipanti([]);
       await carica();
     } catch (err) { setErrore(err.message); }
   }
@@ -198,7 +200,7 @@ export default function Agenda({ io, utenti }) {
                   <span className="ora">{oraDi(i.inizio)}{i.fine && `–${oraDi(i.fine)}`}</span>
                   {" "}{i.titolo}
                 </span>
-                {(i.utente.id === io.id || coordino) && (
+                {(i.organizzatore.id === io.id || coordino) && (
                   <div className="lavoro-azioni">
                     <button className="azione-icona elimina" title="Elimina impegno"
                             onClick={() => { if (window.confirm(`Eliminare "${i.titolo}"?`)) elimina(i.id); }}>🗑</button>
@@ -206,7 +208,16 @@ export default function Agenda({ io, utenti }) {
                 )}
               </div>
               <div className="lavoro-meta">
-                {ambito !== "miei" && <span className="chip piccolo">{i.utente.nome}</span>}
+                {i.partecipanti.length > 1 ? (
+                  // Riunione: mostro chi c'e', cosi' si vede a colpo d'occhio.
+                  i.partecipanti.map((p) => (
+                    <span key={p.id} className={p.id === io.id ? "chip piccolo tu" : "chip piccolo"}>
+                      {p.nome}{p.id === io.id ? " (tu)" : ""}
+                    </span>
+                  ))
+                ) : ambito !== "miei" ? (
+                  <span className="chip piccolo">{i.partecipanti[0]?.nome ?? i.organizzatore.nome}</span>
+                ) : null}
                 {i.luogo && <span className="data-voce">📍 {i.luogo}</span>}
                 {i.promemoria_minuti && (
                   <span className="chip piccolo">promemoria {i.promemoria_minuti} min prima</span>
@@ -248,16 +259,20 @@ export default function Agenda({ io, utenti }) {
               <option value="180">3 ore prima</option>
               <option value="1440">Il giorno prima</option>
             </select>
-            {coordino && (
-              <select value={perChi} onChange={(e) => setPerChi(e.target.value)}
-                      title="In agenda a chi">
-                <option value="">Nella mia agenda</option>
-                {utenti.filter((u) => u.id !== io.id).map((u) => (
-                  <option key={u.id} value={u.id}>Agenda di {u.nome}</option>
-                ))}
-              </select>
-            )}
           </div>
+          {coordino && utenti.length > 1 && (
+            <div className="riga-voce piazzamento">
+              <span className="etichetta-reparti">Anche in agenda a</span>
+              {utenti.filter((u) => u.id !== io.id).map((u) => (
+                <button type="button" key={u.id}
+                        className={partecipanti.includes(u.id) ? "sez attiva" : "sez"}
+                        onClick={() => setPartecipanti((p) =>
+                          p.includes(u.id) ? p.filter((x) => x !== u.id) : [...p, u.id])}>
+                  {u.nome}
+                </button>
+              ))}
+            </div>
+          )}
           <textarea placeholder="Note (facoltative)…" rows={2} value={note}
                     onChange={(e) => setNote(e.target.value)} />
           <div className="riga-voce">

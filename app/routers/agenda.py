@@ -5,8 +5,12 @@ L'agenda risponde a una domanda diversa da quella della bacheca lavori: non
 "cosa c'e' da fare" ma "cosa ho in programma". Per questo gli impegni hanno
 l'ora e appartengono a una persona.
 
+Un impegno con piu' partecipanti e' una riunione: UNA cosa sola che compare
+nell'agenda di tutti quelli che ci sono dentro. Spostandola, si sposta per
+tutti; nessuno si ritrova una copia scollegata dalle altre.
+
 Chi vede cosa:
-- "miei": solo i miei impegni;
+- "miei": gli impegni in cui compaio fra i partecipanti;
 - "reparto": anche quelli dei colleghi con cui divido almeno un reparto;
 - "azienda": tutti quelli dell'organizzazione (per chi coordina).
 Le scadenze mostrate sono sempre e solo quelle dei lavori che gia' posso
@@ -18,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.impegno import Impegno
+from app.models.impegno import Impegno, partecipante_impegno
 from app.models.lavoro import Lavoro, StatoLavoro
 from app.models.progetto import Progetto
 from app.models.reparto import membro_reparto
@@ -36,13 +40,29 @@ def _coordina(current: Utente) -> bool:
     return current.ruolo in (RuoloUtente.admin, RuoloUtente.caposquadra)
 
 
+def _con_partecipante(db: Session, utente_ids):
+    """Condizione "fra i partecipanti c'e' almeno uno di questi".
+
+    Passo dalla tabella-ponte invece di fare una join: con i partecipanti
+    multipli una join restituirebbe la stessa riunione una volta per ogni
+    partecipante che corrisponde.
+    """
+    return Impegno.id.in_(
+        db.query(partecipante_impegno.c.impegno_id)
+        .filter(partecipante_impegno.c.utente_id.in_(utente_ids))
+        .scalar_subquery()
+    )
+
+
 def _impegni_visibili(db: Session, current: Utente, ambito: str):
     """Query degli impegni secondo l'ambito richiesto."""
-    query = db.query(Impegno).join(Utente, Impegno.utente_id == Utente.id).filter(
+    # La join sull'organizzatore serve solo a restare dentro la mia azienda:
+    # e' un legame a uno, quindi non moltiplica le righe.
+    query = db.query(Impegno).join(Utente, Impegno.organizzatore_id == Utente.id).filter(
         Utente.organizzazione_id == current.organizzazione_id)
 
     if ambito == "miei":
-        return query.filter(Impegno.utente_id == current.id)
+        return query.filter(_con_partecipante(db, [current.id]))
 
     if ambito == "azienda":
         return query
@@ -50,30 +70,63 @@ def _impegni_visibili(db: Session, current: Utente, ambito: str):
     # "reparto": i colleghi con cui divido almeno un reparto, piu' me stesso.
     ids_reparti = [r.id for r in current.reparti]
     if not ids_reparti:
-        return query.filter(Impegno.utente_id == current.id)
+        return query.filter(_con_partecipante(db, [current.id]))
     colleghi = (
         db.query(membro_reparto.c.utente_id)
         .filter(membro_reparto.c.reparto_id.in_(ids_reparti))
         .scalar_subquery()
     )
     from sqlalchemy import or_
-    return query.filter(or_(Impegno.utente_id == current.id,
-                            Impegno.utente_id.in_(colleghi)))
+    return query.filter(or_(_con_partecipante(db, [current.id]),
+                            Impegno.id.in_(
+                                db.query(partecipante_impegno.c.impegno_id)
+                                .filter(partecipante_impegno.c.utente_id.in_(colleghi))
+                                .scalar_subquery())))
 
 
 def _impegno_mio_o_404(db, current, impegno_id) -> Impegno:
     impegno = (
-        db.query(Impegno).join(Utente, Impegno.utente_id == Utente.id)
+        db.query(Impegno).join(Utente, Impegno.organizzatore_id == Utente.id)
         .filter(Impegno.id == impegno_id,
                 Utente.organizzazione_id == current.organizzazione_id)
         .first()
     )
     if impegno is None:
         raise HTTPException(status_code=404, detail="Impegno non trovato")
-    # Un'agenda e' personale: la tocca chi ne e' proprietario, o chi coordina.
-    if impegno.utente_id != current.id and not _coordina(current):
-        raise HTTPException(status_code=403, detail="Puoi modificare solo i tuoi impegni")
+    # Un'agenda e' personale: la tocca chi ha organizzato l'impegno, o chi
+    # coordina. Un invitato non deve poter spostare la riunione agli altri.
+    if impegno.organizzatore_id != current.id and not _coordina(current):
+        raise HTTPException(status_code=403, detail="Puoi modificare solo gli impegni che hai creato")
     return impegno
+
+
+def _risolvi_partecipanti(db, current: Utente, ids: list[int]) -> list[Utente]:
+    """Chi partecipa. La lista si prende alla lettera: chi la manda decide se
+    metterci dentro anche se stesso (una riunione di solito si', un incarico
+    dato a un collega no).
+
+    Invitare qualcun altro e' un atto di coordinamento: lo possono fare admin e
+    caposquadra. E devono essere tutti colleghi della mia azienda; se anche uno
+    solo non lo e', rifiuto tutto invece di creare mezza riunione.
+    """
+    if not ids:
+        raise HTTPException(status_code=422, detail="Serve almeno un partecipante")
+
+    voluti = set(ids)
+    altri = voluti - {current.id}
+    if altri and not _coordina(current):
+        raise HTTPException(status_code=403,
+                            detail="Non puoi mettere impegni nell'agenda di un collega")
+
+    persone = (
+        db.query(Utente)
+        .filter(Utente.id.in_(voluti),
+                Utente.organizzazione_id == current.organizzazione_id)
+        .all()
+    )
+    if len(persone) != len(voluti):
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    return persone
 
 
 def _controlla_collegamenti(db, current, forniti: dict) -> None:
@@ -92,30 +145,18 @@ def crea_impegno(dati: ImpegnoCreate, db: Session = Depends(get_db),
     if dati.fine is not None and dati.fine < dati.inizio:
         raise HTTPException(status_code=422, detail="La fine non puo' venire prima dell'inizio")
 
-    proprietario_id = dati.utente_id or current.id
-    if proprietario_id != current.id:
-        # Mettere un impegno in agenda a un collega e' un atto di coordinamento.
-        if not _coordina(current):
-            raise HTTPException(status_code=403,
-                                detail="Non puoi mettere impegni nell'agenda di un collega")
-        collega = (
-            db.query(Utente)
-            .filter(Utente.id == proprietario_id,
-                    Utente.organizzazione_id == current.organizzazione_id)
-            .first()
-        )
-        if collega is None:
-            raise HTTPException(status_code=404, detail="Utente non trovato")
-
+    # Senza indicazioni, l'impegno e' solo mio.
+    partecipanti = _risolvi_partecipanti(db, current, dati.partecipanti_ids or [current.id])
     _controlla_collegamenti(db, current, dati.model_dump())
 
     impegno = Impegno(
         titolo=dati.titolo, note=dati.note, luogo=dati.luogo,
         inizio=dati.inizio, fine=dati.fine,
         promemoria_minuti=dati.promemoria_minuti,
-        utente_id=proprietario_id,
+        organizzatore_id=current.id,
         lavoro_id=dati.lavoro_id, macchina_id=dati.macchina_id,
     )
+    impegno.partecipanti = partecipanti
     db.add(impegno)
     db.commit()
     db.refresh(impegno)
@@ -174,7 +215,7 @@ def prossimi_impegni(giorni: int = Query(7, ge=1, le=60),
     adesso = datetime.now()
     return (
         db.query(Impegno)
-        .filter(Impegno.utente_id == current.id,
+        .filter(_con_partecipante(db, [current.id]),
                 Impegno.inizio >= adesso,
                 Impegno.inizio <= adesso + timedelta(days=giorni))
         .order_by(Impegno.inizio)
@@ -187,10 +228,13 @@ def modifica_impegno(impegno_id: int, dati: ImpegnoUpdate, db: Session = Depends
                      current: Utente = Depends(get_current_user)):
     impegno = _impegno_mio_o_404(db, current, impegno_id)
     forniti = dati.model_dump(exclude_unset=True)
+    partecipanti_ids = forniti.pop("partecipanti_ids", None)
     _controlla_collegamenti(db, current, forniti)
 
     for campo, valore in forniti.items():
         setattr(impegno, campo, valore)
+    if partecipanti_ids is not None:
+        impegno.partecipanti = _risolvi_partecipanti(db, current, partecipanti_ids)
     if impegno.fine is not None and impegno.fine < impegno.inizio:
         raise HTTPException(status_code=422, detail="La fine non puo' venire prima dell'inizio")
 
