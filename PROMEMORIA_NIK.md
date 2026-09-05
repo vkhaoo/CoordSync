@@ -7,28 +7,28 @@ Legenda: **[!]** urgente o con una scadenza · **[ ]** da fare · **[?]** serve 
 
 ---
 
-## [!] Da controllare SUBITO, prima del prossimo deploy
+## [x] Controlli fatti — niente da fare qui
 
-### [!] `SECRET_KEY` deve esistere su Render
+### [x] `SECRET_KEY` su Render: c'è
 
-Ho aggiunto un controllo all'avvio: **se in produzione la chiave di firma è
-ancora quella di esempio scritta nel codice, l'app si rifiuta di partire.**
+Ho aggiunto un controllo all'avvio: in produzione, se la chiave di firma fosse
+quella di esempio scritta nel codice, l'app si rifiuterebbe di partire (con
+quella chiave, che è pubblica su GitHub, chiunque potrebbe fabbricarsi un
+accesso come chiunque altro).
 
-Il motivo è serio: quella chiave firma i token di accesso ed è pubblica (sta su
-GitHub). Se il backend girasse con quella, chiunque potrebbe fabbricarsi un
-accesso come chiunque altro, e nessuno se ne accorgerebbe mai.
+**Verificato dall'esterno che la chiave c'è**: il deploy successivo è andato a
+buon fine e il codice nuovo è online — se la variabile fosse mancata, il
+servizio non sarebbe ripartito e sarebbe rimasta su la versione precedente.
 
-**Vai su Render → backend → Environment e verifica che `SECRET_KEY` ci sia**
-(deve essere una frase lunga e casuale, non quella del codice). Se c'è, non
-cambia niente e il deploy passa liscio.
+Se un domani cambi la chiave, ricordati che **tutti dovranno rifare l'accesso**:
+i token vecchi non valgono più. Nient'altro.
 
-Se invece il prossimo deploy fallisce con un messaggio che parla di
-`SECRET_KEY`, la risposta è: non c'era, e l'app era vulnerabile fino ad ora.
-Aggiungila e ripubblica. Nel frattempo resta online la versione precedente, non
-vai giù.
+### [x] La migrazione delle voci raggruppate è passata
 
-*(Nota: cambiare la `SECRET_KEY` fa scadere tutti i token, quindi tu e i tuoi
-colleghi dovrete rifare l'accesso una volta. Nient'altro.)*
+`cad8fe0afe14` è in produzione: lo si vede dal fatto che il backend nuovo è
+partito (le migrazioni girano prima dell'avvio, quindi se fossero fallite il
+servizio non sarebbe salito). Nessuna voce di storico è stata toccata: sono
+tutte rimaste dove erano, come argomenti a sé stanti.
 
 ---
 
@@ -113,6 +113,23 @@ Migrazioni pubblicate finora (14). Le ultime:
 - `dcbc9794f0d1` — progetti e macchine su più reparti (**sposta dati**)
 - `085f69855d88` — impegni con più partecipanti (**sposta dati**)
 - `c9dcce1d867a` — notifiche in-app
+
+### [ ] Gli avvisi di `npm audit` (solo strumenti di sviluppo)
+
+Installando i test dell'interfaccia, `npm audit` segnala 5 vulnerabilità su
+**vite** e **vitest**. Riguardano il server di sviluppo e l'interfaccia grafica
+dei test: **non finiscono nel sito pubblicato**, che contiene solo il tuo
+codice compilato. Il rischio pratico è per il tuo computer mentre tieni aperto
+`npm run dev`.
+
+Si chiuderebbero passando a vite 7, che però **richiede Node 20.19 o più
+recente**: se quello di Render fosse più vecchio, il deploy del sito
+smetterebbe di funzionare. Non l'ho fatto per non rischiare la produzione per
+un problema che sta solo in locale.
+
+Se vuoi chiuderlo: su Render → Static Site → Environment aggiungi
+`NODE_VERSION` = `20.19.0` (o `22`), verifica che il deploy passi, e poi dimmelo
+che aggiorno vite.
 
 ### [ ] Prova l'app come farebbe un operatore
 
