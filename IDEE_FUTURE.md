@@ -274,11 +274,21 @@ errore di conflitto — parte un invito che quella persona accetta con un clic
 dalla sua casella, e allora l'azienda si aggiunge alle sue. Il cambio azienda
 c'è, nel menu del proprio nome.
 
-**Resta da fare la parte visiva che avevi descritto:** la fila orizzontale di
-riquadri arrotondati all'apertura dell'app, con il **+** in fondo per unirsi a
-una nuova azienda e per accettare o rifiutare gli inviti in attesa. Oggi
-l'invito si accetta solo dal link email, e il cambio azienda è una voce di
-menu: funziona, ma non è la schermata che avevi in mente.
+**Fatti anche gli inviti in attesa** (5 settembre 2026): l'invito non vive più
+solo dentro un link email — è scritto, si trova nel menu del proprio nome e si
+accetta o si rifiuta da lì. Finché non si accetta non apre niente e non si
+compare fra i colleghi.
+
+**Resta la scelta di come mostrarlo.** Tu avevi descritto una fila orizzontale
+di riquadri arrotondati **all'apertura dell'app**, con il **+** in fondo. Io ho
+messo tutto nel menu del tuo nome, e ti spiego perché: quella schermata, aperta
+ogni volta, sarebbe un passaggio in più tutti i giorni per chi lavora in una
+sola azienda — cioè quasi tutti, te compreso finché non arriva un secondo
+cliente.
+
+Una via di mezzo possibile: la schermata di scelta compare all'apertura **solo**
+se hai più di un'azienda o un invito in sospeso, e altrimenti si salta. Dimmi se
+la vuoi così e la faccio.
 
 ### Come lo affronterei
 

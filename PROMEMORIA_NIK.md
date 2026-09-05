@@ -135,7 +135,8 @@ Ogni volta che pubblico una migrazione te lo scrivo. Nei log del backend su
 Render deve comparire una riga `Running upgrade ... -> ...`. Se non c'è, la
 migrazione non è passata e il resto non funzionerà.
 
-Migrazioni pubblicate finora (15). Le ultime:
+Migrazioni pubblicate finora (16). Le ultime:
+- `bed5b1f2f4ae` — inviti in attesa (aggiunge una colonna con valore di riempimento)
 - `2bd91f251225` — appartenenze, un utente in più aziende (**sposta dati**:
   ogni utente diventa membro della sua azienda. Se nei log non compare, gli
   accessi si rompono per tutti: guardala)
