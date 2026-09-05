@@ -7,6 +7,31 @@ Legenda: **[!]** urgente o con una scadenza · **[ ]** da fare · **[?]** serve 
 
 ---
 
+## [!] Da controllare SUBITO, prima del prossimo deploy
+
+### [!] `SECRET_KEY` deve esistere su Render
+
+Ho aggiunto un controllo all'avvio: **se in produzione la chiave di firma è
+ancora quella di esempio scritta nel codice, l'app si rifiuta di partire.**
+
+Il motivo è serio: quella chiave firma i token di accesso ed è pubblica (sta su
+GitHub). Se il backend girasse con quella, chiunque potrebbe fabbricarsi un
+accesso come chiunque altro, e nessuno se ne accorgerebbe mai.
+
+**Vai su Render → backend → Environment e verifica che `SECRET_KEY` ci sia**
+(deve essere una frase lunga e casuale, non quella del codice). Se c'è, non
+cambia niente e il deploy passa liscio.
+
+Se invece il prossimo deploy fallisce con un messaggio che parla di
+`SECRET_KEY`, la risposta è: non c'era, e l'app era vulnerabile fino ad ora.
+Aggiungila e ripubblica. Nel frattempo resta online la versione precedente, non
+vai giù.
+
+*(Nota: cambiare la `SECRET_KEY` fa scadere tutti i token, quindi tu e i tuoi
+colleghi dovrete rifare l'accesso una volta. Nient'altro.)*
+
+---
+
 ## [!] Scadenze e cose che possono morire da sole
 
 ### [!] Il database gratuito di Render scade dopo 90 giorni
@@ -35,18 +60,15 @@ volta a freddo, apri il file, verifica che dentro ci siano i tuoi dati.
 
 ## [ ] Per accendere cose già consegnate
 
-### [ ] Promemoria dell'agenda via email
+### [x] Promemoria dell'agenda via email — CHIAVE MESSA
 
-Il codice c'è ma **è inerte di proposito**: finché non fai questi passi non manda
-niente e non dà errore.
+Hai aggiunto `CHIAVE_PROMEMORIA` su Render e i due secret su GitHub. Resta solo
+da **guardare che giri davvero**: GitHub → Actions → "Promemoria agenda" → Run
+workflow. Deve finire verde. Se dice `503` la chiave sul backend non è arrivata
+(controlla che il servizio sia stato riavviato dopo averla aggiunta); se dice
+`401` le due chiavi non coincidono.
 
-1. Scegli una frase lunga e casuale (30+ caratteri) come chiave.
-2. **Su Render** → backend → Environment: aggiungi `CHIAVE_PROMEMORIA` con quella
-   frase. Verifica che ci sia anche `FRONTEND_URL`.
-3. **Su GitHub** → Settings → Secrets and variables → Actions → New repository secret:
-   - `CHIAVE_PROMEMORIA` — la stessa frase
-   - `URL_BACKEND` — l'indirizzo del backend (es. `https://...onrender.com`)
-4. Vai in Actions → "Promemoria agenda" → Run workflow, per provarla subito.
+Da lì in poi parte da sola ogni quarto d'ora.
 
 Istruzioni più estese in testa a `.github/workflows/promemoria.yml`.
 
@@ -68,14 +90,16 @@ Ti deve comparire la striscia, e dopo qualche secondo devi ritrovarti dentro
 senza aver rifatto l'accesso. Se invece ti chiede di nuovo la password, dimmelo:
 vuol dire che il tempo di risveglio supera i 25 secondi che ho impostato.
 
-### [ ] Il comando di build del frontend su Render
+### [x] Il comando di build del frontend su Render — RISOLTO
 
-Serve a me per poterti togliere dal repository i **2267 file di `node_modules`**
-che ora sono versionati (appesantiscono tutto e sporcano ogni commit).
+È `npm install && npm run build`, quindi ho tolto dal repository i **2267 file
+di `node_modules`**: Render se li riscarica da solo a ogni pubblicazione, nelle
+versioni esatte fissate da `package-lock.json`. Il progetto su GitHub è passato
+da 2398 file tracciati a **131**: adesso si vede il codice, non le librerie.
 
-Vai su Render → il tuo Static Site → Settings → **Build Command** e dimmi cosa
-c'è scritto. Se contiene `npm install` (o `npm ci`), posso toglierli senza
-rischi. Se c'è solo `npm run build`, toglierli **spaccherebbe il deploy**.
+**Al prossimo deploy guarda i log del frontend**: deve comparire `npm install`
+che scarica i pacchetti, e poi il build. Se per qualsiasi motivo fallisse, il
+sito attuale resta su fino a che il nuovo build non riesce.
 
 ### [ ] Controlla i log dopo un deploy con migrazione
 
@@ -102,7 +126,9 @@ Hai scelto Sentry (piano gratuito) per gli errori in produzione. È l'unica cosa
 che manca perché funzioni: il codice è già pronto e resta **inerte** finché la
 chiave non c'è.
 
-1. Vai su sentry.io, crea un account gratuito e un progetto di tipo **Python**.
+1. Vai su sentry.io, crea un account gratuito e un progetto **Python → FastAPI**
+   (se vedi solo "Python" va bene uguale: cambia solo il frammento di codice che
+   Sentry ti mostra, e quel codice noi ce l'abbiamo già in `osservabilita.py`).
 2. Copia il **DSN** che ti mostra (un indirizzo lungo che inizia con `https://`).
 3. Su Render → backend → Environment: aggiungi `SENTRY_DSN` con quel valore.
 4. Facoltativo: imposta anche `AMBIENTE` a `produzione`, così distingui gli

@@ -17,7 +17,7 @@ rischio di lasciare un buco.
 Il chip della priorità è diventato un menu per admin e caposquadra; per gli
 operatori resta un'etichetta. Cambiandola la lista si riordina.
 
-### 2 · Reparti e visibilità per diritti — PROSSIMO
+### 2 · Reparti e visibilità per diritti — FATTO
 
 **Il problema:** oggi l'isolamento si ferma all'azienda. Dentro
 l'organizzazione tutti vedono tutto, quindi non è possibile dividere il lavoro
@@ -49,7 +49,7 @@ assegnato ad alcun reparto, nessun progetto con reparto), poi i reparti si
 assegnano con calma dall'interfaccia. Su un'app usata sul campo, un
 aggiornamento non deve far sparire progetti a nessuno senza preavviso.
 
-### 3 · Storico macchine
+### 3 · Storico macchine — FATTO
 
 **Il bisogno:** tenere traccia, per ogni macchina, di cosa è stato fatto e dei
 problemi affrontati, per costruire uno storico consultabile.
@@ -203,15 +203,19 @@ quando si sta solo guardando. Diventano voci che aprono il modulo di adesso:
 - **Crea sezione** — dentro la tendina delle sezioni, così quel menu contiene
   sia la scelta della sezione sia il modo di aggiungerne una
 
-### C · Ordinare le sezioni della macchina a mano
+### C · Ordinare le sezioni della macchina a mano — FATTO
 
-Oggi le sezioni si possono solo mettere in fila: avendo A, B e C non c'e' modo
-di ottenere A, C, B. Serve poterle **trascinare o spostare su e giu'**, perche'
-l'ordine giusto e' quello dell'impianto, non quello in cui sono state create.
+Ogni sezione ha due frecce (‹ ›) visibili a chi gestisce la macchina; la prima
+non può andare a sinistra e l'ultima a destra. Si manda al server la lista
+completa degli id già riordinata, non "spostane una di uno": così il riordino è
+un'operazione sola, e se i numeri d'ordine erano incasinati (tutti zero, buchi,
+doppioni) il salvataggio li rimette a posto da solo. Se la lista non
+corrisponde esattamente alle sezioni di quella macchina si rifiuta tutto:
+meglio nessun cambiamento che un ordine salvato a metà.
 
-*Nota tecnica:* il campo `ordine` esiste gia' sul modello e `PATCH /sezioni/{id}`
-lo accetta. Manca solo il modo di cambiarlo dall'interfaccia, quindi e' un lavoro
-quasi tutto di frontend.
+Anche la creazione è cambiata: l'ordine lo decide il server e la sezione nuova
+va in fondo. Prima il browser contava le sezioni per scegliere il posto, e
+sbagliava appena se ne cancellava una.
 
 ### D · Raggruppare le voci per argomento *(il piu' significativo)*
 
@@ -251,9 +255,10 @@ l'assunzione su cui poggia tutto l'isolamento.
 
 Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo:
 
-1. **C** — ordinare le sezioni: e' un bisogno concreto e il backend c'e' gia'.
+1. ~~**C** — ordinare le sezioni.~~ FATTO il 5 settembre 2026.
 2. **A e B insieme** — tendine e moduli nascosti: e' un lavoro di sola
-   interfaccia, va fatto in un colpo perche' i due si intrecciano.
+   interfaccia, va fatto in un colpo perche' i due si intrecciano. **E' il
+   prossimo.**
 3. **D** — raggruppamento per argomento: da progettare prima insieme, e' l'unico
    che tocca il modello dati e le migrazioni.
 4. **E** — arriva da se' quando si fara' il multi-azienda.
@@ -282,10 +287,18 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
 - **Chat in tempo reale.** Richiede websocket. Rimandata: i commenti attaccati
   al singolo lavoro coordinano meglio, perché la conversazione resta legata al
   lavoro.
-- **Qualità e infrastruttura:** registro errori in produzione (es. Sentry),
-  backup automatici del database, gestione errori frontend più uniforme,
-  dominio proprio con email dal dominio (SPF/DKIM/DMARC), piano Render a
-  pagamento quando ci saranno utenti veri.
+- **Qualità e infrastruttura.** Fatti: **registro errori in produzione**
+  (Sentry, inerte finché non arriva il DSN), **gestione uniforme dei guasti nel
+  frontend** (attesa massima, tentativi ripetuti sulle sole letture, striscia
+  "il server si sta svegliando" e nessun logout quando è solo la rete a
+  mancare), **controlli in CI su migrazioni e compilazione del frontend**,
+  **guardia sulla SECRET_KEY** all'avvio in produzione. Restano: **backup
+  automatici del database** (oggi non ce n'è nessuno, ed è il rischio più
+  serio), dominio proprio con email dal dominio (SPF/DKIM/DMARC), piano Render
+  a pagamento quando ci saranno utenti veri.
+- **Test del frontend.** Il backend ha 224 test, l'interfaccia zero: le
+  regressioni lì si scoprono usando l'app. Servirebbe almeno una manciata di
+  prove sui pezzi che fanno ragionamento (`api.js`, il calcolo delle date).
 
 ---
 
@@ -297,4 +310,9 @@ robustezza password · link a documento sui progetti · barra di avanzamento ·
 data e autore del completamento · checklist collassabile · modifica, spostamento
 ed eliminazione di lavori e progetti · restyling e responsività · inviti via
 email · obbligo cambio password al primo accesso · scadenze sui lavori ·
-priorità modificabile.
+priorità modificabile · reparti e visibilità per diritti · scheda macchina con
+sezioni, voci e allegati · agenda con impegni, scadenze e riunioni · notifiche
+in-app · ricerca nei lavori e nello storico · limite ai tentativi di accesso ·
+esportazione dei propri dati · tema scuro · cancellazione dell'account con
+anonimizzazione · email di avviso sulle assegnazioni · riordino delle sezioni
+macchina · robustezza al risveglio del server.
