@@ -51,10 +51,38 @@ Cosa fare, in ordine di preferenza:
 3. Anche se passi al piano a pagamento, prendi l'abitudine di un dump ogni tanto:
    un backup che non hai mai provato a ripristinare non è un backup.
 
-### [ ] Fai un dump di prova adesso
+### [!] Accendi i backup automatici (due segreti, cinque minuti)
 
-Non aspettare la scadenza per scoprire che il comando non funziona. Fallo una
-volta a freddo, apri il file, verifica che dentro ci siano i tuoi dati.
+Ho scritto il lavoro che li fa: `.github/workflows/backup.yml`. Ogni lunedì
+notte fa un dump completo del database, lo **cifra** e lo conserva su GitHub
+per 90 giorni. Finché mancano i segreti non fa niente e non dà errore.
+
+Il dump è cifrato perché **questo repository è pubblico**, e i file prodotti
+dalle Actions di un repository pubblico li può scaricare chiunque: un dump in
+chiaro lì dentro vorrebbe dire pubblicare i dati dei tuoi clienti.
+
+Su GitHub → Settings → Secrets and variables → Actions:
+
+1. `DATABASE_URL_ESTERNO` — su Render, pagina del database, voce **External
+   Database URL** (quella interna funziona solo da dentro Render).
+2. `CHIAVE_BACKUP` — una frase lunga a tua scelta. **Segnatela fuori da qui**,
+   in un posto che non sia GitHub: senza quella i backup non si aprono più, e
+   non c'è modo di recuperarla.
+
+Poi Actions → "Backup database" → Run workflow, per vedere che giri.
+
+### [!] Prova a RIPRISTINARE un backup, una volta
+
+Un backup che non hai mai ripristinato non è un backup, è una speranza. Scarica
+il file dalla pagina del lavoro e, sul tuo computer:
+
+```
+gpg --decrypt --batch --passphrase "la-tua-chiave" coordsync-2026-09-05.sql.gpg > ripristino.sql
+psql "URL-di-un-database-vuoto" -f ripristino.sql
+```
+
+Fallo una volta a freddo, adesso che non serve. Il giorno che servirà davvero
+non sarà il momento di scoprire che il comando non funziona.
 
 ---
 

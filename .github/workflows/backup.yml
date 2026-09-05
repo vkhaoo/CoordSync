@@ -1,0 +1,109 @@
+# Backup automatico del database, una volta a settimana.
+#
+# PERCHE' ESISTE: il piano gratuito di Render non fa backup, e il database
+# gratuito viene cancellato dopo 90 giorni. Oggi l'unica copia dei dati e'
+# quella che sta sul server: se sparisce quella, e' sparito tutto.
+#
+# PERCHE' IL DUMP E' CIFRATO: questo repository e' PUBBLICO, e i file prodotti
+# dalle Actions di un repository pubblico li puo' scaricare chiunque. Un dump
+# in chiaro li' dentro vorrebbe dire pubblicare i dati dei clienti. Cifrandolo
+# con una passphrase che sta solo nei segreti, il file scaricato non serve a
+# niente a chi non ha la chiave.
+#
+# ---------------------------------------------------------------------------
+# PER ACCENDERLO servono due segreti (GitHub -> Settings -> Secrets and
+# variables -> Actions -> New repository secret):
+#
+#   DATABASE_URL_ESTERNO  l'indirizzo "External Database URL" che Render mostra
+#                         nella pagina del database (quello interno funziona
+#                         solo da dentro Render)
+#   CHIAVE_BACKUP         una frase lunga a tua scelta. SEGNATELA FUORI DA QUI:
+#                         senza, i backup non si aprono piu'. Non c'e' modo di
+#                         recuperarla.
+#
+# Finche' mancano, il lavoro finisce subito senza fare niente e senza errori.
+#
+# PER RIPRISTINARE un backup (dal tuo computer, con Postgres installato):
+#
+#   gpg --decrypt --batch --passphrase "la-tua-chiave" \
+#       coordsync-2026-09-05.sql.gpg > ripristino.sql
+#   psql "URL-del-database-nuovo" -f ripristino.sql
+#
+# Provalo UNA VOLTA su un database vuoto prima di averne bisogno davvero: un
+# backup che non hai mai ripristinato non e' un backup, e' una speranza.
+# ---------------------------------------------------------------------------
+name: Backup database
+
+on:
+  schedule:
+    # Ogni lunedi' alle 03:00 UTC. Di notte non c'e' nessuno che lavora, e
+    # il dump blocca un attimo il database.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:   # e quando lo lanci a mano
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controlla che i segreti ci siano
+        id: controllo
+        env:
+          URL: ${{ secrets.DATABASE_URL_ESTERNO }}
+          CHIAVE: ${{ secrets.CHIAVE_BACKUP }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$CHIAVE" ]; then
+            echo "Segreti non impostati: non faccio niente."
+            echo "procedi=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "procedi=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installa un pg_dump aggiornato
+        if: steps.controllo.outputs.procedi == 'si'
+        # Quello preinstallato puo' essere piu' vecchio del server e rifiutarsi
+        # di lavorare ("server version mismatch"). Un pg_dump piu' NUOVO del
+        # server invece va sempre bene.
+        run: |
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+          sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Dump e cifratura
+        if: steps.controllo.outputs.procedi == 'si'
+        env:
+          # Passano per l'ambiente e non sulla riga di comando: cosi' non
+          # finiscono nei log ne' nell'elenco dei processi.
+          PGURL: ${{ secrets.DATABASE_URL_ESTERNO }}
+          CHIAVE: ${{ secrets.CHIAVE_BACKUP }}
+        run: |
+          set -euo pipefail
+          NOME="coordsync-$(date +%F).sql"
+          # --no-owner: il ripristino non deve pretendere gli stessi utenti
+          # del server di partenza, che altrove non esistono.
+          pg_dump --no-owner --no-privileges "$PGURL" > "$NOME"
+
+          # Un backup vuoto e' peggio di nessun backup: da' sicurezza senza
+          # darne. Se il file e' sospettosamente piccolo, meglio un lavoro
+          # rosso adesso che una brutta sorpresa fra sei mesi.
+          BYTE=$(stat -c%s "$NOME")
+          echo "Dump: $BYTE byte, $(wc -l < "$NOME") righe"
+          if [ "$BYTE" -lt 1000 ]; then
+            echo "Il dump e' troppo piccolo per essere vero: mi fermo."
+            exit 1
+          fi
+          gpg --symmetric --cipher-algo AES256 --batch --yes \
+              --passphrase "$CHIAVE" --output "$NOME.gpg" "$NOME"
+          rm "$NOME"   # in chiaro non deve restare da nessuna parte
+          ls -lh "$NOME.gpg"
+
+      - name: Conserva il backup
+        if: steps.controllo.outputs.procedi == 'si'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-database
+          path: "*.sql.gpg"
+          # 90 giorni e' il massimo che GitHub tiene gratis, ed e' anche la
+          # vita del database gratuito di Render: comodo da ricordare.
+          retention-days: 90
+          if-no-files-found: error
