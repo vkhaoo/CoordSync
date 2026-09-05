@@ -9,6 +9,7 @@ import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
 import Campanella from "./Campanella.jsx";
+import MioProfilo from "./MioProfilo.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
 
 const PRIORITA = ["bassa", "normale", "alta", "urgente"];
@@ -231,7 +232,7 @@ export default function Dashboard({ onLogout }) {
         </div>
         <div className="barra-destra">
           <Campanella onVaiAlLavoro={vaiAlLavoro} />
-          {io && <span className="mio-ruolo">{io.nome} · {io.ruolo}</span>}
+          <MioProfilo io={io} />
           <button className="esci" onClick={onLogout}>Esci</button>
         </div>
       </header>

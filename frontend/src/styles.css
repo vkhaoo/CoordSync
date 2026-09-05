@@ -539,3 +539,19 @@ input, select, textarea { font-family: var(--sans); }
      lato opposto, cosi' si apre verso il centro seguendo la campanella. */
   .tendina-avvisi { left: 0; right: auto; width: calc(100vw - 2rem); max-width: 340px; }
 }
+
+.blocco-dati-personali { background: var(--pannello); border: 1px solid var(--linea);
+  border-radius: var(--raggio); padding: 1rem; margin-bottom: 1.5rem;
+  box-shadow: var(--ombra-1); }
+.blocco-dati-personali .vuoto { margin: 0 0 0.7rem; max-width: 60ch; line-height: 1.5; }
+
+/* Menu del proprio account */
+.mio-profilo { position: relative; }
+.bottone-profilo { background: transparent; border: none; cursor: pointer; padding: 0.3rem 0.4rem;
+  border-radius: var(--raggio-sm); transition: background .12s ease; }
+.bottone-profilo:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.tendina-profilo { width: 300px; }
+.corpo-profilo { padding: 0.8rem 0.9rem; }
+.riga-profilo { margin: 0 0 0.6rem; font-size: 0.88rem; line-height: 1.5; }
+.riga-profilo.tenue { color: var(--tenue); font-size: 0.8rem; }
+.corpo-profilo .vuoto { margin: 0 0 0.8rem; line-height: 1.5; }

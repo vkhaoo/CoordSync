@@ -5,6 +5,8 @@ Router di autenticazione: registrazione e login.
   modo legittimo di far nascere un'azienda. Ritorna subito un token (auto-login).
 - /auth/login    : email + password -> token JWT.
 """
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
@@ -252,3 +254,89 @@ def accetta_invito(dati: AccettaInvitoRichiesta, db: Session = Depends(get_db)):
     utente.email_verificata = True
     db.commit()
     return {"messaggio": "Password impostata. Ora puoi accedere."}
+
+
+# ---------- ESPORTAZIONE DEI PROPRI DATI ----------
+
+@router.get("/me/export")
+def esporta_i_miei_dati(db: Session = Depends(get_db),
+                        current: Utente = Depends(get_current_user)):
+    """Tutto quello che l'app sa DI TE, in un file JSON da portarsi via.
+
+    E' la portabilita' dei dati: ognuno deve poter tirare fuori la propria
+    roba senza chiedere il permesso a nessuno.
+
+    Cosa c'e' dentro: il profilo, quello che hai SCRITTO (commenti, voci di
+    storico, link), quello che ti riguarda (lavori assegnati, impegni in
+    agenda, avvisi). Cosa NON c'e': i dati dell'azienda che non sono tuoi, e
+    la password, che non esiste in chiaro nemmeno per noi.
+    """
+    from app.models.commento import Commento
+    from app.models.voce_macchina import VoceMacchina
+    from app.models.allegato import Allegato
+    from app.models.impegno import Impegno, partecipante_impegno
+    from app.models.notifica import Notifica
+
+    def quando(valore):
+        return valore.isoformat() if valore else None
+
+    commenti = (db.query(Commento).filter(Commento.autore_id == current.id)
+                .order_by(Commento.creato_il).all())
+    voci = (db.query(VoceMacchina).filter(VoceMacchina.autore_id == current.id)
+            .order_by(VoceMacchina.creato_il).all())
+    allegati = (db.query(Allegato).filter(Allegato.autore_id == current.id)
+                .order_by(Allegato.creato_il).all())
+    impegni = (db.query(Impegno)
+               .filter(Impegno.id.in_(
+                   db.query(partecipante_impegno.c.impegno_id)
+                   .filter(partecipante_impegno.c.utente_id == current.id)
+                   .scalar_subquery()))
+               .order_by(Impegno.inizio).all())
+    avvisi = (db.query(Notifica).filter(Notifica.utente_id == current.id)
+              .order_by(Notifica.creato_il).all())
+
+    return {
+        "esportato_il": datetime.now(timezone.utc).isoformat(),
+        "profilo": {
+            "nome": current.nome,
+            "email": current.email,
+            "ruolo": current.ruolo.value,
+            "email_verificata": current.email_verificata,
+            "azienda": current.organizzazione.nome if current.organizzazione else None,
+            "reparti": [r.nome for r in current.reparti],
+        },
+        "lavori_assegnati": [
+            {"titolo": l.titolo, "descrizione": l.descrizione,
+             "stato": l.stato.value, "priorita": l.priorita.value,
+             "scadenza": l.data_scadenza.isoformat() if l.data_scadenza else None,
+             "progetto": l.progetto.nome if l.progetto else None}
+            for l in current.lavori
+        ],
+        "commenti_scritti": [
+            {"testo": c.testo, "quando": quando(c.creato_il),
+             "lavoro": c.lavoro.titolo if c.lavoro else None}
+            for c in commenti
+        ],
+        "voci_di_storico_scritte": [
+            {"tipo": v.tipo.value, "titolo": v.titolo, "testo": v.testo,
+             "stato": v.stato.value if v.stato else None,
+             "quando": quando(v.creato_il),
+             "macchina": v.macchina.nome if v.macchina else None}
+            for v in voci
+        ],
+        "link_aggiunti": [
+            {"titolo": a.titolo, "url": a.url, "quando": quando(a.creato_il)}
+            for a in allegati
+        ],
+        "agenda": [
+            {"titolo": i.titolo, "note": i.note, "luogo": i.luogo,
+             "inizio": quando(i.inizio), "fine": quando(i.fine),
+             "organizzatore": i.organizzatore.nome if i.organizzatore else None,
+             "partecipanti": [p.nome for p in i.partecipanti]}
+            for i in impegni
+        ],
+        "avvisi_ricevuti": [
+            {"testo": n.testo, "letto": n.letta, "quando": quando(n.creato_il)}
+            for n in avvisi
+        ],
+    }
