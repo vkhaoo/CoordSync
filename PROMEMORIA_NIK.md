@@ -82,38 +82,42 @@ cosa gli avanza, cosa non capisce.
 
 ---
 
-## [?] Decisioni che aspettano te
+## [ ] Crea l'account Sentry e passami la chiave
 
-Finché non rispondi, queste cose restano ferme. Non è pigrizia: sono scelte che
-non posso prendere da solo su dati veri.
+Hai scelto Sentry (piano gratuito) per gli errori in produzione. È l'unica cosa
+che manca perché funzioni: il codice è già pronto e resta **inerte** finché la
+chiave non c'è.
 
-### [?] Cancellazione di un account: cosa succede al suo lavoro?
+1. Vai su sentry.io, crea un account gratuito e un progetto di tipo **Python**.
+2. Copia il **DSN** che ti mostra (un indirizzo lungo che inizia con `https://`).
+3. Su Render → backend → Environment: aggiungi `SENTRY_DSN` con quel valore.
+4. Facoltativo: imposta anche `AMBIENTE` a `produzione`, così distingui gli
+   errori veri da quelli che capitano mentre provi in locale.
 
-Se cancelli un utente, i lavori che aveva creato e i commenti che aveva scritto
-che fine fanno? Le opzioni ragionevoli:
-- **anonimizzare**: il lavoro resta, l'autore diventa "utente eliminato"
-- **riassegnare**: tutto passa a un altro, che scegli al momento
-- **impedire**: non si cancella un utente che ha ancora roba in giro
+Da quel momento, quando l'app si rompe ti arriva un'email con la riga di codice
+esatta, invece di scoprirlo perché te lo dice un collega.
 
-Serve anche decidere se è l'admin a cancellare gli altri, o ognuno se stesso
-(per il GDPR conta la seconda).
+---
 
-### [?] Gli operatori possono organizzare riunioni?
+## Decisioni prese (5 settembre 2026)
 
-Oggi mettere un impegno nell'agenda di un collega è riservato ad admin e
-caposquadra. Va bene così, o vuoi che anche un operatore possa fissare qualcosa
-con i colleghi?
+Le tengo scritte qui così non si perdono e non te le richiedo.
 
-### [?] Le notifiche devono arrivare anche per email?
+| Domanda | Risposta |
+|---|---|
+| Cancellazione di un account | **Anonimizza l'autore**: il lavoro resta, il nome diventa "utente eliminato" |
+| Su cosa lavorare | **Robustezza e visibilità** (errori, gestione guasti, test sui casi limite) |
+| Piano Render | **Non ancora deciso**: non costruisco niente che dipenda dal piano a pagamento |
+| Notifiche via email | **Solo per le assegnazioni**, il resto resta nella campanella |
+| Errori in produzione | **Sentry**, piano gratuito |
+| Operatori e riunioni | **No**: fissare impegni ad altri resta di admin e caposquadra |
+| Come pubblico il lavoro | **Diretto su main**, come finora |
+| Difetti fuori tema | **Li sistemo io** se è sicuro; mi fermo se rischia la produzione |
 
-Oggi la campanella funziona solo dentro l'app. Vuoi che assegnazioni e commenti
-arrivino anche via email? (Attenzione: rischia di diventare fastidioso in fretta,
-di solito si accompagna a preferenze per scegliere cosa ricevere.)
+### Ancora aperta
 
-### [?] Serve una ricerca unica che attraversi tutto?
-
-Oggi si cerca dentro un progetto o dentro una macchina. Ti servirebbe un campo
-unico che cerca insieme in progetti, macchine e agenda?
+- **Ricerca unica su tutto** (progetti + macchine + agenda insieme): messa in
+  coda dopo la robustezza. Dimmi tu se la vuoi prima.
 
 ---
 

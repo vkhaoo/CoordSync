@@ -171,6 +171,93 @@ ricerca unica che attraversi progetti, macchine e agenda insieme.
 
 ---
 
+---
+
+## Appunti di interfaccia (5 settembre 2026)
+
+Raccolti da Nik usando l'app. Il filo conduttore e' uno solo: **quello che non
+serve adesso non deve stare sullo schermo**. Oggi tutto e' sempre aperto, e con
+tante sezioni o tanti progetti la pagina diventa un elenco infinito.
+
+### A · Tendine al posto degli elenchi sempre aperti
+
+Trasformare in menu a tendina, che si aprono premendo un pulsante:
+
+| Dove | Cosa diventa a tendina |
+|---|---|
+| Lavori | l'elenco dei **progetti** nella colonna |
+| Lavori | **Visibile a** (i reparti) |
+| Macchine | l'elenco delle **macchine** nella colonna |
+| Macchine | **Visibile a** (i reparti) |
+| Macchine | le **sezioni** della macchina |
+
+L'**Agenda va bene com'e'** e non si tocca.
+
+### B · I moduli di creazione stanno dietro un pulsante
+
+Oggi "nuovo progetto", "nuovo lavoro" e "nuova sezione" sono sempre lì, anche
+quando si sta solo guardando. Diventano voci che aprono il modulo di adesso:
+
+- **Crea progetto** — dentro la tendina dei progetti
+- **Crea lavoro** — nella schermata dei lavori
+- **Crea sezione** — dentro la tendina delle sezioni, così quel menu contiene
+  sia la scelta della sezione sia il modo di aggiungerne una
+
+### C · Ordinare le sezioni della macchina a mano
+
+Oggi le sezioni si possono solo mettere in fila: avendo A, B e C non c'e' modo
+di ottenere A, C, B. Serve poterle **trascinare o spostare su e giu'**, perche'
+l'ordine giusto e' quello dell'impianto, non quello in cui sono state create.
+
+*Nota tecnica:* il campo `ordine` esiste gia' sul modello e `PATCH /sezioni/{id}`
+lo accetta. Manca solo il modo di cambiarlo dall'interfaccia, quindi e' un lavoro
+quasi tutto di frontend.
+
+### D · Raggruppare le voci per argomento *(il piu' significativo)*
+
+> "Per Modifiche, Lavori, Analisi ecc. sarebbe meglio mettere tutto quello che ha
+> a che fare con un argomento sotto lo stesso punto, come se fosse Progetto e
+> Lavoro iniziale."
+
+Oggi lo storico di una macchina e' un elenco piatto: l'analisi di un problema, la
+modifica che l'ha risolto e il lavoro che e' servito stanno su tre righe separate
+che non si sanno collegate. L'idea e' che una **voce possa contenerne altre**,
+come un progetto contiene i lavori: un argomento in cima ("perdita d'aria sulla
+FAZ") e sotto tutto quello che lo riguarda, in ordine di tempo.
+
+**Attenzione: questa non e' una modifica di aspetto, cambia il modello dati.**
+Le voci passano da elenco piatto a struttura ad albero (una voce con un
+"genitore" facoltativo). Va progettata a parte, decidendo prima: si annidano su
+un livello solo o piu' di uno? Una voce puo' cambiare argomento? Cosa succede
+all'argomento se si cancella? E la migrazione deve lasciare tutte le voci
+esistenti come argomenti a se' stanti, senza perdere niente.
+
+### E · Piu' aziende: la schermata di scelta
+
+Quando arrivera' il multi-azienda (oggi in parcheggio), all'apertura dell'app
+compare una **fila orizzontale scorrevole di riquadri arrotondati**, uno per
+azienda, e in fondo un riquadro con il **+** per unirsi a una nuova.
+
+E cambia anche il funzionamento degli **inviti**: se si invita un indirizzo che
+ha gia' un account, invece di creare un utente nuovo gli arriva un avviso in
+questa schermata; premendo il **+** puo' **accettare o rifiutare**.
+
+*Nota tecnica:* e' un miglioramento vero rispetto a oggi, dove invitare
+un'email gia' registrata da un errore di conflitto. Ma dipende dal multi-azienda,
+che e' il refactor piu' pesante in lista: l'appartenenza a una sola azienda e'
+l'assunzione su cui poggia tutto l'isolamento.
+
+### Come lo affronterei
+
+Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo:
+
+1. **C** — ordinare le sezioni: e' un bisogno concreto e il backend c'e' gia'.
+2. **A e B insieme** — tendine e moduli nascosti: e' un lavoro di sola
+   interfaccia, va fatto in un colpo perche' i due si intrecciano.
+3. **D** — raggruppamento per argomento: da progettare prima insieme, e' l'unico
+   che tocca il modello dati e le migrazioni.
+4. **E** — arriva da se' quando si fara' il multi-azienda.
+
 ## Parcheggio (non ancora pianificate)
 
 - **Sicurezza e GDPR.** Fatti: **limite ai tentativi di accesso** (10 in 15
