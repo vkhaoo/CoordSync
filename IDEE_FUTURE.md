@@ -259,7 +259,7 @@ FAZ") e sotto tutto quello che lo riguarda, in ordine di tempo.
 La migrazione aggiunge una colonna che nasce vuota: tutte le voci esistenti
 restano dove sono, come argomenti a sé stanti.
 
-### E · Piu' aziende: la schermata di scelta — IN PARTE FATTO
+### E · Piu' aziende: la schermata di scelta — FATTO
 
 Quando arrivera' il multi-azienda (oggi in parcheggio), all'apertura dell'app
 compare una **fila orizzontale scorrevole di riquadri arrotondati**, uno per
@@ -279,16 +279,15 @@ solo dentro un link email — è scritto, si trova nel menu del proprio nome e s
 accetta o si rifiuta da lì. Finché non si accetta non apre niente e non si
 compare fra i colleghi.
 
-**Resta la scelta di come mostrarlo.** Tu avevi descritto una fila orizzontale
-di riquadri arrotondati **all'apertura dell'app**, con il **+** in fondo. Io ho
-messo tutto nel menu del tuo nome, e ti spiego perché: quella schermata, aperta
-ogni volta, sarebbe un passaggio in più tutti i giorni per chi lavora in una
-sola azienda — cioè quasi tutti, te compreso finché non arriva un secondo
-cliente.
+**Fatta anche la schermata** (5 settembre 2026), e con lei è cambiato il primo
+accesso: **iscriversi e aprire un'azienda sono due gesti separati**. La
+registrazione crea solo l'account; poi si apre la schermata dei riquadri, che a
+chi non ha niente mostra **solo il +**. Chi arriva per invito non crea nessuna
+azienda: accetta e basta.
 
-Una via di mezzo possibile: la schermata di scelta compare all'apertura **solo**
-se hai più di un'azienda o un invito in sospeso, e altrimenti si salta. Dimmi se
-la vuoi così e la faccio.
+Quando compare: sempre a chi non ha ancora un'azienda, e a richiesta dal menu
+del proprio nome ("Vedi tutte a riquadri"). Chi ne ha una sola non la vede mai
+— entrare dritti dentro è la cosa giusta per il 99% dei giorni.
 
 ### Come lo affronterei
 
