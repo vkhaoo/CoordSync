@@ -35,12 +35,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Su PostgreSQL un enum e' un TIPO, e va creato PRIMA della colonna che lo
-    # usa: dentro create_table lo fa Alembic da solo, ma per un add_column no,
-    # e l'ALTER fallisce con "type statoappartenenza does not exist".
-    # checkfirst=True lo rende ripetibile: se il tipo c'e' gia' (per esempio
-    # perche' un tentativo precedente si e' fermato a meta') non si lamenta.
-    # Su SQLite non esiste niente da creare e la riga non fa nulla.
+    # Su PostgreSQL un enum e' un TIPO a se', e questa riga lo crea prima
+    # della colonna che lo usa.
+    #
+    # NOTA ONESTA: l'avevo aggiunta convinto che senza sarebbe fallita in
+    # produzione, e non era vero — la migrazione era gia' passata cosi' com'era.
+    # Il ritardo che avevo scambiato per un errore era solo la coda delle
+    # pubblicazioni su Render. La riga resta perche' e' comunque piu' sicura
+    # (con checkfirst=True la migrazione si puo' ripetere anche se un
+    # tentativo si e' fermato a meta'), non perche' servisse a rimediare.
+    # Su SQLite non esiste niente da creare e non fa nulla.
     tipo = sa.Enum("invitata", "attiva", name="statoappartenenza")
     tipo.create(op.get_bind(), checkfirst=True)
 
