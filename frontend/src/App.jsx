@@ -3,6 +3,7 @@ import { api, setToken, getToken } from "./api.js";
 import Dashboard from "./Dashboard.jsx";
 import ResetPassword from "./ResetPassword.jsx";
 import AccettaInvito from "./AccettaInvito.jsx";
+import AvvisoRete from "./AvvisoRete.jsx";
 
 // Leggo eventuali token dall'indirizzo (arrivo da un link email).
 const parametri = new URLSearchParams(window.location.search);
@@ -25,14 +26,14 @@ export default function App() {
 
   // Se arrivo dal link dell'email, mostro la pagina per la nuova password.
   if (tokenReset) {
-    return <ResetPassword token={tokenReset}
-             onFatto={() => { window.location.href = window.location.origin; }} />;
+    return <><AvvisoRete /><ResetPassword token={tokenReset}
+             onFatto={() => { window.location.href = window.location.origin; }} /></>;
   }
 
   // Se arrivo da un invito, mostro la pagina "scegli la tua password".
   if (tokenInvito) {
-    return <AccettaInvito token={tokenInvito}
-             onFatto={() => { window.location.href = window.location.origin; }} />;
+    return <><AvvisoRete /><AccettaInvito token={tokenInvito}
+             onFatto={() => { window.location.href = window.location.origin; }} /></>;
   }
 
   async function invia(e) {
@@ -60,12 +61,14 @@ export default function App() {
 
   // Se sono connesso, mostro la dashboard vera.
   if (connesso) {
-    return <Dashboard onLogout={() => { setToken(null); setConnesso(false); }} />;
+    return <><AvvisoRete />
+             <Dashboard onLogout={() => { setToken(null); setConnesso(false); }} /></>;
   }
 
   // Altrimenti mostro il form di accesso/registrazione/recupero.
   return (
     <div className="schermata">
+      <AvvisoRete />
       <form className="card" onSubmit={invia}>
         <div className="marchio">CoordSync</div>
         <p className="sottotitolo">Coordinamento lavori per squadre tecniche</p>

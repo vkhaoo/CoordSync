@@ -68,16 +68,27 @@ export default function Dashboard({ onLogout }) {
   }
 
   // All'apertura: verifico chi sono. Se il token e' scaduto/invalido (401),
-  // torno al login automaticamente. Altrimenti carico i dati.
-  useEffect(() => {
+  // torno al login automaticamente.
+  //
+  // Distinguere il 401 dagli altri guasti e' importante: prima bastava che il
+  // server non rispondesse (addormentato, rete assente) per essere buttati
+  // fuori e dover riscrivere la password, anche se il token era valido.
+  function avvia() {
+    setCaricando(true);
+    setErrore(null);
     api.me()
       .then((utente) => {
         setIo(utente);
         return caricaProgetti().catch((e) => setErrore(e.message));
       })
-      .catch(() => onLogout())   // token non valido -> disconnetto
+      .catch((e) => {
+        if (e.stato === 401) onLogout();     // il token non vale piu'
+        else setErrore(e.message);           // il server non risponde: resto qui
+      })
       .finally(() => setCaricando(false));
-  }, []);
+  }
+
+  useEffect(avvia, []);
 
   // Ogni volta che cambia il progetto selezionato: ricarico i suoi lavori.
   useEffect(() => {
@@ -195,6 +206,26 @@ export default function Dashboard({ onLogout }) {
   }
 
   if (caricando) return <div className="schermata"><p>Caricamento…</p></div>;
+
+  // Il server non ha risposto all'avvio. Non e' un motivo per buttare fuori
+  // l'utente: la sessione e' ancora buona, manca solo la risposta. Gli do un
+  // bottone per riprovare invece di lasciarlo davanti a una pagina vuota.
+  if (!io) {
+    return (
+      <div className="schermata">
+        <div className="card">
+          <div className="marchio">CoordSync</div>
+          <p className="errore">{errore || "Non riesco a contattare il server."}</p>
+          <p className="vuoto piccolo">
+            Se il servizio e' rimasto fermo a lungo si sta riaccendendo: puo'
+            metterci qualche decina di secondi.
+          </p>
+          <button className="principale" onClick={avvia}>Riprova</button>
+          <button type="button" className="link-testo" onClick={onLogout}>Esci</button>
+        </div>
+      </div>
+    );
+  }
 
   // Utente creato dall'admin al primo accesso: prima sceglie una password sua,
   // poi entra. Blocco qui (non nel login) cosi' vale anche per i token gia' salvati.

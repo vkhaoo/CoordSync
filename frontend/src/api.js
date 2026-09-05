@@ -18,17 +18,90 @@ export function setToken(t) {
 }
 export function getToken() { return token; }
 
-async function richiesta(metodo, percorso, corpo) {
+// Quanto aspettare una risposta prima di considerarla persa. Generoso di
+// proposito: sul piano gratuito il servizio si addormenta dopo 15 minuti e la
+// prima richiesta dopo il risveglio puo' metterci quasi un minuto.
+const ATTESA_MASSIMA = 25000;
+const TENTATIVI = 3;
+
+// Chi vuole mostrare "sto svegliando il server..." si registra qui.
+let avvisaRisveglio = null;
+export function quandoIlServerSiSveglia(callback) { avvisaRisveglio = callback; }
+
+// Quante richieste stanno riprovando in questo momento. E' un CONTATORE e non
+// un si/no perche' la pagina lancia piu' chiamate insieme: se la prima che
+// finisce spegnesse l'avviso, sparirebbe mentre le altre stanno ancora
+// aspettando, e l'utente vedrebbe un lampo senza capire.
+let quanteAspettano = 0;
+function segnala(inPiu) {
+  quanteAspettano = Math.max(0, quanteAspettano + inPiu);
+  if (avvisaRisveglio) avvisaRisveglio(quanteAspettano > 0);
+}
+
+const aspetta = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function unTentativo(metodo, percorso, corpo) {
+  // AbortController: senza, una richiesta che non torna resta appesa per
+  // sempre e l'utente guarda una schermata bloccata senza capire perche'.
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), ATTESA_MASSIMA);
+
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const risposta = await fetch(BASE + percorso, {
-    method: metodo,
-    headers,
-    body: corpo ? JSON.stringify(corpo) : undefined,
-  });
+  try {
+    return await fetch(BASE + percorso, {
+      method: metodo,
+      headers,
+      body: corpo ? JSON.stringify(corpo) : undefined,
+      signal: stop.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-  // Se il backend risponde con errore, leggo il messaggio e lo rilancio.
+async function richiesta(metodo, percorso, corpo) {
+  let risposta;
+  let ultimoGuasto;
+
+  // Si riprova SOLO per le letture. Ripetere una scrittura sarebbe pericoloso:
+  // se la richiesta era arrivata e si e' persa solo la risposta, il secondo
+  // tentativo creerebbe un doppione (due lavori, due commenti...).
+  const riprovabile = metodo === "GET";
+  const quanti = riprovabile ? TENTATIVI : 1;
+
+  let hoSegnalato = false;
+  try {
+    for (let n = 1; n <= quanti; n++) {
+      try {
+        risposta = await unTentativo(metodo, percorso, corpo);
+        break;
+      } catch (guasto) {
+        ultimoGuasto = guasto;
+        if (n < quanti) {
+          if (!hoSegnalato) { hoSegnalato = true; segnala(+1); }
+          await aspetta(1500 * n);   // un attimo di piu' a ogni giro
+        }
+      }
+    }
+  } finally {
+    // Anche se va male devo togliermi dal conto, altrimenti l'avviso resta
+    // acceso per sempre.
+    if (hoSegnalato) segnala(-1);
+  }
+
+  if (!risposta) {
+    // Nessuna risposta: server spento, che si sta svegliando, o rete assente.
+    // Il messaggio del browser ("Failed to fetch") non dice niente a nessuno.
+    throw new Error(
+      ultimoGuasto?.name === "AbortError"
+        ? "Il server non ha risposto in tempo. Se e' rimasto fermo a lungo si sta " +
+          "svegliando: riprova fra qualche secondo."
+        : "Non riesco a contattare il server. Controlla la connessione e riprova."
+    );
+  }
+
   if (!risposta.ok) {
     let dettaglio = "Errore";
     try {
@@ -40,7 +113,17 @@ async function richiesta(metodo, percorso, corpo) {
         dettaglio = corpo.detail.map((e) => e.msg).join("; ");
       }
     } catch {}
-    throw new Error(dettaglio);
+
+    // Qualche caso merita parole piu' chiare di quelle del server.
+    if (risposta.status === 401 && percorso !== "/auth/login") {
+      dettaglio = "La tua sessione e' scaduta: rientra per continuare.";
+    } else if (risposta.status >= 500) {
+      dettaglio = "Il server ha avuto un problema. Riprova fra poco; " +
+                  "se continua, e' un guasto e ce ne stiamo accorgendo.";
+    }
+    const errore = new Error(dettaglio);
+    errore.stato = risposta.status;
+    throw errore;
   }
   // 204 = nessun contenuto; altrimenti leggo il JSON.
   return risposta.status === 204 ? null : risposta.json();

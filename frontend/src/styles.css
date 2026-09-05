@@ -677,3 +677,20 @@ input, select, textarea { font-family: var(--sans); }
   font-family: var(--sans); font-size: 0.85rem; font-weight: 600; cursor: pointer;
   transition: all .15s ease; }
 .bottone-pericolo:hover { background: var(--errore); color: #fff; }
+
+/* --- Striscia "il server si sta svegliando" ------------------------------
+   Fissa in alto e sopra a tutto: compare durante i tentativi falliti, quindi
+   deve essere vista anche se l'utente sta guardando meta' pagina. */
+.striscia-rete {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  padding: 8px 14px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--acciaio-900);
+  background: var(--ambra);
+  border-bottom: 1px solid var(--ambra-scuro);
+  box-shadow: 0 2px 8px rgba(22, 33, 46, 0.18);
+}
