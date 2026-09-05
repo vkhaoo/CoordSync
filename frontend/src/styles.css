@@ -791,3 +791,21 @@ input, select, textarea { font-family: var(--sans); }
 .riga-sezione { display: flex; align-items: center; gap: 0.2rem; }
 .riga-sezione .voce { flex: 1; min-width: 0; }
 .comandi-sezione { display: flex; align-items: center; gap: 0.15rem; flex: 0 0 auto; }
+
+/* --- Voci raggruppate per argomento --------------------------------------
+   Le voci sotto un argomento rientrano e hanno una linea a sinistra: si vede
+   a colpo d'occhio cosa appartiene a cosa senza dover leggere. */
+.voci-figlie {
+  list-style: none;
+  margin: 0.75rem 0 0 0;
+  padding: 0 0 0 0.9rem;
+  border-left: 2px solid var(--linea);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.voci-figlie .lavoro { margin: 0; }
+/* La riga che compare premendo ⤵, per scegliere sotto quale argomento
+   spostare una voce. */
+.riga-sposta { display: flex; align-items: center; gap: 0.35rem; margin: 0.4rem 0; }
+.riga-sposta select { flex: 1; min-width: 0; }

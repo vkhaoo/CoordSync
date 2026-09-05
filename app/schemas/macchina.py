@@ -52,6 +52,9 @@ class VoceCreate(BaseModel):
     # Dove si vede: nel generale, in certe sezioni, o in entrambi.
     in_generale: bool = True
     sezioni_ids: list[int] = []
+    # Sotto quale argomento sta questa voce. Vuoto = e' una voce a se',
+    # e puo' diventare lei stessa un argomento.
+    genitore_id: int | None = None
 
 
 class VoceUpdate(BaseModel):
@@ -61,6 +64,10 @@ class VoceUpdate(BaseModel):
     stato: StatoVoce | None = None
     in_generale: bool | None = None
     sezioni_ids: list[int] | None = None
+    # Mandare genitore_id: null la stacca dall'argomento e la rimette da sola.
+    # (Il campo assente e il campo a null sono cose diverse: vedi exclude_unset
+    # nel router.)
+    genitore_id: int | None = None
 
 
 class AutoreRead(BaseModel):
@@ -71,6 +78,7 @@ class AutoreRead(BaseModel):
 
 class VoceRead(BaseModel):
     id: int
+    genitore_id: int | None = None
     tipo: TipoVoce
     stato: StatoVoce | None = None
     titolo: str

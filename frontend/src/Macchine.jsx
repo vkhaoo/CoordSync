@@ -35,6 +35,7 @@ export default function Macchine({ io, reparti }) {
   const [nuovaSezione, setNuovaSezione] = useState("");
   // Anche qui: si apre la scheda per leggere lo storico, non per scriverci.
   const [creaVoceAperta, setCreaVoceAperta] = useState(false);
+  const [vGenitore, setVGenitore] = useState("");   // "" = voce a se
   const [vTipo, setVTipo] = useState("lavoro");
   const [vTitolo, setVTitolo] = useState("");
   const [vTesto, setVTesto] = useState("");
@@ -124,8 +125,9 @@ export default function Macchine({ io, reparti }) {
         stato: vTipo === "lavoro" ? vStato : null,
         in_generale: vGenerale,
         sezioni_ids: vSezioni,
+        genitore_id: vGenitore ? Number(vGenitore) : null,
       });
-      setVTitolo(""); setVTesto(""); setVSezioni([]); setVGenerale(true);
+      setVTitolo(""); setVTesto(""); setVSezioni([]); setVGenerale(true); setVGenitore("");
     });
   }
 
@@ -139,6 +141,25 @@ export default function Macchine({ io, reparti }) {
   // non fatti accaduti, quindi non hanno senso sepolte nella cronologia.
   const info = voci.filter((v) => v.tipo === "informazione");
   const cronologia = voci.filter((v) => v.tipo !== "informazione");
+
+  // Raggruppo per argomento: le voci con un genitore finiscono sotto di lui.
+  //
+  // Una figlia il cui argomento NON e' nell'elenco corrente (capita cercando,
+  // o filtrando per tipo) si mostra lo stesso, da sola: nascondere un
+  // risultato perche' manca il suo capofila sarebbe peggio del disordine.
+  const presenti = new Set(cronologia.map((v) => v.id));
+  const figliePer = new Map();
+  cronologia.forEach((v) => {
+    if (v.genitore_id != null && presenti.has(v.genitore_id)) {
+      figliePer.set(v.genitore_id, [...(figliePer.get(v.genitore_id) || []), v]);
+    }
+  });
+  const radici = cronologia.filter(
+    (v) => v.genitore_id == null || !presenti.has(v.genitore_id));
+
+  // Gli argomenti fra cui si puo' scegliere: le voci che non stanno gia'
+  // sotto qualcun altro (un solo livello, come vuole il server).
+  const argomenti = voci.filter((v) => v.genitore_id == null);
 
   return (
     <div className="corpo">
@@ -330,7 +351,8 @@ export default function Macchine({ io, reparti }) {
             {info.length > 0 && filtroTipo === "" && (
               <div className="blocco-info">
                 <h3 className="titolo-colonna">Informazioni utili</h3>
-                {info.map((v) => <VoceCard key={v.id} voce={v} io={io} gestisco={gestisco} azione={azione} />)}
+                {info.map((v) => <VoceCard key={v.id} voce={v} io={io} gestisco={gestisco}
+                                           azione={azione} argomenti={argomenti} figlie={[]} />)}
               </div>
             )}
 
@@ -357,6 +379,17 @@ export default function Macchine({ io, reparti }) {
                 <input placeholder="Titolo…" value={vTitolo}
                        onChange={(e) => setVTitolo(e.target.value)} required />
               </div>
+              {argomenti.length > 0 && (
+                <div className="riga-voce">
+                  <label className="etichetta-tendina">Sotto l'argomento</label>
+                  <select value={vGenitore} onChange={(e) => setVGenitore(e.target.value)}>
+                    <option value="">Nessuno — voce a se'</option>
+                    {argomenti.map((a) => (
+                      <option key={a.id} value={a.id}>{a.titolo}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <textarea placeholder="Descrizione (facoltativa)…" rows={2} value={vTesto}
                         onChange={(e) => setVTesto(e.target.value)} />
               <div className="riga-voce piazzamento">
@@ -380,14 +413,15 @@ export default function Macchine({ io, reparti }) {
             )}
 
             {/* Storico */}
-            {cronologia.length === 0 ? (
+            {radici.length === 0 ? (
               <p className="vuoto">{cerca
                 ? `Niente trovato per "${cerca}".`
                 : "Niente da mostrare con questi filtri."}</p>
             ) : (
               <ul className="lista-lavori">
-                {cronologia.map((v) => (
-                  <VoceCard key={v.id} voce={v} io={io} gestisco={gestisco} azione={azione} />
+                {radici.map((v) => (
+                  <VoceCard key={v.id} voce={v} io={io} gestisco={gestisco} azione={azione}
+                            argomenti={argomenti} figlie={figliePer.get(v.id) || []} />
                 ))}
               </ul>
             )}
@@ -399,15 +433,28 @@ export default function Macchine({ io, reparti }) {
 }
 
 // Una riga dello storico.
-function VoceCard({ voce, io, gestisco, azione }) {
+function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [] }) {
   const mia = io && voce.autore && voce.autore.id === io.id;
   const posso = mia || gestisco;
+  const [spostando, setSpostando] = useState(false);
+
+  // Sotto quali argomenti si puo' mettere questa voce: non se stessa, e non
+  // le altre se lei stessa ha gia' delle voci sotto (un solo livello).
+  const possibili = figlie.length > 0 ? [] : argomenti.filter((a) => a.id !== voce.id);
 
   return (
     <li className={`lavoro voce-macchina tipo-${voce.tipo}`}>
       <div className="lavoro-testa">
         <span className="lavoro-titolo">{voce.titolo}</span>
         <div className="lavoro-azioni">
+          {posso && possibili.length > 0 && !spostando && (
+            <button className="azione-icona" title="Mettila sotto un argomento"
+                    onClick={() => setSpostando(true)}>⤵</button>
+          )}
+          {posso && voce.genitore_id != null && !spostando && (
+            <button className="azione-icona" title="Staccala dall'argomento"
+                    onClick={() => azione(() => api.modificaVoce(voce.id, { genitore_id: null }))}>⤴</button>
+          )}
           {voce.tipo === "lavoro" && (
             <select className={`stato-select stato-${voce.stato}`} value={voce.stato || "da_fare"}
                     disabled={!posso}
@@ -425,6 +472,21 @@ function VoceCard({ voce, io, gestisco, azione }) {
         </div>
       </div>
 
+      {spostando && (
+        <div className="riga-sposta">
+          <select defaultValue="" autoFocus
+                  onChange={(e) => {
+                    const scelto = e.target.value;
+                    setSpostando(false);
+                    if (scelto) azione(() => api.modificaVoce(voce.id, { genitore_id: Number(scelto) }));
+                  }}>
+            <option value="">Scegli l'argomento…</option>
+            {possibili.map((a) => <option key={a.id} value={a.id}>{a.titolo}</option>)}
+          </select>
+          <button className="mini annulla" onClick={() => setSpostando(false)}>×</button>
+        </div>
+      )}
+
       <div className="lavoro-meta">
         <span className={`prio tipo-badge-${voce.tipo}`}>{TIPI[voce.tipo]}</span>
         <span className="data-voce">
@@ -440,6 +502,16 @@ function VoceCard({ voce, io, gestisco, azione }) {
       <Allegati allegati={voce.allegati}
                 onAggiungi={(d) => azione(() => api.allegaVoce(voce.id, d))}
                 onElimina={(id) => azione(() => api.eliminaAllegato(id))} />
+
+      {/* Quello che sta sotto questo argomento, in ordine di tempo. */}
+      {figlie.length > 0 && (
+        <ul className="voci-figlie">
+          {figlie.map((f) => (
+            <VoceCard key={f.id} voce={f} io={io} gestisco={gestisco}
+                      azione={azione} argomenti={argomenti} figlie={[]} />
+          ))}
+        </ul>
+      )}
     </li>
   );
 }

@@ -61,7 +61,28 @@ class VoceMacchina(Base):
     macchina_id = Column(Integer, ForeignKey("macchine.id", ondelete="CASCADE"),
                          nullable=False, index=True)
 
+    # Raggruppamento per argomento: una voce puo' stare SOTTO un'altra, come i
+    # lavori stanno sotto un progetto. "Perdita d'aria sulla FAZ" diventa
+    # l'argomento, e sotto ci finiscono l'analisi, la modifica e il lavoro che
+    # l'hanno risolta, invece di tre righe sciolte che non si sanno collegate.
+    #
+    # UN SOLO LIVELLO: chi ha un genitore non puo' farne da genitore a sua
+    # volta. Lo impone il router, non il database. E' la stessa forma di
+    # progetto/lavoro, che Nik gia' conosce, e evita alberi profondi in cui
+    # non si ritrova piu' niente.
+    #
+    # SET NULL e non CASCADE: cancellando l'argomento le voci sotto NON si
+    # perdono, tornano sciolte. In una scheda che vive per anni buttare via lo
+    # storico per un gesto solo sarebbe il danno peggiore possibile.
+    genitore_id = Column(Integer, ForeignKey("voci_macchina.id", ondelete="SET NULL"),
+                         nullable=True, index=True)
+
     macchina = relationship("Macchina", back_populates="voci")
     autore = relationship("Utente")
     sezioni = relationship("SezioneMacchina", secondary=voce_sezione, back_populates="voci")
+    # remote_side sull'id: dice a SQLAlchemy da che parte sta il "padre"
+    # nella relazione di una tabella con se stessa.
+    genitore = relationship("VoceMacchina", remote_side=[id], back_populates="figlie")
+    figlie = relationship("VoceMacchina", back_populates="genitore",
+                          order_by="VoceMacchina.creato_il")
     allegati = relationship("Allegato", back_populates="voce", cascade="all, delete-orphan")

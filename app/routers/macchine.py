@@ -229,14 +229,59 @@ def _normalizza_stato(tipo: TipoVoce, stato):
     return stato if tipo == TipoVoce.lavoro else None
 
 
+def _controlla_genitore(db: Session, macchina_id: int, genitore_id: int | None,
+                        voce: VoceMacchina | None = None) -> None:
+    """Verifica che una voce possa stare sotto l'argomento indicato.
+
+    Le regole sono tre, e tutte servono a tenere la struttura leggibile:
+
+    1) l'argomento dev'essere della STESSA macchina. Sparpagliare le voci di
+       un impianto sotto quelle di un altro non vuol dire niente;
+    2) UN SOLO LIVELLO: non si mette una voce sotto una che sta gia' sotto
+       qualcos'altro. E' la forma di progetto/lavoro, non un albero in cui a
+       forza di rientri non si ritrova piu' niente;
+    3) chi ha gia' delle voci sotto di se' non puo' diventare figlia a sua
+       volta, se no il livello diventerebbe due lo stesso.
+    """
+    if genitore_id is None:
+        return
+
+    if voce is not None and genitore_id == voce.id:
+        raise HTTPException(status_code=400,
+                            detail="Una voce non puo' stare sotto se stessa")
+
+    genitore = (
+        db.query(VoceMacchina)
+        .filter(VoceMacchina.id == genitore_id,
+                VoceMacchina.macchina_id == macchina_id)
+        .first()
+    )
+    if genitore is None:
+        raise HTTPException(status_code=400,
+                            detail="L'argomento scelto non e' di questa macchina")
+    if genitore.genitore_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Si puo' raggruppare su un livello solo: quell'argomento sta gia' sotto un altro",
+        )
+    if voce is not None and db.query(VoceMacchina).filter(
+            VoceMacchina.genitore_id == voce.id).first() is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Questa voce ha gia' altre voci sotto di se': staccale prima di spostarla",
+        )
+
+
 @router.post("/macchine/{macchina_id}/voci", response_model=VoceRead, status_code=201)
 def crea_voce(macchina_id: int, dati: VoceCreate, db: Session = Depends(get_db),
               current: Utente = Depends(get_current_user)):
     """Scrivere nel taccuino lo puo' fare chiunque veda la macchina."""
     _macchina_o_404(db, current, macchina_id)
+    _controlla_genitore(db, macchina_id, dati.genitore_id)
 
     voce = VoceMacchina(
         tipo=dati.tipo,
+        genitore_id=dati.genitore_id,
         stato=_normalizza_stato(dati.tipo, dati.stato),
         titolo=dati.titolo,
         testo=dati.testo,
@@ -285,6 +330,10 @@ def modifica_voce(voce_id: int, dati: VoceUpdate, db: Session = Depends(get_db),
 
     forniti = dati.model_dump(exclude_unset=True)
     sezioni_ids = forniti.pop("sezioni_ids", None)
+    # 'genitore_id' presente e a null = staccala dall'argomento; assente =
+    # non si tocca. Per questo si guarda dentro 'forniti' e non il valore.
+    if "genitore_id" in forniti:
+        _controlla_genitore(db, voce.macchina_id, forniti["genitore_id"], voce)
     for campo, valore in forniti.items():
         setattr(voce, campo, valore)
     # Se cambia il tipo, lo stato va rivalutato (un'analisi non ha stato).
