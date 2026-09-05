@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.osservabilita import prepara_log, prepara_sentry, traccia_richieste
 
-from app.database import Base, engine
 from app import models  # noqa: F401  (importa i modelli cosi' vengono registrati)
 from app.routers import auth
 from app.routers import progetti
