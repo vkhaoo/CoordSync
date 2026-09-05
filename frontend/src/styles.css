@@ -873,3 +873,10 @@ input, select, textarea { font-family: var(--sans); }
 .lista-aziende .voce:disabled { cursor: default; opacity: 1; }
 .ruolo-azienda { font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase;
   letter-spacing: 0.06em; opacity: 0.75; flex: 0 0 auto; }
+
+/* Un invito in attesa nel menu del proprio nome. */
+.invito-azienda { display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem; padding: 0.35rem 0; }
+.nome-invito { display: flex; flex-direction: column; gap: 1px; min-width: 0;
+  font-size: 0.87rem; color: var(--inchiostro); }
+.azioni-invito { display: flex; gap: 0.25rem; flex: 0 0 auto; }

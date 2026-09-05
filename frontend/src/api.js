@@ -145,6 +145,11 @@ export const api = {
     richiesta("POST", "/auth/cambia-azienda", { organizzazione_id }),
   accettaInvitoAzienda: (token) =>
     richiesta("POST", "/auth/accetta-invito-azienda", { token }),
+  // Rispondere a un invito trovandolo nell'app, senza passare dall'email.
+  accettaInvito: (organizzazione_id) =>
+    richiesta("POST", "/auth/inviti/accetta", { organizzazione_id }),
+  rifiutaInvito: (organizzazione_id) =>
+    richiesta("POST", "/auth/inviti/rifiuta", { organizzazione_id }),
   cancellaMioAccount: () => richiesta("DELETE", "/auth/me"),
   eliminaUtente: (id) => richiesta("DELETE", `/utenti/${id}`),
   cambiaPassword: (vecchia_password, nuova_password) => richiesta("POST", "/auth/cambia-password", { vecchia_password, nuova_password }),

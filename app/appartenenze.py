@@ -5,19 +5,22 @@ Chi crea un utente non deve ricordarsi di creargli anche la tessera: se lo
 dimentica una volta sola, quella persona entra e non vede niente. Qui c'e' una
 funzione che fa le due cose insieme, e tutti passano da li'.
 """
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from app.models.appartenenza import Appartenenza
+from app.models.appartenenza import Appartenenza, StatoAppartenenza
 from app.models.utente import RuoloUtente, Utente
 
 
 def iscrivi(db: Session, utente: Utente, organizzazione_id: int,
-            ruolo: RuoloUtente) -> Appartenenza:
+            ruolo: RuoloUtente,
+            stato: StatoAppartenenza = StatoAppartenenza.attiva) -> Appartenenza:
     """Rende un utente membro di un'azienda con un certo ruolo.
 
-    Se la tessera c'e' gia' aggiorna solo il ruolo, invece di lasciar
+    Se la tessera c'e' gia' aggiorna ruolo e stato, invece di lasciar
     esplodere la chiave primaria: chiamarla due volte non deve essere un
-    errore, e cambiare ruolo a qualcuno passa da qui.
+    errore, e sia il cambio ruolo sia l'accettazione di un invito passano
+    da qui.
     """
     esistente = (
         db.query(Appartenenza)
@@ -27,11 +30,12 @@ def iscrivi(db: Session, utente: Utente, organizzazione_id: int,
     )
     if esistente is not None:
         esistente.ruolo = ruolo
+        esistente.stato = stato
         return esistente
 
     tessera = Appartenenza(utente_id=utente.id,
                            organizzazione_id=organizzazione_id,
-                           ruolo=ruolo)
+                           ruolo=ruolo, stato=stato)
     db.add(tessera)
     return tessera
 
@@ -46,8 +50,9 @@ def condizione_membro(organizzazione_id: int):
     Si usa `.any()` (un EXISTS) e non una join: con la join, chi ha piu'
     tessere tornerebbe una volta per ognuna.
     """
-    return Utente.appartenenze.any(
-        Appartenenza.organizzazione_id == organizzazione_id)
+    return Utente.appartenenze.any(sa.and_(
+        Appartenenza.organizzazione_id == organizzazione_id,
+        Appartenenza.stato == StatoAppartenenza.attiva))
 
 
 def ruolo_in(db: Session, utente: Utente, organizzazione_id: int) -> RuoloUtente | None:
@@ -59,16 +64,27 @@ def ruolo_in(db: Session, utente: Utente, organizzazione_id: int) -> RuoloUtente
     tessera = (
         db.query(Appartenenza)
         .filter(Appartenenza.utente_id == utente.id,
-                Appartenenza.organizzazione_id == organizzazione_id)
+                Appartenenza.organizzazione_id == organizzazione_id,
+                # SOLO le tessere attive. Un invito in attesa compare
+                # nell'elenco delle proprie aziende ma non apre niente:
+                # togliere questa riga vorrebbe dire far entrare chiunque
+                # sia stato invitato, anche senza aver mai risposto.
+                Appartenenza.stato == StatoAppartenenza.attiva)
         .first()
     )
     return tessera.ruolo if tessera is not None else None
 
 
-def aziende_di(db: Session, utente: Utente) -> list[Appartenenza]:
-    """Tutte le aziende di cui fa parte, per la schermata di scelta."""
-    return (
-        db.query(Appartenenza)
-        .filter(Appartenenza.utente_id == utente.id)
-        .all()
-    )
+def aziende_di(db: Session, utente: Utente,
+               solo_attive: bool = True) -> list[Appartenenza]:
+    """Le aziende di cui fa parte.
+
+    Di default solo quelle vere. Con solo_attive=False tornano anche gli
+    inviti in attesa, che servono alla schermata di scelta: li' vanno
+    mostrati, ma come qualcosa a cui rispondere, non come un posto dove si
+    e' gia' dentro.
+    """
+    query = db.query(Appartenenza).filter(Appartenenza.utente_id == utente.id)
+    if solo_attive:
+        query = query.filter(Appartenenza.stato == StatoAppartenenza.attiva)
+    return query.all()

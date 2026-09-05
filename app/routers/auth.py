@@ -328,6 +328,7 @@ class AziendaRead(BaseModel):
     nome: str
     ruolo: RuoloUtente
     attiva: bool          # quella in cui sto lavorando adesso
+    invito: bool          # True = e' un invito a cui non ho ancora risposto
 
 
 @router.get("/aziende", response_model=list[AziendaRead])
@@ -339,11 +340,75 @@ def le_mie_aziende(db: Session = Depends(get_db),
     accorgersi che questa cosa esiste, e infatti il frontend mostra il
     selettore solo quando ce n'e' piu' d'una.
     """
+    from app.models.appartenenza import StatoAppartenenza
+
     return [
-        AziendaRead(id=t.organizzazione_id, nome=t.organizzazione.nome,
-                    ruolo=t.ruolo, attiva=t.organizzazione_id == current.org_attiva_id)
-        for t in aziende_di(db, current)
+        AziendaRead(
+            id=t.organizzazione_id,
+            nome=t.organizzazione.nome,
+            ruolo=t.ruolo,
+            attiva=t.organizzazione_id == current.org_attiva_id,
+            invito=t.stato == StatoAppartenenza.invitata,
+        )
+        # solo_attive=False: gli inviti in attesa vanno mostrati qui, perche'
+        # e' il posto dove si risponde. Non aprono niente finche' non si dice
+        # di si' (il controllo vero e' in appartenenze.ruolo_in).
+        for t in aziende_di(db, current, solo_attive=False)
     ]
+
+
+class RispostaInvito(BaseModel):
+    organizzazione_id: int
+
+
+@router.post("/inviti/accetta", response_model=AziendaRead)
+def accetta_invito_da_dentro(dati: RispostaInvito, db: Session = Depends(get_db),
+                             current: Utente = Depends(get_current_user)):
+    """Accetta un invito trovandolo nell'app, senza passare dall'email.
+
+    Serve quando l'email si perde o finisce nello spam: l'invito e' scritto,
+    quindi lo si trova comunque nel menu delle proprie aziende.
+    """
+    from app.models.appartenenza import Appartenenza, StatoAppartenenza
+
+    tessera = _invito_mio(db, current, dati.organizzazione_id)
+    tessera.stato = StatoAppartenenza.attiva
+    db.commit()
+    return AziendaRead(id=tessera.organizzazione_id, nome=tessera.organizzazione.nome,
+                       ruolo=tessera.ruolo, attiva=False, invito=False)
+
+
+@router.post("/inviti/rifiuta", status_code=204)
+def rifiuta_invito(dati: RispostaInvito, db: Session = Depends(get_db),
+                   current: Utente = Depends(get_current_user)):
+    """Dice di no a un invito: la tessera in attesa sparisce.
+
+    Si cancella davvero invece di segnarla "rifiutata": non serve a niente
+    tenere memoria di un no, e chi ha invitato puo' sempre riprovare.
+    """
+    tessera = _invito_mio(db, current, dati.organizzazione_id)
+    db.delete(tessera)
+    db.commit()
+
+
+def _invito_mio(db: Session, current: Utente, organizzazione_id: int):
+    """L'invito in attesa che riguarda ME e quell'azienda, o 404.
+
+    Il filtro sull'utente e' la parte importante: senza, chiunque potrebbe
+    accettare l'invito di qualcun altro passando un id a caso.
+    """
+    from app.models.appartenenza import Appartenenza, StatoAppartenenza
+
+    tessera = (
+        db.query(Appartenenza)
+        .filter(Appartenenza.utente_id == current.id,
+                Appartenenza.organizzazione_id == organizzazione_id,
+                Appartenenza.stato == StatoAppartenenza.invitata)
+        .first()
+    )
+    if tessera is None:
+        raise HTTPException(status_code=404, detail="Invito non trovato")
+    return tessera
 
 
 class CambioAzienda(BaseModel):

@@ -33,6 +33,15 @@ export default function MioProfilo({ io, onLogout }) {
   // Cambiare azienda vuol dire ricevere un token nuovo e ricaricare tutto:
   // progetti, macchine, colleghi, permessi cambiano insieme, e ridisegnare
   // pezzo per pezzo lascerebbe per un attimo sullo schermo roba dell'altra.
+  async function rispondi(azienda, accetto) {
+    setErrore(null);
+    try {
+      if (accetto) await api.accettaInvito(azienda.id);
+      else await api.rifiutaInvito(azienda.id);
+      setAziende(await api.mieAziende());
+    } catch (err) { setErrore(err.message); }
+  }
+
   async function vaiIn(azienda) {
     setErrore(null);
     try {
@@ -112,11 +121,11 @@ export default function MioProfilo({ io, onLogout }) {
             {/* Il selettore delle aziende compare SOLO a chi ne ha piu' d'una:
                 chi lavora in un posto solo non deve nemmeno accorgersi che
                 questa cosa esiste. */}
-            {aziende.length > 1 && (
+            {aziende.filter((a) => !a.invito).length > 1 && (
               <div className="blocco-aziende">
                 <span className="etichetta-tendina">Stai lavorando in</span>
                 <ul className="lista-aziende">
-                  {aziende.map((az) => (
+                  {aziende.filter((a) => !a.invito).map((az) => (
                     <li key={az.id}>
                       <button className={az.attiva ? "voce attiva" : "voce"}
                               disabled={az.attiva}
@@ -127,6 +136,29 @@ export default function MioProfilo({ io, onLogout }) {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {/* Inviti a cui non ho ancora risposto. Si vedono qui anche se
+                l'email non e' mai arrivata: l'invito e' scritto, non vive
+                solo dentro un link. */}
+            {aziende.some((a) => a.invito) && (
+              <div className="blocco-aziende">
+                <span className="etichetta-tendina">Ti hanno invitato</span>
+                {aziende.filter((a) => a.invito).map((az) => (
+                  <div key={az.id} className="invito-azienda">
+                    <span className="nome-invito">
+                      {az.nome}
+                      <span className="ruolo-azienda">come {az.ruolo}</span>
+                    </span>
+                    <span className="azioni-invito">
+                      <button className="mini" title="Accetta"
+                              onClick={() => rispondi(az, true)}>✓</button>
+                      <button className="mini annulla" title="Rifiuta"
+                              onClick={() => rispondi(az, false)}>×</button>
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
             {io.reparti && io.reparti.length > 0 && (

@@ -74,10 +74,21 @@ def test_invitare_chi_ha_gia_un_account_non_crea_niente(client, email_spedite):
 
 
 def test_finche_non_accetta_non_vede_niente_dell_altra_azienda(client, email_spedite):
+    """L'invito si vede, ma non apre niente: e' il punto piu' importante di
+    tutto il meccanismo degli inviti in attesa."""
     a, b, _ = _due_aziende(client, email_spedite)
 
     assert [p["nome"] for p in client.get("/progetti", headers=a).json()] == ["Roba di A"]
-    assert len(client.get("/auth/aziende", headers=a).json()) == 1
+
+    aziende = client.get("/auth/aziende", headers=a).json()
+    per_nome = {x["nome"]: x for x in aziende}
+    assert per_nome["Azienda A"]["invito"] is False
+    assert per_nome["Azienda B"]["invito"] is True     # solo un invito, non un posto dove sono
+
+    # e non ci si puo' nemmeno spostare dentro
+    assert client.post("/auth/cambia-azienda",
+                       json={"organizzazione_id": per_nome["Azienda B"]["id"]},
+                       headers=a).status_code == 404
 
 
 def test_accettando_l_azienda_si_aggiunge(client, email_spedite):
@@ -227,3 +238,56 @@ def test_l_ultimo_admin_di_un_altra_azienda_blocca_la_cancellazione(client, emai
     r = client.delete("/auth/me", headers=a)
     assert r.status_code == 409
     assert "Azienda A" in r.json()["detail"]
+
+
+# ---------- RISPONDERE ALL'INVITO DA DENTRO L'APP ----------
+
+def test_accettare_l_invito_senza_passare_dall_email(client, email_spedite):
+    """L'email puo' perdersi o finire nello spam: l'invito e' scritto, quindi
+    si trova comunque nel menu delle proprie aziende."""
+    a, b, _ = _due_aziende(client, email_spedite)
+    id_b = [x["id"] for x in client.get("/auth/aziende", headers=a).json()
+            if x["invito"]][0]
+
+    r = client.post("/auth/inviti/accetta", json={"organizzazione_id": id_b}, headers=a)
+    assert r.status_code == 200
+    assert r.json()["nome"] == "Azienda B"
+
+    # ora ci si puo' andare davvero
+    assert client.post("/auth/cambia-azienda", json={"organizzazione_id": id_b},
+                       headers=a).status_code == 200
+
+
+def test_rifiutare_l_invito_lo_fa_sparire(client, email_spedite):
+    a, b, _ = _due_aziende(client, email_spedite)
+    id_b = [x["id"] for x in client.get("/auth/aziende", headers=a).json()
+            if x["invito"]][0]
+
+    assert client.post("/auth/inviti/rifiuta", json={"organizzazione_id": id_b},
+                       headers=a).status_code == 204
+
+    assert [x["nome"] for x in client.get("/auth/aziende", headers=a).json()] == ["Azienda A"]
+    # e chi aveva invitato puo' sempre riprovare
+    assert client.post("/utenti/invita",
+                       json={"nome": "Marco", "email": "marco@a.it", "ruolo": "operatore"},
+                       headers=b).status_code == 202
+
+
+def test_non_si_accetta_l_invito_di_qualcun_altro(client, email_spedite):
+    """Il filtro sull'utente e' la parte importante: senza, basterebbe
+    indovinare l'id dell'azienda per infilarsi dentro."""
+    a, b, _ = _due_aziende(client, email_spedite)
+    id_b = [x["id"] for x in client.get("/auth/aziende", headers=a).json()
+            if x["invito"]][0]
+    terza = registra(client, "Azienda C", "Carla", "carla@c.it")
+
+    assert client.post("/auth/inviti/accetta", json={"organizzazione_id": id_b},
+                       headers=terza).status_code == 404
+    assert client.post("/auth/inviti/rifiuta", json={"organizzazione_id": id_b},
+                       headers=terza).status_code == 404
+
+
+def test_chi_e_solo_invitato_non_compare_fra_i_colleghi(client, email_spedite):
+    """Non deve finire nel menu "assegna a": potrebbe ancora dire di no."""
+    a, b, _ = _due_aziende(client, email_spedite)
+    assert [u["nome"] for u in client.get("/utenti", headers=b).json()] == ["Bruno"]

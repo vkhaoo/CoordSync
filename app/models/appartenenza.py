@@ -18,12 +18,27 @@ azienda sola, quella attiva in quel momento: cambia solo il modo di sapere
 qual e' (prima la riga dell'utente, adesso il token, verificato contro le
 tessere). Nessuna query vede due aziende insieme, mai.
 """
+import enum
+
 from sqlalchemy import Column, Integer, ForeignKey, Enum as SAEnum, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 
 from app.database import Base
 from app.models.utente import RuoloUtente
+
+
+class StatoAppartenenza(str, enum.Enum):
+    """A che punto e' la tessera.
+
+    'invitata' e' un invito che aspetta una risposta: la persona compare
+    nell'elenco delle SUE aziende in attesa, ma **non vede niente** di quel
+    posto finche' non accetta. Il controllo che lo garantisce sta in
+    app/appartenenze.py: chi cerca il ruolo di qualcuno guarda solo le tessere
+    attive.
+    """
+    invitata = "invitata"
+    attiva = "attiva"
 
 
 class Appartenenza(Base):
@@ -40,6 +55,11 @@ class Appartenenza(Base):
     # un'altra.
     ruolo = Column(SAEnum(RuoloUtente), nullable=False,
                    default=RuoloUtente.operatore)
+
+    # Invito in attesa o appartenenza vera. Le tessere che c'erano prima di
+    # questa colonna sono tutte attive: erano gente che gia' lavorava li'.
+    stato = Column(SAEnum(StatoAppartenenza), nullable=False,
+                   default=StatoAppartenenza.attiva)
 
     creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

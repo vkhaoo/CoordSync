@@ -75,13 +75,13 @@ def invita_utente(dati: InvitoRichiesta, db: Session = Depends(get_db),
 
     - **email nuova**: nasce un account SENZA password, che l'invitato
       scegliera' dal link. E' l'onboarding di sempre.
-    - **email che ha gia' un account CoordSync**: non si crea niente e non si
-      tocca niente. Parte un invito che quella persona puo' accettare o
-      ignorare, e solo accettando questa azienda si aggiunge alle sue.
+    - **email che ha gia' un account CoordSync**: si scrive un invito in
+      attesa, che quella persona trova sia nella posta sia dentro l'app, e a
+      cui puo' rispondere di si' o di no. Finche' non accetta non vede niente
+      di quest'azienda e non compare fra i colleghi.
 
     Il consenso non e' un dettaglio: un amministratore non deve poter
-    attaccare l'account di qualcun altro alla propria azienda. L'unico modo
-    di entrare e' un clic su un link arrivato alla propria casella.
+    attaccare l'account di qualcun altro alla propria azienda.
     """
     esistente = db.query(Utente).filter(Utente.email == dati.email).first()
     if esistente is not None:
@@ -113,11 +113,11 @@ def _invita_chi_ha_gia_un_account(db: Session, current: Utente, invitato: Utente
                                   ruolo: RuoloUtente):
     """Manda l'invito a chi CoordSync ce l'ha gia'.
 
-    Si risponde 202 ("preso in carico") e non 201 ("creato"), perche' non e'
-    stato creato proprio niente: finche' non accetta, per quest'azienda quella
-    persona non esiste. Si risponde anche senza dire niente di lei: chi invita
-    ha scritto un indirizzo email, e non deve venire a sapere dalla risposta
-    come si chiama chi c'e' dietro.
+    Si risponde 202 ("preso in carico") e non 201 ("creato"): un utente non e'
+    stato creato, e finche' quella persona non accetta, per quest'azienda non
+    esiste. Si risponde anche senza dire niente di lei: chi invita ha scritto
+    un indirizzo email, e non deve venire a sapere dalla risposta come si
+    chiama chi c'e' dietro.
     """
     from fastapi.responses import JSONResponse
     from app.appartenenze import ruolo_in
@@ -127,13 +127,27 @@ def _invita_chi_ha_gia_un_account(db: Session, current: Utente, invitato: Utente
         # Un account cancellato non si "riattiva" invitandolo.
         raise HTTPException(status_code=409, detail="Email gia' registrata")
 
-    if ruolo_in(db, invitato, current.org_attiva_id) is not None:
+    from app.models.appartenenza import Appartenenza, StatoAppartenenza
+    tessera = (
+        db.query(Appartenenza)
+        .filter(Appartenenza.utente_id == invitato.id,
+                Appartenenza.organizzazione_id == current.org_attiva_id)
+        .first()
+    )
+    if tessera is not None and tessera.stato == StatoAppartenenza.attiva:
         raise HTTPException(status_code=409,
                             detail="Questa persona fa gia' parte dell'azienda")
 
-    # Nel token c'e' tutto quello che serve ad accettare: chi, dove, con che
-    # ruolo. Cosi' non serve una tabella di inviti in attesa, e un invito non
-    # accettato scade da solo senza lasciare tracce da pulire.
+    # L'invito si SCRIVE, come tessera in attesa: cosi' l'invitato lo trova
+    # dentro l'app anche se l'email si perde per strada, e puo' rispondere di
+    # no. Finche' resta "invitata" non apre proprio niente (vedi ruolo_in).
+    #
+    # Il link email resta la scorciatoia: nel token c'e' tutto quello che
+    # serve ad accettare senza nemmeno collegarsi.
+    iscrivi(db, invitato, current.org_attiva_id, ruolo,
+            stato=StatoAppartenenza.invitata)
+    db.commit()
+
     soggetto = f"{invitato.id}:{current.org_attiva_id}:{ruolo.value}"
     token = crea_token_scopo(soggetto, SCOPO_INVITO_AZIENDA,
                              durata_minuti=60 * 24 * GIORNI_INVITO)
@@ -156,11 +170,15 @@ def elenca_utenti(db: Session = Depends(get_db),
     dev'essere mostrato come operatore, se no si finisce per assegnargli cose
     che il server gli rifiutera'.
     """
-    from app.models.appartenenza import Appartenenza
+    from app.models.appartenenza import Appartenenza, StatoAppartenenza
 
     tessere = (
         db.query(Appartenenza)
-        .filter(Appartenenza.organizzazione_id == current.org_attiva_id)
+        .filter(Appartenenza.organizzazione_id == current.org_attiva_id,
+                # Chi e' stato invitato ma non ha ancora risposto NON e' un
+                # collega: non deve comparire fra le persone a cui assegnare
+                # lavori, perche' potrebbe anche dire di no.
+                Appartenenza.stato == StatoAppartenenza.attiva)
         .all()
     )
     elenco = []
