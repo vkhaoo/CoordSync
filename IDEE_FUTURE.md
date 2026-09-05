@@ -179,7 +179,7 @@ Raccolti da Nik usando l'app. Il filo conduttore e' uno solo: **quello che non
 serve adesso non deve stare sullo schermo**. Oggi tutto e' sempre aperto, e con
 tante sezioni o tanti progetti la pagina diventa un elenco infinito.
 
-### A · Tendine al posto degli elenchi sempre aperti
+### A · Tendine al posto degli elenchi sempre aperti — FATTO
 
 Trasformare in menu a tendina, che si aprono premendo un pulsante:
 
@@ -193,7 +193,14 @@ Trasformare in menu a tendina, che si aprono premendo un pulsante:
 
 L'**Agenda va bene com'e'** e non si tocca.
 
-### B · I moduli di creazione stanno dietro un pulsante
+*Fatto il 5 settembre 2026* con un componente solo, `Tendina.jsx`, usato in
+tutti e cinque i punti. Si chiude cliccando fuori o con Esc. Il contenuto
+riceve una funzione `chiudi`, così chi lo usa decide quali gesti chiudono il
+menu: scegliere un progetto sì, spuntare un reparto no (quasi sempre se ne
+tocca più d'uno di fila). La tendina delle sezioni raccoglie anche il riordino
+e l'eliminazione: tutto quello che riguarda le sezioni sta in un posto solo.
+
+### B · I moduli di creazione stanno dietro un pulsante — FATTO
 
 Oggi "nuovo progetto", "nuovo lavoro" e "nuova sezione" sono sempre lì, anche
 quando si sta solo guardando. Diventano voci che aprono il modulo di adesso:
@@ -202,6 +209,10 @@ quando si sta solo guardando. Diventano voci che aprono il modulo di adesso:
 - **Crea lavoro** — nella schermata dei lavori
 - **Crea sezione** — dentro la tendina delle sezioni, così quel menu contiene
   sia la scelta della sezione sia il modo di aggiungerne una
+
+*Fatto il 5 settembre 2026.* Aggiunto anche il modulo della **nuova voce** di
+storico, che era il blocco più ingombrante della scheda macchina e stava aperto
+anche quando si leggeva soltanto. Ogni modulo ha la × per richiudersi.
 
 ### C · Ordinare le sezioni della macchina a mano — FATTO
 
@@ -256,11 +267,10 @@ l'assunzione su cui poggia tutto l'isolamento.
 Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo:
 
 1. ~~**C** — ordinare le sezioni.~~ FATTO il 5 settembre 2026.
-2. **A e B insieme** — tendine e moduli nascosti: e' un lavoro di sola
-   interfaccia, va fatto in un colpo perche' i due si intrecciano. **E' il
-   prossimo.**
+2. ~~**A e B insieme** — tendine e moduli nascosti.~~ FATTI il 5 settembre 2026.
 3. **D** — raggruppamento per argomento: da progettare prima insieme, e' l'unico
-   che tocca il modello dati e le migrazioni.
+   che tocca il modello dati e le migrazioni. **E' il prossimo**, ma prima
+   servono le tue risposte alle domande qui sotto.
 4. **E** — arriva da se' quando si fara' il multi-azienda.
 
 ## Parcheggio (non ancora pianificate)
