@@ -142,6 +142,8 @@ export const api = {
   cancellaMioAccount: () => richiesta("DELETE", "/auth/me"),
   eliminaUtente: (id) => richiesta("DELETE", `/utenti/${id}`),
   cambiaPassword: (vecchia_password, nuova_password) => richiesta("POST", "/auth/cambia-password", { vecchia_password, nuova_password }),
+  // Ricerca unica: una parola, cinque tipi di risultato.
+  cercaDappertutto: (q) => richiesta("GET", `/ricerca?q=${encodeURIComponent(q)}`),
   progetti: ()     => richiesta("GET", "/progetti"),
   lavori:   (progettoId, q = "") => richiesta("GET",
     `/lavori?progetto_id=${progettoId}` + (q ? `&q=${encodeURIComponent(q)}` : "")),

@@ -16,7 +16,7 @@ const TIPI = {
 };
 const STATI = { da_fare: "Da fare", in_corso: "In corso", fatto: "Fatto" };
 
-export default function Macchine({ io, reparti }) {
+export default function Macchine({ io, reparti, vaiA }) {
   const [macchine, setMacchine] = useState([]);
   const [selezionata, setSelezionata] = useState(null);
   const [scheda, setScheda] = useState(null);      // dettaglio della macchina aperta
@@ -65,6 +65,17 @@ export default function Macchine({ io, reparti }) {
     setScheda(s);
     setVoci(v);
   }
+
+  // Arrivo dalla ricerca in alto: apro la macchina che mi e' stata indicata.
+  // Anche i filtri vanno azzerati, se no si atterra su una scheda filtrata e
+  // sembra che la voce cercata non ci sia.
+  useEffect(() => {
+    if (vaiA == null) return;
+    setSelezionata(vaiA);
+    setFiltroTipo("");
+    setFiltroSezione("");
+    setCerca("");
+  }, [vaiA]);
 
   useEffect(() => {
     caricaMacchine().catch((e) => setErrore(e.message)).finally(() => setCaricando(false));

@@ -533,6 +533,10 @@ input, select, textarea { font-family: var(--sans); }
      a destra, la tendina usciva quasi tutta fuori schermo. Qui la ancoro al
      lato opposto, cosi' si apre verso il centro seguendo la campanella. */
   .tendina-avvisi { left: 0; right: auto; width: calc(100vw - 2rem); max-width: 340px; }
+  /* Stessa storia per i risultati della ricerca: ancorati a destra uscivano
+     di 188px dal bordo sinistro (misurato). */
+  .risultati-ricerca { left: 0; right: auto; width: calc(100vw - 2rem); }
+  .ricerca-globale input { width: 100%; max-width: none; }
 }
 
 .blocco-dati-personali { background: var(--pannello); border: 1px solid var(--linea);
@@ -809,3 +813,51 @@ input, select, textarea { font-family: var(--sans); }
    spostare una voce. */
 .riga-sposta { display: flex; align-items: center; gap: 0.35rem; margin: 0.4rem 0; }
 .riga-sposta select { flex: 1; min-width: 0; }
+
+/* --- Ricerca unica nella barra in alto ----------------------------------- */
+.ricerca-globale { position: relative; }
+.ricerca-globale input {
+  width: 190px;
+  max-width: 34vw;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  background: var(--pannello);
+  border: 1px solid var(--linea);
+  border-radius: 20px;
+  color: var(--inchiostro);
+}
+.ricerca-globale input:focus { outline: none; border-color: var(--ambra); }
+
+.risultati-ricerca {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 60;
+  width: min(360px, 88vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0.7rem;
+  background: var(--pannello);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  box-shadow: var(--ombra-3);
+}
+.gruppo-risultati { margin-bottom: 0.7rem; }
+.gruppo-risultati:last-child { margin-bottom: 0; }
+.gruppo-risultati ul { list-style: none; margin: 0.3rem 0 0; padding: 0; }
+.gruppo-risultati button {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.gruppo-risultati button:hover { background: var(--pannello-2); }
+.risultato-titolo { color: var(--inchiostro); font-size: 0.87rem; }
+/* Dove sta la cosa trovata: un titolo da solo non basta a orientarsi. */
+.risultato-dove { color: var(--tenue); font-size: 0.75rem; }

@@ -22,6 +22,7 @@ from app.routers import reparti
 from app.routers import macchine
 from app.routers import agenda
 from app.routers import notifiche_app
+from app.routers import ricerca_globale
 
 # Lo schema del database e' gestito dalle MIGRAZIONI Alembic
 # (comando: alembic upgrade head), non piu' creato "al volo" qui.
@@ -66,6 +67,7 @@ app.include_router(reparti.router)
 app.include_router(macchine.router)
 app.include_router(agenda.router)
 app.include_router(notifiche_app.router)
+app.include_router(ricerca_globale.router)
 
 
 @app.get("/health")

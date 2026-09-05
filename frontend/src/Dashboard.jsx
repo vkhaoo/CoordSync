@@ -9,6 +9,7 @@ import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
 import Tendina from "./Tendina.jsx";
+import RicercaGlobale from "./RicercaGlobale.jsx";
 import Campanella from "./Campanella.jsx";
 import MioProfilo from "./MioProfilo.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
@@ -46,6 +47,9 @@ export default function Dashboard({ onLogout }) {
   // Il modulo del nuovo lavoro parte chiuso: quasi sempre si apre l'app per
   // guardare come va, non per aggiungere qualcosa.
   const [creaLavoroAperto, setCreaLavoroAperto] = useState(false);
+  // Quale macchina aprire quando si arriva dalla ricerca: la vista Macchine
+  // ha una sua selezione interna, e questo e' il modo di dirle dove andare.
+  const [macchinaDaAprire, setMacchinaDaAprire] = useState(null);
   const [nuovoTitolo, setNuovoTitolo] = useState("");
   const [nuovaPriorita, setNuovaPriorita] = useState("normale");
   const [nuovaScadenza, setNuovaScadenza] = useState("");   // "" = senza scadenza
@@ -266,6 +270,11 @@ export default function Dashboard({ onLogout }) {
           </nav>
         </div>
         <div className="barra-destra">
+          <RicercaGlobale
+            onVaiAlLavoro={vaiAlLavoro}
+            onVaiAlProgetto={(id) => { setVista("lavori"); setSelezionato(id); }}
+            onVaiAllaMacchina={(id) => { setVista("macchine"); setMacchinaDaAprire(id); }}
+            onVaiAllAgenda={() => setVista("agenda")} />
           <Campanella onVaiAlLavoro={vaiAlLavoro} />
           <MioProfilo io={io} onLogout={onLogout} />
           <button className="esci" onClick={onLogout}>Esci</button>
@@ -296,7 +305,7 @@ export default function Dashboard({ onLogout }) {
           <GestioneReparti />
         </div>
       ) : vista === "macchine" ? (
-        <Macchine io={io} reparti={reparti} />
+        <Macchine io={io} reparti={reparti} vaiA={macchinaDaAprire} />
       ) : vista === "agenda" ? (
         <Agenda io={io} utenti={utenti} />
       ) : (

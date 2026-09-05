@@ -17,6 +17,13 @@ def condizione_testo(colonne, testo: str | None):
 
     I caratteri jolly di LIKE vengono neutralizzati: senza, cercare "50%"
     restituirebbe tutto, e un "_" farebbe da singolo carattere qualsiasi.
+
+    LIMITE NOTO: si cerca il testo esattamente com'e' scritto. "valvola" non
+    trova "valvole", e un errore di battitura non trova niente. Andare oltre
+    vorrebbe dire la ricerca a tutto testo di PostgreSQL (che pero' in locale,
+    su SQLite, non esiste: sviluppo e produzione si comporterebbero in modo
+    diverso, e i test smetterebbero di dire la verita'). Per ora si preferisce
+    una ricerca che fa una cosa sola e la fa uguale dappertutto.
     """
     if not testo or not testo.strip():
         return None
