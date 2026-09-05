@@ -10,6 +10,8 @@ from app.models.utente import Utente, RuoloUtente
 from app.schemas.commento import CommentoCreate, CommentoRead
 from app.dependencies import get_current_user
 from app.visibilita import lavoro_visibile
+from app.avvisi import avvisa
+from app.models.notifica import TipoAvviso
 
 router = APIRouter(prefix="/lavori/{lavoro_id}/commenti", tags=["commenti"])
 
@@ -31,6 +33,13 @@ def aggiungi_commento(lavoro_id: int, dati: CommentoCreate,
     # L'autore e' chi e' loggato: non si puo' commentare "a nome di" un altro.
     commento = Commento(testo=dati.testo, lavoro_id=lavoro_id, autore_id=current.id)
     db.add(commento)
+
+    # Avviso chi sta su quel lavoro (non me stesso: ci pensa avvisa()).
+    anteprima = dati.testo if len(dati.testo) <= 60 else dati.testo[:57] + "..."
+    avvisa(db, lavoro.assegnatari, TipoAvviso.commento,
+           f"{current.nome} ha commentato \"{lavoro.titolo}\": {anteprima}",
+           mittente=current, lavoro_id=lavoro.id)
+
     db.commit()
     db.refresh(commento)
     return commento

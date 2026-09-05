@@ -127,10 +127,18 @@ Render addormenta il servizio dopo 15 minuti e non offre lavori programmati.
 Due strade: una **GitHub Action schedulata** che chiama un endpoint che manda le
 email (gratis, e le Actions ci sono già per i test), oppure il piano a pagamento.
 
-### 5 · Notifiche in-app
+### 5 · Notifiche in-app — FATTE
 
-Campanella con contatore, avviso su assegnazione e nuovo commento. Guadagna
-molto se arriva dopo l'agenda, perché può avvisare anche delle scadenze vicine.
+Campanella con contatore nella barra. Avvisa su tre cose: **ti hanno assegnato
+un lavoro**, **qualcuno ha commentato un lavoro dove sei assegnato**, **ti hanno
+messo in agenda un impegno o una riunione**.
+
+Nessuno riceve l'avviso di un gesto suo, e gli avvisi non aggiungono
+visibilità: si mandano solo a chi quella cosa la può già vedere. Il testo è
+salvato composto, come fotografia di un fatto avvenuto: se il lavoro viene
+cancellato l'avviso resta leggibile, perde solo il collegamento.
+
+Cliccando un avviso si va sul lavoro citato.
 
 ### 6 · Allegati come link — FATTI
 

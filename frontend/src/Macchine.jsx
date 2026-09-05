@@ -3,6 +3,7 @@ import { api } from "./api.js";
 import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
+import { dalServer } from "./date.js";
 
 // Etichette dei tipi di voce. "informazione" e' a parte: non e' un fatto
 // avvenuto in una data, e' sapere di riferimento che resta valido.
@@ -346,7 +347,7 @@ function VoceCard({ voce, io, gestisco, azione }) {
       <div className="lavoro-meta">
         <span className={`prio tipo-badge-${voce.tipo}`}>{TIPI[voce.tipo]}</span>
         <span className="data-voce">
-          {new Date(voce.creato_il).toLocaleDateString("it-IT")}
+          {dalServer(voce.creato_il).toLocaleDateString("it-IT")}
           {voce.autore && <> · {voce.autore.nome}</>}
         </span>
         {voce.in_generale && <span className="chip piccolo">generale</span>}

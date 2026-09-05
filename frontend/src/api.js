@@ -59,6 +59,7 @@ export const api = {
   progetti: ()     => richiesta("GET", "/progetti"),
   lavori:   (progettoId, q = "") => richiesta("GET",
     `/lavori?progetto_id=${progettoId}` + (q ? `&q=${encodeURIComponent(q)}` : "")),
+  tuttiILavori: () => richiesta("GET", "/lavori"),
   creaProgetto: (dati) => richiesta("POST", "/progetti", dati),
   aggiornaProgetto: (id, dati) => richiesta("PATCH", `/progetti/${id}`, dati),
   eliminaProgetto: (id) => richiesta("DELETE", `/progetti/${id}`),
@@ -99,6 +100,12 @@ export const api = {
   allegaProgetto: (id, dati) => richiesta("POST", `/progetti/${id}/allegati`, dati),
   allegaLavoro: (id, dati) => richiesta("POST", `/lavori/${id}/allegati`, dati),
   eliminaAllegato: (id) => richiesta("DELETE", `/allegati/${id}`),
+
+  // --- Avvisi in-app (campanella) ---
+  notifiche:    () => richiesta("GET", "/notifiche"),
+  segnaLetta:   (id) => richiesta("PATCH", `/notifiche/${id}`),
+  segnaTutteLette: () => richiesta("POST", "/notifiche/segna-tutte-lette"),
+  eliminaNotifica: (id) => richiesta("DELETE", `/notifiche/${id}`),
 
   reparti:      () => richiesta("GET", "/reparti"),
   creaReparto:  (nome) => richiesta("POST", "/reparti", { nome }),

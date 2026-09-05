@@ -8,6 +8,7 @@ import Agenda from "./Agenda.jsx";
 import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
+import Campanella from "./Campanella.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
 
 const PRIORITA = ["bassa", "normale", "alta", "urgente"];
@@ -100,6 +101,20 @@ export default function Dashboard({ onLogout }) {
       const creato = await api.creaProgetto({ nome: nuovoProgetto });
       setNuovoProgetto("");
       await caricaProgetti(creato.id);   // ricarico e seleziono il nuovo
+    } catch (err) { setErrore(err.message); }
+  }
+
+  // Cliccando un avviso si va sul lavoro citato: cerco in che progetto sta
+  // e ci porto l'utente, azzerando la ricerca per non nasconderglielo.
+  async function vaiAlLavoro(lavoroId) {
+    setErrore(null);
+    try {
+      const tutti = await api.tuttiILavori();
+      const trovato = tutti.find((l) => l.id === lavoroId);
+      if (!trovato) return;                       // cancellato nel frattempo
+      setVista("lavori");
+      setCercaLavori("");
+      setSelezionato(trovato.progetto_id);
     } catch (err) { setErrore(err.message); }
   }
 
@@ -215,6 +230,7 @@ export default function Dashboard({ onLogout }) {
           </nav>
         </div>
         <div className="barra-destra">
+          <Campanella onVaiAlLavoro={vaiAlLavoro} />
           {io && <span className="mio-ruolo">{io.nome} · {io.ruolo}</span>}
           <button className="esci" onClick={onLogout}>Esci</button>
         </div>

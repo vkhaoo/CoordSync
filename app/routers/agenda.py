@@ -32,6 +32,8 @@ from app.schemas.impegno import (
 )
 from app.dependencies import get_current_user
 from app.visibilita import lavori_visibili, lavoro_visibile, macchina_visibile
+from app.avvisi import avvisa
+from app.models.notifica import TipoAvviso
 
 router = APIRouter(prefix="/agenda", tags=["agenda"])
 
@@ -129,6 +131,14 @@ def _risolvi_partecipanti(db, current: Utente, ids: list[int]) -> list[Utente]:
     return persone
 
 
+def _avvisa_partecipanti(db, current: Utente, impegno: Impegno, persone) -> None:
+    """Fa sapere alle persone che si sono ritrovate qualcosa in agenda."""
+    quando = impegno.inizio.strftime("%d/%m alle %H:%M")
+    avvisa(db, persone, TipoAvviso.impegno,
+           f"{current.nome} ti ha messo in agenda \"{impegno.titolo}\" il {quando}",
+           mittente=current, impegno_id=impegno.id)
+
+
 def _controlla_collegamenti(db, current, forniti: dict) -> None:
     """Lavoro e macchina collegati devono essere cose che posso vedere."""
     if forniti.get("lavoro_id") is not None:
@@ -158,6 +168,10 @@ def crea_impegno(dati: ImpegnoCreate, db: Session = Depends(get_db),
     )
     impegno.partecipanti = partecipanti
     db.add(impegno)
+    db.flush()   # serve l'id per collegarci gli avvisi
+
+    _avvisa_partecipanti(db, current, impegno, partecipanti)
+
     db.commit()
     db.refresh(impegno)
     return impegno
@@ -234,7 +248,11 @@ def modifica_impegno(impegno_id: int, dati: ImpegnoUpdate, db: Session = Depends
     for campo, valore in forniti.items():
         setattr(impegno, campo, valore)
     if partecipanti_ids is not None:
+        prima = {p.id for p in impegno.partecipanti}
         impegno.partecipanti = _risolvi_partecipanti(db, current, partecipanti_ids)
+        # Avviso solo chi si e' AGGIUNTO ora: chi c'era gia' e' gia' stato avvisato.
+        nuovi = [p for p in impegno.partecipanti if p.id not in prima]
+        _avvisa_partecipanti(db, current, impegno, nuovi)
     if impegno.fine is not None and impegno.fine < impegno.inizio:
         raise HTTPException(status_code=422, detail="La fine non puo' venire prima dell'inizio")
 

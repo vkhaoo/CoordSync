@@ -17,6 +17,8 @@ from app.schemas.lavoro import LavoroRead
 from app.models.utente import RuoloUtente
 from app.dependencies import get_current_user, richiedi_ruolo
 from app.visibilita import lavoro_visibile
+from app.avvisi import avvisa
+from app.models.notifica import TipoAvviso
 
 router = APIRouter(prefix="/lavori/{lavoro_id}/assegnati", tags=["assegnazioni"])
 
@@ -45,6 +47,10 @@ def assegna(lavoro_id: int, dati: AssegnaRichiesta, db: Session = Depends(get_db
     # Evito doppioni: se e' gia' assegnato, non lo aggiungo di nuovo.
     if utente not in lavoro.assegnatari:
         lavoro.assegnatari.append(utente)   # <- aggiunge una riga nella tabella-ponte
+        # Glielo faccio sapere: e' il momento in cui un lavoro diventa "suo".
+        avvisa(db, [utente], TipoAvviso.assegnazione,
+               f"{current.nome} ti ha assegnato il lavoro \"{lavoro.titolo}\"",
+               mittente=current, lavoro_id=lavoro.id)
         db.commit()
         db.refresh(lavoro)
     return lavoro

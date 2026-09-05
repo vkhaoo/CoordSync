@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "./api.js";
 import Allegati from "./Allegati.jsx";
+import { dalServer } from "./date.js";
 
 const ETICHETTA_STATO = {
   da_fare: "Da fare", in_corso: "In corso", in_attesa: "In attesa", fatto: "Fatto",
@@ -237,7 +238,7 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
       {/* Se completato: mostro quando e da chi */}
       {lavoro.stato === "fatto" && lavoro.completato_il && (
         <div className="completamento-info">
-          ✓ Completato il {new Date(lavoro.completato_il).toLocaleDateString("it-IT")}
+          ✓ Completato il {dalServer(lavoro.completato_il).toLocaleDateString("it-IT")}
           {lavoro.completato_da && <> da {lavoro.completato_da.nome}</>}
         </div>
       )}
