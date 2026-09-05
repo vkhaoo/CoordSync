@@ -33,7 +33,7 @@ def condizione_progetti_visibili(db: Session, current: Utente):
     Uso .any() (che diventa un EXISTS) e non una join: con i reparti multipli
     una join restituirebbe lo stesso progetto una volta per reparto in comune.
     """
-    if current.ruolo == RuoloUtente.admin:
+    if current.ruolo_attivo == RuoloUtente.admin:
         return true()
 
     ids_reparti = [r.id for r in current.reparti]
@@ -54,7 +54,7 @@ def progetti_visibili(db: Session, current: Utente):
     """Query dei progetti che vedo: filtro azienda + filtro reparto."""
     return (
         db.query(Progetto)
-        .filter(Progetto.organizzazione_id == current.organizzazione_id,
+        .filter(Progetto.organizzazione_id == current.org_attiva_id,
                 condizione_progetti_visibili(db, current))
     )
 
@@ -68,7 +68,7 @@ def lavori_visibili(db: Session, current: Utente):
     """Query dei lavori che vedo: un lavoro si vede se si vede il suo progetto."""
     return (
         db.query(Lavoro).join(Progetto)
-        .filter(Progetto.organizzazione_id == current.organizzazione_id,
+        .filter(Progetto.organizzazione_id == current.org_attiva_id,
                 condizione_progetti_visibili(db, current))
     )
 
@@ -88,8 +88,8 @@ def macchine_visibili(db: Session, current: Utente):
     from app.models.macchina import Macchina
 
     query = db.query(Macchina).filter(
-        Macchina.organizzazione_id == current.organizzazione_id)
-    if current.ruolo == RuoloUtente.admin:
+        Macchina.organizzazione_id == current.org_attiva_id)
+    if current.ruolo_attivo == RuoloUtente.admin:
         return query
 
     ids_reparti = [r.id for r in current.reparti]
@@ -120,13 +120,13 @@ def reparti_assegnabili(db: Session, current: Utente, reparti_ids: list[int] | N
     trovati = (
         db.query(R)
         .filter(R.id.in_(set(reparti_ids)),
-                R.organizzazione_id == current.organizzazione_id)
+                R.organizzazione_id == current.org_attiva_id)
         .all()
     )
     # Se anche uno solo non e' della mia azienda, rifiuto tutto.
     if len(trovati) != len(set(reparti_ids)):
         return False
-    if current.ruolo == RuoloUtente.admin:
+    if current.ruolo_attivo == RuoloUtente.admin:
         return True
 
     miei = {r.id for r in current.reparti}
@@ -141,6 +141,6 @@ def carica_reparti(db: Session, current: Utente, reparti_ids: list[int]):
     return (
         db.query(Reparto)
         .filter(Reparto.id.in_(set(reparti_ids)),
-                Reparto.organizzazione_id == current.organizzazione_id)
+                Reparto.organizzazione_id == current.org_attiva_id)
         .all()
     )

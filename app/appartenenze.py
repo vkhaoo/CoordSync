@@ -36,6 +36,20 @@ def iscrivi(db: Session, utente: Utente, organizzazione_id: int,
     return tessera
 
 
+def condizione_membro(organizzazione_id: int):
+    """Condizione "questo utente lavora in quest'azienda", da usare nelle query.
+
+    Prima bastava guardare `utenti.organizzazione_id`: adesso non basta piu',
+    perche' una persona puo' lavorare qui pur essendo nata altrove. Si guarda
+    la tessera.
+
+    Si usa `.any()` (un EXISTS) e non una join: con la join, chi ha piu'
+    tessere tornerebbe una volta per ognuna.
+    """
+    return Utente.appartenenze.any(
+        Appartenenza.organizzazione_id == organizzazione_id)
+
+
 def ruolo_in(db: Session, utente: Utente, organizzazione_id: int) -> RuoloUtente | None:
     """Che ruolo ha questa persona in quest'azienda, o None se non ci lavora.
 

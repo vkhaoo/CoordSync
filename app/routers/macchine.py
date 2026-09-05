@@ -37,7 +37,7 @@ router = APIRouter(tags=["macchine"])
 
 
 def _gestisce(current: Utente) -> bool:
-    return current.ruolo in (RuoloUtente.admin, RuoloUtente.caposquadra)
+    return current.ruolo_attivo in (RuoloUtente.admin, RuoloUtente.caposquadra)
 
 
 def _macchina_o_404(db, current, macchina_id) -> Macchina:
@@ -73,7 +73,7 @@ def crea_macchina(dati: MacchinaCreate, db: Session = Depends(get_db),
     macchina = Macchina(
         nome=dati.nome,
         descrizione=dati.descrizione,
-        organizzazione_id=current.organizzazione_id,
+        organizzazione_id=current.org_attiva_id,
     )
     macchina.reparti = carica_reparti(db, current, dati.reparti_ids)
     db.add(macchina)

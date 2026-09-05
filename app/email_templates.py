@@ -210,3 +210,45 @@ def assegnazione_lavoro(nome: str, chi_assegna: str, titolo: str,
     html = _layout(titolo=f"Ciao {nome}, un lavoro per te", righe_html=righe,
                    cta_testo="Apri CoordSync", cta_link=link)
     return oggetto, testo, html
+
+
+def invito_azienda(nome: str, azienda: str, link: str):
+    """Invito rivolto a chi ha GIA' un account CoordSync.
+
+    Diverso da invito(): non c'e' nessuna password da scegliere, l'account
+    esiste gia'. Quello che si chiede e' il consenso ad aggiungere un'azienda
+    alle proprie — e per questo il link e' l'unico modo di accettare: un
+    amministratore non deve poter attaccare l'account di qualcun altro alla
+    propria azienda senza che quella persona dica di si'.
+    """
+    oggetto = f"Ti hanno invitato in {azienda} su CoordSync"
+    testo = (
+        f"Ciao {nome},\n\n"
+        f"ti hanno invitato a lavorare anche per {azienda} su CoordSync.\n\n"
+        "Il tuo account resta lo stesso: accettando, questa azienda si aggiunge "
+        "a quelle fra cui puoi passare dal menu del tuo nome, senza rifare "
+        "l'accesso e senza una seconda password.\n\n"
+        f"{link}\n\n"
+        "Il link scade tra 7 giorni.\n\n"
+        "Se non ti aspettavi questo invito, ignoralo pure: senza il tuo clic "
+        "non cambia niente.\n\n"
+        "Il team di CoordSync"
+    )
+    html = _layout(
+        titolo=f"Ciao {nome}, ti vogliono in {azienda}",
+        righe_html=(
+            _riga(f"Ti hanno invitato a lavorare anche per <strong>{azienda}</strong>.") +
+            _riga("Il tuo account resta lo stesso: accettando, questa azienda si "
+                  "aggiunge a quelle fra cui puoi passare, senza una seconda password.")
+        ),
+        cta_testo="Accetta l'invito",
+        cta_link=link,
+    )
+    html = html.replace(
+        "</tbody></table>",
+        _riga('<span style="font-size:13px; color:#8a94a0;">Il link scade tra 7 giorni. '
+              'Senza il tuo clic non cambia niente.</span>') +
+        "</tbody></table>",
+        1,
+    )
+    return oggetto, testo, html

@@ -861,3 +861,15 @@ input, select, textarea { font-family: var(--sans); }
 .risultato-titolo { color: var(--inchiostro); font-size: 0.87rem; }
 /* Dove sta la cosa trovata: un titolo da solo non basta a orientarsi. */
 .risultato-dove { color: var(--tenue); font-size: 0.75rem; }
+
+/* --- Scelta dell'azienda (per chi ne ha piu' d'una) ----------------------- */
+.blocco-aziende { margin: 0.7rem 0; padding-top: 0.7rem; border-top: 1px solid var(--linea-2); }
+.lista-aziende { list-style: none; margin: 0.35rem 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: 2px; }
+.lista-aziende .voce { display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem; width: 100%; }
+/* Quella in cui si sta gia' non e' cliccabile: resta accesa per dire "sei qui",
+   senza far credere che ci sia qualcosa da premere. */
+.lista-aziende .voce:disabled { cursor: default; opacity: 1; }
+.ruolo-azienda { font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase;
+  letter-spacing: 0.06em; opacity: 0.75; flex: 0 0 auto; }

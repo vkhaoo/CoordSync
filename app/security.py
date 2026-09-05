@@ -29,21 +29,35 @@ def verifica_password(in_chiaro: str, impronta: str) -> bool:
     return _hasher.verify(in_chiaro, impronta)
 
 
-def crea_token(utente_id: int) -> str:
-    """Crea un token JWT che identifica l'utente e scade dopo un po'."""
+def crea_token(utente_id: int, organizzazione_id: int | None = None) -> str:
+    """Crea un token JWT che dice CHI sei e DENTRO QUALE AZIENDA stai lavorando.
+
+    L'azienda sta nel token e non sulla riga dell'utente perche' la stessa
+    persona puo' essere collegata da due dispositivi su due aziende diverse:
+    scrivendola nel database, l'ultimo che cambia deciderebbe per tutti.
+    """
     scadenza = datetime.now(timezone.utc) + timedelta(minutes=settings.token_durata_minuti)
     contenuto = {
         "sub": str(utente_id),   # 'sub' (subject) = chi e' il token: l'id utente
         "exp": scadenza,         # 'exp' = quando scade
     }
+    if organizzazione_id is not None:
+        contenuto["org"] = organizzazione_id
     return jwt.encode(contenuto, settings.secret_key, algorithm=_ALGORITMO)
 
 
-def leggi_token(token: str) -> int | None:
-    """Verifica un token e restituisce l'id utente, o None se non valido/scaduto."""
+def leggi_token(token: str) -> tuple[int, int | None] | None:
+    """Verifica un token e restituisce (id utente, id azienda attiva).
+
+    L'azienda puo' essere None: i token emessi PRIMA del multi-azienda non ce
+    l'hanno. In quel caso vale l'azienda di casa dell'utente — cosi' nessuno
+    si ritrova buttato fuori il giorno della pubblicazione solo perche' aveva
+    un token vecchio in tasca.
+    """
     try:
         contenuto = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITMO])
-        return int(contenuto["sub"])
+        org = contenuto.get("org")
+        return int(contenuto["sub"]), (int(org) if org is not None else None)
     except (jwt.InvalidTokenError, KeyError, ValueError):
         return None
 

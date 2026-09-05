@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.appartenenze import condizione_membro
 from app.database import get_db
 from app.models.reparto import Reparto
 from app.models.utente import Utente, RuoloUtente
@@ -23,7 +24,7 @@ def _reparto_mio(db: Session, reparto_id: int, current: Utente) -> Reparto | Non
     return (
         db.query(Reparto)
         .filter(Reparto.id == reparto_id,
-                Reparto.organizzazione_id == current.organizzazione_id)
+                Reparto.organizzazione_id == current.org_attiva_id)
         .first()
     )
 
@@ -31,7 +32,7 @@ def _reparto_mio(db: Session, reparto_id: int, current: Utente) -> Reparto | Non
 @router.post("", response_model=RepartoRead, status_code=201)
 def crea_reparto(dati: RepartoCreate, db: Session = Depends(get_db),
                  current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin))):
-    reparto = Reparto(nome=dati.nome, organizzazione_id=current.organizzazione_id)
+    reparto = Reparto(nome=dati.nome, organizzazione_id=current.org_attiva_id)
     db.add(reparto)
     db.commit()
     db.refresh(reparto)
@@ -43,7 +44,7 @@ def elenca_reparti(db: Session = Depends(get_db),
                    current: Utente = Depends(get_current_user)):
     return (
         db.query(Reparto)
-        .filter(Reparto.organizzazione_id == current.organizzazione_id)
+        .filter(Reparto.organizzazione_id == current.org_attiva_id)
         .all()
     )
 
@@ -90,7 +91,7 @@ def aggiungi_membro(reparto_id: int, dati: MembroRichiesta, db: Session = Depend
     utente = (
         db.query(Utente)
         .filter(Utente.id == dati.utente_id,
-                Utente.organizzazione_id == current.organizzazione_id)
+                condizione_membro(current.org_attiva_id))
         .first()
     )
     if utente is None:

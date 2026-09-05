@@ -41,7 +41,7 @@ def crea_progetto(
         nome=dati.nome,
         descrizione=dati.descrizione,
         link_documento=dati.link_documento,
-        organizzazione_id=current.organizzazione_id,
+        organizzazione_id=current.org_attiva_id,
         macchina_id=dati.macchina_id,
     )
     progetto.reparti = carica_reparti(db, current, dati.reparti_ids)

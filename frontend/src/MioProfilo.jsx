@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { api } from "./api.js";
+import { api, setToken } from "./api.js";
 import { temaCorrente, impostaTema } from "./tema.js";
 
 // Il menu del proprio account, aperto cliccando il nome nella barra.
@@ -10,6 +10,7 @@ export default function MioProfilo({ io, onLogout }) {
   const [tema, setTema] = useState(temaCorrente);
   const [errore, setErrore] = useState(null);
   const [scaricando, setScaricando] = useState(false);
+  const [aziende, setAziende] = useState([]);
   const contenitore = useRef(null);
 
   useEffect(() => {
@@ -20,6 +21,26 @@ export default function MioProfilo({ io, onLogout }) {
     document.addEventListener("mousedown", fuori);
     return () => document.removeEventListener("mousedown", fuori);
   }, [aperto]);
+
+  // Le aziende si chiedono solo all'apertura del menu: quasi tutti ne hanno
+  // una sola, e non ha senso pagare una richiesta a ogni caricamento per una
+  // cosa che la maggior parte delle persone non vedra' mai.
+  useEffect(() => {
+    if (!aperto) return;
+    api.mieAziende().then(setAziende).catch(() => setAziende([]));
+  }, [aperto]);
+
+  // Cambiare azienda vuol dire ricevere un token nuovo e ricaricare tutto:
+  // progetti, macchine, colleghi, permessi cambiano insieme, e ridisegnare
+  // pezzo per pezzo lascerebbe per un attimo sullo schermo roba dell'altra.
+  async function vaiIn(azienda) {
+    setErrore(null);
+    try {
+      const risposta = await api.cambiaAzienda(azienda.id);
+      setToken(risposta.access_token);
+      window.location.reload();
+    } catch (err) { setErrore(err.message); }
+  }
 
   // Il browser scarica il file da solo: creo un indirizzo temporaneo che punta
   // al contenuto tenuto in memoria e faccio finta di cliccarlo.
@@ -87,6 +108,27 @@ export default function MioProfilo({ io, onLogout }) {
               </button>
             </div>
             <p className="riga-profilo"><strong>{io.nome}</strong><br />{io.email}</p>
+
+            {/* Il selettore delle aziende compare SOLO a chi ne ha piu' d'una:
+                chi lavora in un posto solo non deve nemmeno accorgersi che
+                questa cosa esiste. */}
+            {aziende.length > 1 && (
+              <div className="blocco-aziende">
+                <span className="etichetta-tendina">Stai lavorando in</span>
+                <ul className="lista-aziende">
+                  {aziende.map((az) => (
+                    <li key={az.id}>
+                      <button className={az.attiva ? "voce attiva" : "voce"}
+                              disabled={az.attiva}
+                              onClick={() => vaiIn(az)}>
+                        {az.nome}
+                        <span className="ruolo-azienda">{az.ruolo}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {io.reparti && io.reparti.length > 0 && (
               <p className="riga-profilo tenue">
                 Reparti: {io.reparti.map((r) => r.nome).join(", ")}

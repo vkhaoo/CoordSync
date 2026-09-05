@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.appartenenze import condizione_membro
 from app.database import get_db
 from app.models.lavoro import Lavoro
 from app.models.progetto import Progetto
@@ -68,7 +69,7 @@ def assegna(lavoro_id: int, dati: AssegnaRichiesta, db: Session = Depends(get_db
     utente = (
         db.query(Utente)
         .filter(Utente.id == dati.utente_id,
-                Utente.organizzazione_id == current.organizzazione_id)
+                condizione_membro(current.org_attiva_id))
         .first()
     )
     if utente is None:

@@ -29,7 +29,7 @@ def _sotto_mia(db, sotto_id, current):
     return (
         db.query(SottoAttivita).join(Lavoro).join(Progetto)
         .filter(SottoAttivita.id == sotto_id,
-                Progetto.organizzazione_id == current.organizzazione_id,
+                Progetto.organizzazione_id == current.org_attiva_id,
                 condizione_progetti_visibili(db, current))
         .first()
     )
@@ -37,7 +37,7 @@ def _sotto_mia(db, sotto_id, current):
 
 def _puo_aggiornare(lavoro, current) -> bool:
     """Chi puo' spuntare le voci: admin/caposquadra, o l'operatore se assegnato."""
-    if current.ruolo in (RuoloUtente.admin, RuoloUtente.caposquadra):
+    if current.ruolo_attivo in (RuoloUtente.admin, RuoloUtente.caposquadra):
         return True
     return any(u.id == current.id for u in lavoro.assegnatari)
 

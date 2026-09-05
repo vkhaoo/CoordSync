@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.appartenenze import condizione_membro
 from app.database import get_db
 from app.models.impegno import Impegno, partecipante_impegno
 from app.models.lavoro import Lavoro, StatoLavoro
@@ -40,7 +41,7 @@ router = APIRouter(prefix="/agenda", tags=["agenda"])
 
 
 def _coordina(current: Utente) -> bool:
-    return current.ruolo in (RuoloUtente.admin, RuoloUtente.caposquadra)
+    return current.ruolo_attivo in (RuoloUtente.admin, RuoloUtente.caposquadra)
 
 
 def _con_partecipante(db: Session, utente_ids):
@@ -62,7 +63,7 @@ def _impegni_visibili(db: Session, current: Utente, ambito: str):
     # La join sull'organizzatore serve solo a restare dentro la mia azienda:
     # e' un legame a uno, quindi non moltiplica le righe.
     query = db.query(Impegno).join(Utente, Impegno.organizzatore_id == Utente.id).filter(
-        Utente.organizzazione_id == current.organizzazione_id)
+        condizione_membro(current.org_attiva_id))
 
     if ambito == "miei":
         return query.filter(_con_partecipante(db, [current.id]))
@@ -91,7 +92,7 @@ def _impegno_mio_o_404(db, current, impegno_id) -> Impegno:
     impegno = (
         db.query(Impegno).join(Utente, Impegno.organizzatore_id == Utente.id)
         .filter(Impegno.id == impegno_id,
-                Utente.organizzazione_id == current.organizzazione_id)
+                condizione_membro(current.org_attiva_id))
         .first()
     )
     if impegno is None:
@@ -124,7 +125,7 @@ def _risolvi_partecipanti(db, current: Utente, ids: list[int]) -> list[Utente]:
     persone = (
         db.query(Utente)
         .filter(Utente.id.in_(voluti),
-                Utente.organizzazione_id == current.organizzazione_id)
+                condizione_membro(current.org_attiva_id))
         .all()
     )
     if len(persone) != len(voluti):

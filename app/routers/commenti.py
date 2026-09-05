@@ -25,7 +25,7 @@ def aggiungi_commento(lavoro_id: int, dati: CommentoCreate,
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
 
     # L'operatore puo' commentare SOLO i lavori a lui assegnati.
-    if current.ruolo == RuoloUtente.operatore:
+    if current.ruolo_attivo == RuoloUtente.operatore:
         assegnato = any(u.id == current.id for u in lavoro.assegnatari)
         if not assegnato:
             raise HTTPException(status_code=403, detail="Puoi commentare solo i lavori a te assegnati")

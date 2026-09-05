@@ -139,6 +139,12 @@ export const api = {
   resetPassword: (token, nuova_password) => richiesta("POST", "/auth/reset-password", { token, nuova_password }),
   accettaInvito: (token, password) => richiesta("POST", "/auth/accetta-invito", { token, password }),
   esportaMieiDati: () => richiesta("GET", "/auth/me/export"),
+  // Le aziende di cui faccio parte, e il passaggio dall'una all'altra.
+  mieAziende: () => richiesta("GET", "/auth/aziende"),
+  cambiaAzienda: (organizzazione_id) =>
+    richiesta("POST", "/auth/cambia-azienda", { organizzazione_id }),
+  accettaInvitoAzienda: (token) =>
+    richiesta("POST", "/auth/accetta-invito-azienda", { token }),
   cancellaMioAccount: () => richiesta("DELETE", "/auth/me"),
   eliminaUtente: (id) => richiesta("DELETE", `/utenti/${id}`),
   cambiaPassword: (vecchia_password, nuova_password) => richiesta("POST", "/auth/cambia-password", { vecchia_password, nuova_password }),

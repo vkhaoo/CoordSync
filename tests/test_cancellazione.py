@@ -69,15 +69,21 @@ def test_dopo_la_cancellazione_non_si_entra_piu(client):
     assert _login(client, "luca@a.it").status_code == 401
 
 
-def test_il_nome_e_l_email_spariscono_dall_elenco(client):
+def test_chi_se_ne_va_sparisce_dall_elenco_dei_colleghi(client):
+    """Da quando l'appartenenza all'azienda e' una tessera a parte, chi se ne
+    va esce proprio dall'elenco invece di restarci come "Utente eliminato".
+
+    E' meglio cosi': quell'elenco alimenta il menu "assegna a", e un utente
+    cancellato non deve poter ricevere lavori. Il suo nome continua a
+    comparire dove ha scritto qualcosa (commenti, voci di storico), che e'
+    il posto dove serve davvero."""
     a = registra(client, "Azienda A", "Marco", "marco@a.it")
     luca = _crea_utente(client, a, "Luca", "luca@a.it")
     client.delete("/auth/me", headers=luca)
 
     elenco = client.get("/utenti", headers=a).json()
-    assert "Luca" not in [u["nome"] for u in elenco]
+    assert [u["nome"] for u in elenco] == ["Marco"]
     assert "luca@a.it" not in [u["email"] for u in elenco]
-    assert "Utente eliminato" in [u["nome"] for u in elenco]
 
 
 def test_esce_dai_reparti_e_dai_lavori_assegnati(client):
@@ -96,10 +102,19 @@ def test_esce_dai_reparti_e_dai_lavori_assegnati(client):
     # non e' piu' assegnato a niente...
     lavori = client.get(f"/lavori?progetto_id={p['id']}", headers=a).json()
     assert lavori[0]["assegnatari"] == []
-    # ...e non e' piu' in nessun reparto
-    anonimo = [u for u in client.get("/utenti", headers=a).json()
-               if u["nome"] == "Utente eliminato"][0]
-    assert anonimo["reparti"] == []
+    # ...e non e' piu' in nessun reparto. Si guarda nel database perche'
+    # dall'elenco dei colleghi e' proprio sparito (non e' piu' membro
+    # dell'azienda), quindi da fuori non c'e' piu' niente da interrogare.
+    from app.database import SessionLocal
+    from app.models.utente import Utente
+    db = SessionLocal()
+    try:
+        anonimo = db.query(Utente).filter(Utente.nome == "Utente eliminato").first()
+        assert anonimo is not None
+        assert anonimo.reparti == []
+        assert anonimo.appartenenze == []
+    finally:
+        db.close()
 
 
 def test_gli_avvisi_ricevuti_spariscono(client):

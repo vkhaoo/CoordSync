@@ -22,6 +22,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -31,14 +32,32 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _tipo_ruolo():
+    """Il tipo della colonna 'ruolo', diverso a seconda del database.
+
+    QUI C'ERA UNA TRAPPOLA che in locale non si vedeva. Su PostgreSQL un enum
+    e' un TIPO vero, creato una volta sola: 'ruoloutente' esiste gia' dallo
+    schema iniziale, dove lo usa la tabella utenti. Un sa.Enum dentro
+    create_table proverebbe a CREARLO DI NUOVO, e la migrazione morirebbe in
+    produzione con "type ruoloutente already exists" — mentre in locale, su
+    SQLite (dove gli enum sono semplici stringhe), sarebbe passata liscia.
+
+    Con create_type=False si dice a PostgreSQL: il tipo c'e' gia', usalo e
+    basta. E' anche il motivo per cui tutte le migrazioni precedenti non
+    avevano il problema: creavano tipi nuovi, non ne riusavano uno.
+    """
+    valori = ("admin", "caposquadra", "operatore")
+    if op.get_bind().dialect.name == "postgresql":
+        return postgresql.ENUM(*valori, name="ruoloutente", create_type=False)
+    return sa.Enum(*valori, name="ruoloutente")
+
+
 def upgrade() -> None:
     op.create_table(
         "appartenenze",
         sa.Column("utente_id", sa.Integer(), nullable=False),
         sa.Column("organizzazione_id", sa.Integer(), nullable=False),
-        sa.Column("ruolo",
-                  sa.Enum("admin", "caposquadra", "operatore", name="ruoloutente"),
-                  nullable=False),
+        sa.Column("ruolo", _tipo_ruolo(), nullable=False),
         sa.Column("creato_il", sa.DateTime(), nullable=True),
         # I vincoli hanno un nome: Alembic li genererebbe anonimi, e il giorno
         # che servisse toccarli il downgrade non saprebbe cosa togliere.

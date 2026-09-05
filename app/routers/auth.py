@@ -17,7 +17,7 @@ from app.database import get_db
 from app.models.organizzazione import Organizzazione
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.utente import UtenteRead
-from app.appartenenze import iscrivi
+from app.appartenenze import aziende_di, iscrivi, ruolo_in
 from app.security import (
     verifica_password, crea_token, hash_password,
     crea_token_scopo, leggi_token_scopo,
@@ -91,8 +91,9 @@ def register(dati: RegisterRichiesta, db: Session = Depends(get_db)):
     # Invio l'email di verifica (in sviluppo: link nei log).
     _invia_verifica(admin)
 
-    # Lo loggo subito: gli restituisco un token.
-    return TokenRisposta(access_token=crea_token(admin.id))
+    # Lo loggo subito: gli restituisco un token gia' puntato sull'azienda
+    # che ha appena creato.
+    return TokenRisposta(access_token=crea_token(admin.id, org.id))
 
 
 # ---------- LOGIN ----------
@@ -124,14 +125,24 @@ def login(dati: LoginRichiesta, richiesta: Request, db: Session = Depends(get_db
         raise HTTPException(status_code=401, detail="Credenziali non valide")
 
     limiti.azzera(dati.email, ip)   # chi entra davvero riparte pulito
-    return TokenRisposta(access_token=crea_token(utente.id))
+    # Si entra nell'azienda di casa: da li' si potra' cambiare senza
+    # rifare l'accesso (POST /auth/cambia-azienda).
+    return TokenRisposta(access_token=crea_token(utente.id, utente.organizzazione_id))
 
 
 @router.get("/me", response_model=UtenteRead)
 def leggi_me(current: Utente = Depends(get_current_user)):
-    """Restituisce l'utente attualmente loggato (nome, email, ruolo, azienda).
-    Serve al frontend per sapere che ruolo ho e adattare l'interfaccia."""
-    return current
+    """Chi sono, DENTRO L'AZIENDA IN CUI STO LAVORANDO ADESSO.
+
+    Ruolo e azienda sono quelli attivi, non quelli scritti sulla riga: la
+    stessa persona puo' essere amministratore da una parte e operatore
+    dall'altra, e il frontend decide da qui cosa mostrare. Restituire il
+    ruolo "di casa" vorrebbe dire far comparire pulsanti che poi il server
+    rifiuta."""
+    dati = UtenteRead.model_validate(current).model_dump()
+    dati["organizzazione_id"] = current.org_attiva_id
+    dati["ruolo"] = current.ruolo_attivo
+    return dati
 
 
 @router.get("/verifica-email", response_class=HTMLResponse)
@@ -233,6 +244,8 @@ def cambia_password(dati: CambiaPasswordRichiesta, db: Session = Depends(get_db)
 
 # Lo scopo del token di invito. Usato anche da /utenti/invita (che lo genera).
 SCOPO_INVITO = "invito"
+# Invito rivolto a chi ha gia' un account: aggiunge un'azienda alle sue.
+SCOPO_INVITO_AZIENDA = "invito_azienda"
 
 
 class AccettaInvitoRichiesta(BaseModel):
@@ -261,6 +274,103 @@ def accetta_invito(dati: AccettaInvitoRichiesta, db: Session = Depends(get_db)):
     utente.email_verificata = True
     db.commit()
     return {"messaggio": "Password impostata. Ora puoi accedere."}
+
+
+class AccettaInvitoAzienda(BaseModel):
+    token: str
+
+
+class EsitoInvitoAzienda(BaseModel):
+    azienda: str
+    ruolo: RuoloUtente
+
+
+@router.post("/accetta-invito-azienda", response_model=EsitoInvitoAzienda)
+def accetta_invito_azienda(dati: AccettaInvitoAzienda, db: Session = Depends(get_db)):
+    """Accetta l'invito a lavorare anche per un'altra azienda.
+
+    Non serve essere collegati: il token e' arrivato per email a quella
+    casella, e il clic vale come consenso. E' l'unico modo di entrare in
+    un'azienda con un account che esiste gia' — un amministratore non puo'
+    aggiungersi qualcuno da solo.
+
+    Dentro il token c'e' tutto: chi, dove, con che ruolo. Cosi' non serve una
+    tabella di inviti in attesa, e quelli mai accettati scadono da soli senza
+    lasciare niente da pulire.
+    """
+    soggetto = leggi_token_scopo(dati.token, SCOPO_INVITO_AZIENDA)
+    if soggetto is None:
+        raise HTTPException(status_code=400, detail="Invito non valido o scaduto")
+
+    try:
+        utente_id, org_id, ruolo = soggetto.split(":")
+        utente_id, org_id = int(utente_id), int(org_id)
+        ruolo = RuoloUtente(ruolo)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="Invito non valido")
+
+    utente = db.query(Utente).filter(Utente.id == utente_id).first()
+    org = db.query(Organizzazione).filter(Organizzazione.id == org_id).first()
+    if utente is None or org is None:
+        raise HTTPException(status_code=400, detail="Invito non valido")
+    if utente.password_hash is None and utente.nome == "Utente eliminato":
+        raise HTTPException(status_code=400, detail="Invito non valido")
+
+    iscrivi(db, utente, org_id, ruolo)
+    db.commit()
+    return EsitoInvitoAzienda(azienda=org.nome, ruolo=ruolo)
+
+
+# ---------- LE MIE AZIENDE ----------
+
+class AziendaRead(BaseModel):
+    id: int
+    nome: str
+    ruolo: RuoloUtente
+    attiva: bool          # quella in cui sto lavorando adesso
+
+
+@router.get("/aziende", response_model=list[AziendaRead])
+def le_mie_aziende(db: Session = Depends(get_db),
+                   current: Utente = Depends(get_current_user)):
+    """Le aziende di cui faccio parte, con il ruolo che ho in ognuna.
+
+    Quasi sempre e' una sola: chi lavora in un posto solo non deve nemmeno
+    accorgersi che questa cosa esiste, e infatti il frontend mostra il
+    selettore solo quando ce n'e' piu' d'una.
+    """
+    return [
+        AziendaRead(id=t.organizzazione_id, nome=t.organizzazione.nome,
+                    ruolo=t.ruolo, attiva=t.organizzazione_id == current.org_attiva_id)
+        for t in aziende_di(db, current)
+    ]
+
+
+class CambioAzienda(BaseModel):
+    organizzazione_id: int
+
+
+@router.post("/cambia-azienda", response_model=TokenRisposta)
+def cambia_azienda(dati: CambioAzienda, db: Session = Depends(get_db),
+                   current: Utente = Depends(get_current_user)):
+    """Passa a un'altra delle proprie aziende, senza rifare l'accesso.
+
+    Si restituisce un TOKEN NUOVO invece di cambiare qualcosa nel database,
+    perche' l'azienda attiva e' una cosa di questa sessione: lo stesso account
+    puo' essere aperto sul telefono su un'azienda e sul fisso su un'altra,
+    senza che l'uno sposti l'altro.
+
+    Il vecchio token resta valido fino a scadenza, puntato sull'azienda di
+    prima: e' voluto, e' esattamente il senso di "questa finestra sta li',
+    quell'altra sta qua".
+    """
+    if ruolo_in(db, current, dati.organizzazione_id) is None:
+        # 404 e non 403: a chi non ci lavora non si dice nemmeno che
+        # quell'azienda esiste.
+        raise HTTPException(status_code=404, detail="Azienda non trovata")
+
+    return TokenRisposta(
+        access_token=crea_token(current.id, dati.organizzazione_id))
 
 
 # ---------- ESPORTAZIONE DEI PROPRI DATI ----------
@@ -307,7 +417,7 @@ def esporta_i_miei_dati(db: Session = Depends(get_db),
         "profilo": {
             "nome": current.nome,
             "email": current.email,
-            "ruolo": current.ruolo.value,
+            "ruolo": current.ruolo_attivo.value,
             "email_verificata": current.email_verificata,
             "azienda": current.organizzazione.nome if current.organizzazione else None,
             "reparti": [r.nome for r in current.reparti],
@@ -365,12 +475,17 @@ def cancella_il_mio_account(db: Session = Depends(get_db),
     """
     from app.cancellazione import anonimizza, e_ultimo_admin
 
-    if e_ultimo_admin(db, current):
-        raise HTTPException(
-            status_code=409,
-            detail="Sei l'ultimo amministratore: nomina prima qualcun altro, "
-                   "altrimenti l'azienda resta senza nessuno che possa gestirla.",
-        )
+    # Il controllo si fa su TUTTE le aziende di cui faccio parte, non solo su
+    # quella in cui sto guardando adesso: andandomene le lascio tutte, e ne
+    # basta una senza amministratori per bloccarla per sempre.
+    for tessera in aziende_di(db, current):
+        if e_ultimo_admin(db, current, tessera.organizzazione_id):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Sei l'ultimo amministratore di {tessera.organizzazione.nome}: "
+                       "nomina prima qualcun altro, altrimenti quell'azienda resta "
+                       "senza nessuno che possa gestirla.",
+            )
 
     anonimizza(db, current)
     db.commit()

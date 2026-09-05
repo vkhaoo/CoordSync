@@ -4,11 +4,14 @@ import Dashboard from "./Dashboard.jsx";
 import ResetPassword from "./ResetPassword.jsx";
 import AccettaInvito from "./AccettaInvito.jsx";
 import AvvisoRete from "./AvvisoRete.jsx";
+import AccettaInvitoAzienda from "./AccettaInvitoAzienda.jsx";
 
 // Leggo eventuali token dall'indirizzo (arrivo da un link email).
 const parametri = new URLSearchParams(window.location.search);
 const tokenReset = parametri.get("reset_token");
 const tokenInvito = parametri.get("invito_token");
+// Invito rivolto a chi ha gia' un account: aggiunge un'azienda alle sue.
+const tokenInvitoAzienda = parametri.get("invito_azienda_token");
 
 export default function App() {
   // "stato" = dati che, se cambiano, ridisegnano lo schermo da soli.
@@ -27,6 +30,12 @@ export default function App() {
   // Se arrivo dal link dell'email, mostro la pagina per la nuova password.
   if (tokenReset) {
     return <><AvvisoRete /><ResetPassword token={tokenReset}
+             onFatto={() => { window.location.href = window.location.origin; }} /></>;
+  }
+
+  // Invito a una seconda azienda: l'account c'e' gia', serve solo il si'.
+  if (tokenInvitoAzienda) {
+    return <><AvvisoRete /><AccettaInvitoAzienda token={tokenInvitoAzienda}
              onFatto={() => { window.location.href = window.location.origin; }} /></>;
   }
 

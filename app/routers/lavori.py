@@ -99,7 +99,7 @@ def cambia_stato(lavoro_id: int, dati: LavoroUpdateStato,
 
     # Permesso: admin e caposquadra su qualsiasi lavoro; l'operatore SOLO
     # se e' tra gli assegnatari di quel lavoro ("i lavori suoi").
-    if current.ruolo == RuoloUtente.operatore:
+    if current.ruolo_attivo == RuoloUtente.operatore:
         assegnato = any(u.id == current.id for u in lavoro.assegnatari)
         if not assegnato:
             raise HTTPException(status_code=403, detail="Puoi aggiornare solo i lavori a te assegnati")

@@ -69,22 +69,37 @@ def anonimizza(db: Session, utente: Utente) -> None:
     utente.deve_cambiare_password = False
 
 
-def e_ultimo_admin(db: Session, utente: Utente) -> bool:
-    """True se e' l'ultimo admin rimasto della sua azienda.
+def e_ultimo_admin(db: Session, utente: Utente, organizzazione_id: int | None = None) -> bool:
+    """True se e' l'ultimo admin rimasto in QUELL'azienda.
 
     Serve a non lasciare un'azienda senza timone: senza admin nessuno potrebbe
     piu' gestire utenti, reparti e permessi, e non ci sarebbe modo di rimediare
     dall'interno dell'app.
+
+    Il conto si fa sulle tessere e non sulla riga degli utenti: il ruolo vale
+    per azienda, e la stessa persona puo' essere amministratore qui e operatore
+    da un'altra parte.
     """
+    from app.models.appartenenza import Appartenenza
     from app.models.utente import RuoloUtente
 
-    if utente.ruolo != RuoloUtente.admin:
+    org = organizzazione_id if organizzazione_id is not None else utente.organizzazione_id
+
+    mia = (
+        db.query(Appartenenza)
+        .filter(Appartenenza.utente_id == utente.id,
+                Appartenenza.organizzazione_id == org)
+        .first()
+    )
+    if mia is None or mia.ruolo != RuoloUtente.admin:
         return False
+
     quanti = (
-        db.query(Utente)
-        .filter(Utente.organizzazione_id == utente.organizzazione_id,
-                Utente.ruolo == RuoloUtente.admin,
-                Utente.id != utente.id,
+        db.query(Appartenenza)
+        .join(Utente, Utente.id == Appartenenza.utente_id)
+        .filter(Appartenenza.organizzazione_id == org,
+                Appartenenza.ruolo == RuoloUtente.admin,
+                Appartenenza.utente_id != utente.id,
                 Utente.password_hash.isnot(None))   # gli anonimizzati non contano
         .count()
     )
