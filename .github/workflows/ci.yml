@@ -1,5 +1,10 @@
-# CI: ad ogni push (o pull request) GitHub esegue da solo questi passi.
-# Se i test falliscono, compare una X rossa e vieni avvisato.
+# CI: ad ogni push (o pull request) GitHub esegue da solo questi controlli.
+# Se qualcosa fallisce, compare una X rossa accanto al commit e vieni avvisato.
+#
+# I tre lavori girano in parallelo e rispondono a tre domande diverse:
+#   test       — il backend fa ancora quello che deve?
+#   migrazioni — il database si aggiorna senza rompersi, e si torna indietro?
+#   frontend   — l'interfaccia compila?
 name: CI
 
 on:
@@ -13,7 +18,7 @@ jobs:
       # 1) Scarica il codice del repository
       - uses: actions/checkout@v4
 
-      # 2) Prepara Python 3.12
+      # 2) Prepara Python 3.12 (la stessa versione che gira in produzione)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -25,3 +30,49 @@ jobs:
       # 4) Lancia i test
       - name: Esegui i test
         run: pytest -q
+
+  migrazioni:
+    # Le migrazioni sono la cosa che puo' fare piu' danno: girano sul database
+    # VERO in produzione. Qui si provano su uno vuoto, in salita e in discesa.
+    # Le trappole prese finora (vincoli senza nome, dati non travasati) si
+    # vedevano solo eseguendole: adesso le vede GitHub prima di me.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installa dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Applica tutte le migrazioni su un database vuoto
+        run: python -m alembic upgrade head
+
+      - name: Torna indietro fino all'inizio e riapplica
+        # Se un downgrade e' scritto male non se ne accorge nessuno finche'
+        # non serve davvero, cioe' nel momento peggiore.
+        run: |
+          python -m alembic downgrade base
+          python -m alembic upgrade head
+
+  frontend:
+    # Senza questo, un errore di sintassi in un .jsx passava il verde e
+    # arrivava in produzione: te ne accorgevi dal sito bianco.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installa le librerie
+        # 'npm ci' invece di 'npm install': installa esattamente le versioni
+        # scritte in package-lock.json, senza aggiornare niente per conto suo.
+        run: npm ci
+        working-directory: frontend
+
+      - name: Compila
+        run: npm run build
+        working-directory: frontend
