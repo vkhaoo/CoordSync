@@ -54,6 +54,20 @@ Istruzioni più estese in testa a `.github/workflows/promemoria.yml`.
 
 ## [ ] Da verificare quando hai un minuto
 
+### [ ] Prova l'app "a freddo", cioè col server addormentato
+
+Sul piano gratuito Render spegne il servizio dopo 15 minuti che nessuno lo usa,
+e la prima richiesta dopo lo spegnimento puo' metterci quasi un minuto.
+
+Ho appena cambiato il comportamento dell'app in quel momento: prima ti buttava
+alla schermata di accesso (e dovevi riscrivere la password), ora resta dov'era,
+mostra una striscia gialla "Il server si sta svegliando" e riprova da sola.
+
+Per provarlo: non aprire l'app per una ventina di minuti, poi aprila e guarda.
+Ti deve comparire la striscia, e dopo qualche secondo devi ritrovarti dentro
+senza aver rifatto l'accesso. Se invece ti chiede di nuovo la password, dimmelo:
+vuol dire che il tempo di risveglio supera i 25 secondi che ho impostato.
+
 ### [ ] Il comando di build del frontend su Render
 
 Serve a me per poterti togliere dal repository i **2267 file di `node_modules`**
