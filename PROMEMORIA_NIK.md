@@ -107,7 +107,9 @@ Ogni volta che pubblico una migrazione te lo scrivo. Nei log del backend su
 Render deve comparire una riga `Running upgrade ... -> ...`. Se non c'è, la
 migrazione non è passata e il resto non funzionerà.
 
-Migrazioni pubblicate finora (13). Le ultime:
+Migrazioni pubblicate finora (14). Le ultime:
+- `cad8fe0afe14` — voci macchina raggruppate per argomento (**pubblicata oggi**:
+  è quella da controllare nei log del prossimo deploy)
 - `dcbc9794f0d1` — progetti e macchine su più reparti (**sposta dati**)
 - `085f69855d88` — impegni con più partecipanti (**sposta dati**)
 - `c9dcce1d867a` — notifiche in-app

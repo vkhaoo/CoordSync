@@ -166,8 +166,9 @@ I caratteri jolly di LIKE (`%` e `_`) vengono neutralizzati: cercare "50%" deve
 trovare la percentuale, non restituire tutto. C'è un test apposta, e un altro
 che verifica che cercare non aggiri i reparti.
 
-**Possibile seguito:** cercare anche dentro commenti e voci di checklist, e una
-ricerca unica che attraversi progetti, macchine e agenda insieme.
+**Fatto anche:** la ricerca guarda dentro i commenti e le voci di checklist.
+**Resta:** una ricerca unica che attraversi progetti, macchine e agenda
+insieme, dalla barra in alto.
 
 ---
 
@@ -228,7 +229,7 @@ Anche la creazione è cambiata: l'ordine lo decide il server e la sezione nuova
 va in fondo. Prima il browser contava le sezioni per scegliere il posto, e
 sbagliava appena se ne cancellava una.
 
-### D · Raggruppare le voci per argomento *(il piu' significativo)*
+### D · Raggruppare le voci per argomento — FATTO
 
 > "Per Modifiche, Lavori, Analisi ecc. sarebbe meglio mettere tutto quello che ha
 > a che fare con un argomento sotto lo stesso punto, come se fosse Progetto e
@@ -240,12 +241,17 @@ che non si sanno collegate. L'idea e' che una **voce possa contenerne altre**,
 come un progetto contiene i lavori: un argomento in cima ("perdita d'aria sulla
 FAZ") e sotto tutto quello che lo riguarda, in ordine di tempo.
 
-**Attenzione: questa non e' una modifica di aspetto, cambia il modello dati.**
-Le voci passano da elenco piatto a struttura ad albero (una voce con un
-"genitore" facoltativo). Va progettata a parte, decidendo prima: si annidano su
-un livello solo o piu' di uno? Una voce puo' cambiare argomento? Cosa succede
-all'argomento se si cancella? E la migrazione deve lasciare tutte le voci
-esistenti come argomenti a se' stanti, senza perdere niente.
+**Fatto il 5 settembre 2026.** Le domande aperte sono state chiuse così:
+
+| Domanda | Risposta |
+|---|---|
+| Quanti livelli? | **Uno solo.** Chi sta sotto qualcuno non può avere roba sotto, e chi ha già roba sotto non può diventare figlio. È la forma di progetto/lavoro, già familiare, e non diventa un labirinto |
+| Una voce può cambiare argomento? | **Sì**, e può anche staccarsi e tornare da sola |
+| Se si cancella l'argomento? | **Le voci sotto restano**, sciolte (`ON DELETE SET NULL`). Buttare via lo storico con un gesto solo sarebbe il danno peggiore in una scheda che vive per anni |
+| L'argomento può essere di un'altra macchina? | **No** |
+
+La migrazione aggiunge una colonna che nasce vuota: tutte le voci esistenti
+restano dove sono, come argomenti a sé stanti.
 
 ### E · Piu' aziende: la schermata di scelta
 
@@ -268,9 +274,7 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
 
 1. ~~**C** — ordinare le sezioni.~~ FATTO il 5 settembre 2026.
 2. ~~**A e B insieme** — tendine e moduli nascosti.~~ FATTI il 5 settembre 2026.
-3. **D** — raggruppamento per argomento: da progettare prima insieme, e' l'unico
-   che tocca il modello dati e le migrazioni. **E' il prossimo**, ma prima
-   servono le tue risposte alle domande qui sotto.
+3. ~~**D** — raggruppamento per argomento.~~ FATTO il 5 settembre 2026.
 4. **E** — arriva da se' quando si fara' il multi-azienda.
 
 ## Parcheggio (non ancora pianificate)
