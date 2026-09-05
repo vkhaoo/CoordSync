@@ -21,6 +21,10 @@ from app.main import app
 def _database_pulito():
     """Prima di OGNI test: crea le tabelle vuote. Dopo: le cancella.
     'autouse=True' = si applica da solo a tutti i test, senza chiederlo."""
+    from app import limiti
+    # Il conteggio dei tentativi di accesso sta in memoria e sopravviverebbe
+    # da un test all'altro: azzerato qui, cosi' i test non si fanno inciampare.
+    limiti.azzera_tutto()
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)

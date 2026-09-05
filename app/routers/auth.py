@@ -5,7 +5,7 @@ Router di autenticazione: registrazione e login.
   modo legittimo di far nascere un'azienda. Ritorna subito un token (auto-login).
 - /auth/login    : email + password -> token JWT.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -22,6 +22,7 @@ from app.security import (
 from app.schemas.validators import PasswordStr
 from app.dependencies import get_current_user
 from app.notifiche import invia_email
+from app import limiti
 from app.email_templates import (
     verifica_email as email_verifica_template,
     reset_password as email_reset_template,
@@ -93,14 +94,27 @@ class LoginRichiesta(BaseModel):
 
 
 @router.post("/login", response_model=TokenRisposta)
-def login(dati: LoginRichiesta, db: Session = Depends(get_db)):
+def login(dati: LoginRichiesta, richiesta: Request, db: Session = Depends(get_db)):
+    ip = richiesta.client.host if richiesta.client else "sconosciuto"
+
+    # Prima di tutto: chi ha gia' sbagliato troppe volte aspetta.
+    attesa = limiti.attesa_richiesta(dati.email, ip)
+    if attesa is not None:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Troppi tentativi di accesso. Riprova fra {attesa} secondi.",
+            headers={"Retry-After": str(attesa)},
+        )
+
     utente = db.query(Utente).filter(Utente.email == dati.email).first()
     # Stesso errore generico se l'utente non c'e' o la password e' sbagliata.
-    if utente is None or utente.password_hash is None:
-        raise HTTPException(status_code=401, detail="Credenziali non valide")
-    if not verifica_password(dati.password, utente.password_hash):
+    if (utente is None
+            or utente.password_hash is None
+            or not verifica_password(dati.password, utente.password_hash)):
+        limiti.registra_fallimento(dati.email, ip)
         raise HTTPException(status_code=401, detail="Credenziali non valide")
 
+    limiti.azzera(dati.email, ip)   # chi entra davvero riparte pulito
     return TokenRisposta(access_token=crea_token(utente.id))
 
 
