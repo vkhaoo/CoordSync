@@ -14,7 +14,7 @@ Visibilita': la macchina segue il reparto, esattamente come i progetti.
 La regola vive in visibilita.py, qui non si riscrive.
 """
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -278,6 +278,26 @@ def _controlla_genitore(db: Session, macchina_id: int, genitore_id: int | None,
         )
 
 
+def _voci_col_testo_dentro(db: Session, q: str | None) -> list:
+    """Condizioni "il testo cercato sta in un commento / in una spunta".
+
+    Sottoquery e non join: una join farebbe tornare la stessa voce una volta
+    per ogni commento che corrisponde. Vive qui e non in ricerca.py perche'
+    parla di voci di macchina, non di ricerca in generale.
+    """
+    nei_commenti = (
+        db.query(Commento.voce_id)
+        .filter(Commento.voce_id.isnot(None),
+                condizione_testo([Commento.testo], q)).scalar_subquery()
+    )
+    nella_checklist = (
+        db.query(SottoAttivita.voce_id)
+        .filter(SottoAttivita.voce_id.isnot(None),
+                condizione_testo([SottoAttivita.testo], q)).scalar_subquery()
+    )
+    return [VoceMacchina.id.in_(nei_commenti), VoceMacchina.id.in_(nella_checklist)]
+
+
 @router.post("/macchine/{macchina_id}/voci", response_model=VoceRead, status_code=201)
 def crea_voce(macchina_id: int, dati: VoceCreate, db: Session = Depends(get_db),
               current: Utente = Depends(richiedi_azienda)):
@@ -311,14 +331,17 @@ def elenca_voci(macchina_id: int, tipo: TipoVoce | None = None,
     """Le voci della macchina. Senza filtri e' lo storico completo, in ordine
     di tempo: e' la vista "cosa e' successo su questo impianto".
 
-    'q' cerca nel titolo e nel testo: con anni di storico e' l'unico modo
-    pratico per ritrovare quella volta che si era rotta la valvola."""
+    'q' cerca nel titolo, nel testo, nei COMMENTI e nella CHECKLIST: con anni
+    di storico e' l'unico modo pratico per ritrovare quella volta che si era
+    rotta la valvola — e spesso quello che si ricorda non e' il titolo della
+    voce, ma una frase scritta rispondendo ("dove avevo scritto della
+    guarnizione?"). E' la stessa regola che vale sui lavori di progetto."""
     _macchina_o_404(db, current, macchina_id)
 
     query = db.query(VoceMacchina).filter(VoceMacchina.macchina_id == macchina_id)
     cerca = condizione_testo([VoceMacchina.titolo, VoceMacchina.testo], q)
     if cerca is not None:
-        query = query.filter(cerca)
+        query = query.filter(or_(cerca, *_voci_col_testo_dentro(db, q)))
     if tipo is not None:
         query = query.filter(VoceMacchina.tipo == tipo)
     if sezione_id is not None:

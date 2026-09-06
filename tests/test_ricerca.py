@@ -235,3 +235,64 @@ def test_cercare_nei_commenti_rispetta_i_reparti(client):
 
     assert client.get("/lavori?q=riservatissima", headers=dino).json() == []
     assert len(client.get("/lavori?q=riservatissima", headers=a).json()) == 1
+
+
+def test_lo_storico_si_cerca_anche_nei_commenti_e_nella_checklist(client):
+    """Quello che si ricorda spesso non e' il titolo della voce, ma una frase
+    scritta rispondendo. E' la stessa regola che vale sui lavori di progetto."""
+    from tests.conftest import registra
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = client.post("/macchine", json={"nome": "Pressa 1"}, headers=a).json()
+    v = client.post(f"/macchine/{m['id']}/voci",
+                    json={"tipo": "lavoro", "titolo": "Fermo macchina di marzo"},
+                    headers=a).json()
+    client.post(f"/voci/{v['id']}/commenti",
+                json={"testo": "era la guarnizione del pistone"}, headers=a)
+    client.post(f"/voci/{v['id']}/sotto-attivita",
+                json={"testo": "Ordinare il filtro FR-12"}, headers=a)
+
+    # Una parola che sta SOLO nel commento.
+    trovate = client.get(f"/macchine/{m['id']}/voci?q=guarnizione", headers=a).json()
+    assert [x["titolo"] for x in trovate] == ["Fermo macchina di marzo"]
+
+    # Una che sta SOLO nella checklist.
+    trovate = client.get(f"/macchine/{m['id']}/voci?q=FR-12", headers=a).json()
+    assert len(trovate) == 1
+
+    # E la voce non arriva doppia se il testo compare in piu' posti.
+    client.post(f"/voci/{v['id']}/commenti", json={"testo": "guarnizione nuova"}, headers=a)
+    assert len(client.get(f"/macchine/{m['id']}/voci?q=guarnizione", headers=a).json()) == 1
+
+    # Controprova: una parola che non c'e' da nessuna parte non trova niente.
+    assert client.get(f"/macchine/{m['id']}/voci?q=inverter", headers=a).json() == []
+
+
+def test_anche_la_ricerca_dappertutto_guarda_nei_commenti_di_macchina(client):
+    from tests.conftest import registra
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = client.post("/macchine", json={"nome": "Pressa 1"}, headers=a).json()
+    v = client.post(f"/macchine/{m['id']}/voci",
+                    json={"tipo": "analisi", "titolo": "Vibrazioni"}, headers=a).json()
+    client.post(f"/voci/{v['id']}/commenti",
+                json={"testo": "picco a 120 Hz sul cuscinetto"}, headers=a)
+
+    trovati = client.get("/ricerca?q=cuscinetto", headers=a).json()
+    assert [x["titolo"] for x in trovati["voci"]] == ["Vibrazioni"]
+
+
+def test_i_commenti_di_un_lavoro_non_fanno_trovare_una_voce_di_macchina(client):
+    """Le due tabelle sono in comune: un commento di lavoro non deve far
+    comparire una voce di macchina che con lui non c'entra niente."""
+    from tests.conftest import registra
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+    lavoro = client.post("/lavori", json={"titolo": "L", "progetto_id": p["id"]}, headers=a).json()
+    client.post(f"/lavori/{lavoro['id']}/commenti",
+                json={"testo": "parola-solo-del-lavoro"}, headers=a)
+
+    m = client.post("/macchine", json={"nome": "Pressa 1"}, headers=a).json()
+    client.post(f"/macchine/{m['id']}/voci",
+                json={"tipo": "analisi", "titolo": "Misure"}, headers=a)
+
+    assert client.get(f"/macchine/{m['id']}/voci?q=parola-solo-del-lavoro",
+                      headers=a).json() == []

@@ -18,6 +18,7 @@ Qui si cerca dappertutto in un colpo. Due punti fermi:
 """
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -29,6 +30,7 @@ from app.models.progetto import Progetto
 from app.models.utente import Utente
 from app.models.voce_macchina import VoceMacchina
 from app.ricerca import condizione_testo
+from app.routers.macchine import _voci_col_testo_dentro
 from app.visibilita import lavori_visibili, macchine_visibili, progetti_visibili
 
 router = APIRouter(prefix="/ricerca", tags=["ricerca"])
@@ -124,7 +126,8 @@ def cerca_dappertutto(q: str = Query(..., min_length=2),
     voci = (
         db.query(VoceMacchina)
         .filter(VoceMacchina.macchina_id.in_(ids_macchine_visibili),
-                condizione_testo([VoceMacchina.titolo, VoceMacchina.testo], q))
+                or_(condizione_testo([VoceMacchina.titolo, VoceMacchina.testo], q),
+                    *_voci_col_testo_dentro(db, q)))
         .order_by(VoceMacchina.creato_il.desc())
         .limit(QUANTI)
         .all()
