@@ -3,6 +3,7 @@ import { api } from "./api.js";
 import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
 import Commenti from "./Commenti.jsx";
+import QrMacchina from "./QrMacchina.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
 import Tendina from "./Tendina.jsx";
 import { dalServer } from "./date.js";
@@ -32,6 +33,7 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
   const [filtroMacchine, setFiltroMacchine] = useState(""); // filtro sui nomi, in locale
 
   // Form
+  const [qrAperto, setQrAperto] = useState(false);   // l'etichetta da stampare
   const [nuovaMacchina, setNuovaMacchina] = useState("");
   const [nuovaSezione, setNuovaSezione] = useState("");
   // Anche qui: si apre la scheda per leggere lo storico, non per scriverci.
@@ -227,12 +229,17 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
             <div className="intestazione-progetto">
               <div className="testa-progetto">
                 <h2 className="titolo-progetto">{scheda.nome}</h2>
-                {gestisco && (
-                  <div className="lavoro-azioni">
+                <div className="lavoro-azioni">
+                  {/* L'etichetta la puo' stampare chiunque veda la macchina:
+                      non e' una chiave, e chi va ad attaccarla sull'impianto
+                      spesso non e' chi amministra. */}
+                  <button className="azione-icona" title="Etichetta QR da stampare"
+                          onClick={() => setQrAperto(true)}>⬚</button>
+                  {gestisco && (
                     <button className="azione-icona elimina" title="Elimina macchina"
                             onClick={eliminaMacchina}>🗑</button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {gestisco ? (
@@ -442,6 +449,10 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
           </>
         )}
       </main>
+
+      {qrAperto && scheda && (
+        <QrMacchina macchina={scheda} onChiudi={() => setQrAperto(false)} />
+      )}
     </div>
   );
 }

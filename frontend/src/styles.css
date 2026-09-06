@@ -1045,3 +1045,35 @@ input, select, textarea { font-family: var(--sans); }
 .blocco-miei-dati input { width: 100%; margin-bottom: 0.4rem; }
 .blocco-miei-dati .form-inline input { margin-bottom: 0; }
 .ok.piccolo { font-size: 0.82rem; line-height: 1.45; margin: 0 0 0.5rem; }
+
+/* ==========================================================================
+   Etichetta QR della macchina, e stampa
+   ========================================================================== */
+
+.velo-qr {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  background: rgba(15, 22, 30, .55);
+}
+.foglio-qr {
+  background: #fff; color: #17202a; border-radius: 12px; padding: 1rem;
+  max-width: 420px; width: 100%; box-shadow: var(--ombra-3);
+}
+/* Il foglio resta BIANCO anche col tema scuro: e' un'anteprima di quello che
+   uscira' dalla stampante, non un pezzo di interfaccia. */
+.comandi-qr { display: flex; justify-content: flex-end; gap: 0.5rem; margin-bottom: 0.6rem; }
+.etichetta-qr { text-align: center; }
+.etichetta-qr h2 { margin: 0 0 0.2rem; font-size: 1.3rem; }
+.etichetta-qr .sottotitolo { color: #5f6b78; margin-bottom: 0.6rem; }
+.disegno-qr svg { width: 100%; max-width: 280px; height: auto; }
+.piede-qr { font-size: 0.8rem; color: #5f6b78; margin: 0.4rem 0 0; }
+
+@media print {
+  /* Sulla carta va solo l'etichetta: niente barra, niente elenco lavori,
+     niente sfondo scuro che si porterebbe via mezza cartuccia. */
+  body * { visibility: hidden; }
+  .foglio-qr, .foglio-qr * { visibility: visible; }
+  .comandi-qr { display: none; }
+  .velo-qr { position: static; background: none; padding: 0; display: block; }
+  .foglio-qr { box-shadow: none; max-width: none; }
+}

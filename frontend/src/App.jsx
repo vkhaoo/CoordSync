@@ -15,6 +15,10 @@ const tokenInvito = parametri.get("invito_token");
 const tokenInvitoAzienda = parametri.get("invito_azienda_token");
 // Conferma di un nuovo indirizzo email: il cambio avviene solo qui.
 const tokenCambioEmail = parametri.get("cambio_email_token");
+// Arrivo dal QR attaccato su una macchina: si apre direttamente la sua scheda.
+// Non e' un token e non apre niente da solo — chi non e' collegato vede il
+// modulo di accesso, e dopo si ritrova qui, perche' l'indirizzo non cambia.
+const macchinaDaQr = parametri.get("macchina");
 
 export default function App() {
   // "stato" = dati che, se cambiano, ridisegnano lo schermo da soli.
@@ -164,7 +168,8 @@ export default function App() {
   // Se sono connesso, mostro la dashboard vera.
   if (connesso) {
     return <><AvvisoRete />
-             <Dashboard onLogout={async () => {
+             <Dashboard apriMacchina={macchinaDaQr ? Number(macchinaDaQr) : null}
+                        onLogout={async () => {
                // Il cookie lo cancella il server; setToken butta via
                // l'eventuale token vecchio rimasto in localStorage.
                try { await api.esci(); } catch { }

@@ -27,14 +27,17 @@ const ETICHETTA_PRIORITA = {
 // cui arriveranno a pagine riordinare quella che si ha in mano darebbe un
 // ordine sbagliato.
 
-export default function Dashboard({ onLogout }) {
+export default function Dashboard({ onLogout, apriMacchina = null }) {
   const [progetti, setProgetti] = useState([]);
   const [selezionato, setSelezionato] = useState(null);
   const [lavori, setLavori] = useState([]);
   const [utenti, setUtenti] = useState([]);   // colleghi dell'azienda (per l'assegnazione)
   const [reparti, setReparti] = useState([]); // reparti dell'azienda (per la visibilità)
   const [io, setIo] = useState(null);         // l'utente loggato (per sapere il mio ruolo)
-  const [vista, setVista] = useState("lavori");  // "lavori" oppure "utenti"
+  // Arrivando dal QR di una macchina si parte gia' dentro la sua scheda,
+  // invece di far ricominciare dall'elenco dei lavori chi ha appena inquadrato
+  // un impianto preciso.
+  const [vista, setVista] = useState(apriMacchina ? "macchine" : "lavori");
   const [avvisoVerifica, setAvvisoVerifica] = useState(null);  // feedback "reinvia"
   const [errore, setErrore] = useState(null);
   const [caricando, setCaricando] = useState(true);
@@ -46,7 +49,7 @@ export default function Dashboard({ onLogout }) {
   const [creaLavoroAperto, setCreaLavoroAperto] = useState(false);
   // Quale macchina aprire quando si arriva dalla ricerca: la vista Macchine
   // ha una sua selezione interna, e questo e' il modo di dirle dove andare.
-  const [macchinaDaAprire, setMacchinaDaAprire] = useState(null);
+  const [macchinaDaAprire, setMacchinaDaAprire] = useState(apriMacchina);
   // Vero quando si vuole vedere la schermata dei riquadri: sempre a chi non
   // ha ancora nessuna azienda, a richiesta per gli altri.
   const [scegliAzienda, setScegliAzienda] = useState(false);
