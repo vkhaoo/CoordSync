@@ -96,7 +96,7 @@ def register(dati: RegisterRichiesta, richiesta: Request, risposta: Response,
     db.refresh(utente)
 
     _invia_verifica(utente)
-    token = crea_token(utente.id)
+    token = crea_token(utente.id, versione=utente.token_versione)
     sessione.imposta(risposta, token)
     return TokenRisposta(access_token=token)
 
@@ -141,7 +141,7 @@ def crea_azienda(dati: NuovaAzienda, risposta: Response,
         current.ruolo = RuoloUtente.admin
     db.commit()
 
-    token = crea_token(current.id, org.id)
+    token = crea_token(current.id, org.id, versione=current.token_versione)
     sessione.imposta(risposta, token)
     return AziendaCreata(id=org.id, nome=org.nome, access_token=token)
 
@@ -189,7 +189,7 @@ def login(dati: LoginRichiesta, richiesta: Request, risposta: Response,
 
     # Si entra nell'azienda di casa: da li' si potra' cambiare senza
     # rifare l'accesso (POST /auth/cambia-azienda).
-    token = crea_token(utente.id, utente.organizzazione_id)
+    token = crea_token(utente.id, utente.organizzazione_id, versione=utente.token_versione)
     sessione.imposta(risposta, token)
     return TokenRisposta(access_token=token)
 
@@ -232,7 +232,7 @@ def verifica_due_fattori(dati: VerificaDueFattori, richiesta: Request,
 
     if due_fattori.codice_valido(utente.totp_segreto, dati.codice):
         limiti.azzera(utente.email, ip)
-        token = crea_token(utente.id, utente.organizzazione_id)
+        token = crea_token(utente.id, utente.organizzazione_id, versione=utente.token_versione)
         sessione.imposta(risposta, token)
         return TokenRisposta(access_token=token)
 
@@ -244,12 +244,38 @@ def verifica_due_fattori(dati: VerificaDueFattori, richiesta: Request,
         utente.totp_recupero = ",".join(rimasti)
         db.commit()
         limiti.azzera(utente.email, ip)
-        token = crea_token(utente.id, utente.organizzazione_id)
+        token = crea_token(utente.id, utente.organizzazione_id, versione=utente.token_versione)
         sessione.imposta(risposta, token)
         return TokenRisposta(access_token=token)
 
     limiti.registra_fallimento(utente.email, ip)
     raise HTTPException(status_code=401, detail="Codice non valido")
+
+
+@router.get("/csrf")
+def valore_csrf(richiesta: Request, risposta: Response):
+    """Consegna al frontend il valore anti-CSRF da rimandare nell'header.
+
+    Serve perche' quel cookie il frontend NON puo' leggerlo: le pagine stanno
+    su un host e il backend su un altro, e un documento vede solo i cookie del
+    proprio host. Il cookie parte lo stesso verso il backend (lo fa il browser),
+    ma per il codice della pagina e' invisibile — ed e' cosi' che ho rotto le
+    scritture in produzione.
+
+    Non serve essere collegati: il valore non e' un segreto e da solo non apre
+    niente. Quello che conta e' che un sito estraneo non possa LEGGERE questa
+    risposta, e a impedirlo e' il CORS, che lascia passare solo la nostra
+    origine.
+
+    Se il cookie non c'e' ancora (prima di entrare, o dopo che e' scaduto) se
+    ne crea uno al volo, cosi' anche la prima richiesta ha la sua prova.
+    """
+    esistente = richiesta.cookies.get(sessione.NOME_COOKIE_CSRF)
+    if esistente:
+        return {"csrf": esistente}
+
+    nuovo = sessione.solo_csrf(risposta)
+    return {"csrf": nuovo}
 
 
 @router.post("/logout", status_code=204)
@@ -377,6 +403,10 @@ def reset_password(dati: ResetPasswordRichiesta, db: Session = Depends(get_db)):
     utente.password_hash = hash_password(dati.nuova_password)
     # La password ora l'ha scelta lui: se era obbligato a cambiarla, l'obbligo decade.
     utente.deve_cambiare_password = False
+    # Chi reimposta la password quasi sempre lo fa perche' teme che qualcuno
+    # sia entrato: tutte le sessioni aperte, comprese quelle dell'intruso,
+    # smettono di valere.
+    utente.token_versione += 1
     db.commit()
     return {"messaggio": "Password reimpostata. Ora puoi accedere."}
 
@@ -508,7 +538,8 @@ class CambiaPasswordRichiesta(BaseModel):
 
 
 @router.post("/cambia-password", status_code=200)
-def cambia_password(dati: CambiaPasswordRichiesta, db: Session = Depends(get_db),
+def cambia_password(dati: CambiaPasswordRichiesta, risposta: Response,
+                    db: Session = Depends(get_db),
                     current: Utente = Depends(get_current_user)):
     """Cambio password volontario o obbligato (primo accesso di un utente
     creato dall'admin). Chiedo la vecchia password: un token rubato da solo
@@ -517,8 +548,16 @@ def cambia_password(dati: CambiaPasswordRichiesta, db: Session = Depends(get_db)
         raise HTTPException(status_code=401, detail="Password attuale non corretta")
 
     current.password_hash = hash_password(dati.nuova_password)
+    # Tutte le sessioni aperte cadono: e' quello che si aspetta chiunque
+    # cambi la password ("da adesso chi era dentro e' fuori").
+    current.token_versione += 1
+    current.deve_cambiare_password = False
     current.deve_cambiare_password = False
     db.commit()
+    # ...tranne quella di chi la sta cambiando adesso: gli si da' subito una
+    # sessione della generazione nuova, se no si butterebbe fuori da solo.
+    sessione.imposta(risposta, crea_token(current.id, current.org_attiva_id,
+                                          versione=current.token_versione))
     return {"messaggio": "Password aggiornata."}
 
 
@@ -811,7 +850,7 @@ def cambia_azienda(dati: CambioAzienda, risposta: Response,
         # quell'azienda esiste.
         raise HTTPException(status_code=404, detail="Azienda non trovata")
 
-    token = crea_token(current.id, dati.organizzazione_id)
+    token = crea_token(current.id, dati.organizzazione_id, versione=current.token_versione)
     sessione.imposta(risposta, token)
     return TokenRisposta(access_token=token)
 

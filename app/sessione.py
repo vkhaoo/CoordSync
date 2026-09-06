@@ -15,10 +15,23 @@ piu' rubare e portare via.
 IL PREZZO SONO I CSRF. Un cookie il browser lo allega DA SOLO, anche quando la
 richiesta parte da un altro sito: senza contromisure, una pagina qualunque
 potrebbe far partire una POST verso CoordSync con la tua sessione attaccata.
-Qui si usa il "doppio invio": accanto al cookie della sessione ce n'e' uno
-LEGGIBILE con un numero casuale, che il frontend rilegge e rispedisce in un
-header. Un sito estraneo il cookie non riesce a leggerlo (glielo impedisce il
-browser), quindi quell'header non sa scriverlo.
+Qui si usa il "doppio invio": accanto al cookie della sessione ce n'e' uno con
+un numero casuale, che il frontend rispedisce in un header; il server confronta
+i due.
+
+ATTENZIONE, imparato rompendo la produzione: il frontend NON puo' leggere quel
+cookie da document.cookie, perche' le pagine stanno su un host
+(coordsync.onrender.com) e il backend su un altro
+(coordsync-backend.onrender.com), e un documento vede solo i cookie del PROPRIO
+host. Il cookie parte comunque verso il backend — quello lo fa il browser da
+solo — ma per il codice della pagina e' invisibile. Quindi il valore si
+consegna nel CORPO di una risposta (GET /auth/csrf) e il frontend lo tiene in
+memoria.
+
+Il doppio invio resta valido lo stesso: un sito estraneo non puo' LEGGERE
+quella risposta, perche' il CORS lascia passare solo la nostra origine. Puo'
+far partire una richiesta col cookie attaccato, ma non sapra' mai cosa scrivere
+nell'header.
 
 PERCHE' SI ACCETTA ANCORA L'HEADER Authorization. Chi era gia' collegato ha in
 tasca un token in localStorage: se il server smettesse di colpo di accettarlo,
@@ -42,8 +55,14 @@ HEADER_CSRF = "X-CSRF-Token"
 METODI_SICURI = {"GET", "HEAD", "OPTIONS"}
 
 
-def imposta(risposta: Response, token: str) -> None:
-    """Attacca alla risposta il cookie della sessione e quello anti-CSRF."""
+def imposta(risposta: Response, token: str) -> str:
+    """Attacca alla risposta il cookie della sessione e quello anti-CSRF.
+
+    Restituisce il valore anti-CSRF, perche' il frontend NON puo' leggerlo dal
+    cookie: le pagine stanno su un host e il backend su un altro, e
+    document.cookie mostra solo i cookie del proprio host. Va consegnato nel
+    CORPO della risposta (vedi GET /auth/csrf).
+    """
     durata = settings.token_durata_minuti * 60
 
     risposta.set_cookie(
@@ -58,14 +77,34 @@ def imposta(risposta: Response, token: str) -> None:
     # rispedisce nell'header. Non e' un segreto — serve solo a dimostrare che
     # la richiesta arriva da una pagina che i cookie li puo' leggere, cioe'
     # dalla nostra.
+    prova = secrets.token_urlsafe(24)
     risposta.set_cookie(
-        NOME_COOKIE_CSRF, secrets.token_urlsafe(24),
+        NOME_COOKIE_CSRF, prova,
         max_age=durata,
         httponly=False,
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
         path="/",
     )
+    return prova
+
+
+def solo_csrf(risposta: Response) -> str:
+    """Rilascia il solo cookie anti-CSRF, senza toccare la sessione.
+
+    Serve a chi non e' ancora entrato: anche il primo accesso e' una POST, e
+    anche quella deve poter portare la sua prova.
+    """
+    prova = secrets.token_urlsafe(24)
+    risposta.set_cookie(
+        NOME_COOKIE_CSRF, prova,
+        max_age=settings.token_durata_minuti * 60,
+        httponly=False,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        path="/",
+    )
+    return prova
 
 
 def cancella(risposta: Response) -> None:

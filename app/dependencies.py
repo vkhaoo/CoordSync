@@ -56,11 +56,19 @@ def get_current_user(
     letto = leggi_token(token)
     if letto is None:
         raise HTTPException(status_code=401, detail="Token non valido o scaduto")
-    utente_id, org_dal_token = letto
+    utente_id, org_dal_token, versione_token = letto
 
     utente = db.query(Utente).filter(Utente.id == utente_id).first()
     if utente is None:
         raise HTTPException(status_code=401, detail="Utente non trovato")
+
+    # Sessione di una generazione superata: e' successo qualcosa che doveva
+    # buttare fuori tutti (cambio password, secondo fattore spento). Chi
+    # avesse rubato la sessione si ferma qui.
+    if versione_token != utente.token_versione:
+        raise HTTPException(
+            status_code=401,
+            detail="Sessione non piu' valida: rientra con la password nuova.")
 
     # --- dentro QUALE azienda sta lavorando adesso ---------------------------
     # L'azienda arriva dal token. Se manca puo' essere un token emesso prima

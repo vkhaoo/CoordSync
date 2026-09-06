@@ -34,13 +34,34 @@ export function setToken(t) {
   // La sessione la apre e la chiude il server, con i cookie. Qui resta solo
   // il compito di buttare via l'eventuale token vecchio.
   tokenVecchio = null;
+  // Cambiando sessione cambia anche la prova anti-CSRF: si ributta, cosi' la
+  // prossima scrittura se ne fa dare una nuova.
+  valoreCsrf = null;
   try { localStorage.removeItem(CHIAVE_TOKEN); } catch { }
 }
 export function getToken() { return tokenVecchio; }
 
-function valoreCookie(nome) {
-  const trovato = document.cookie.split("; ").find((c) => c.startsWith(nome + "="));
-  return trovato ? decodeURIComponent(trovato.split("=").slice(1).join("=")) : null;
+// Il valore anti-CSRF, tenuto SOLO in memoria.
+//
+// Non si legge da document.cookie, e qui c'e' una lezione pagata rompendo la
+// produzione: le pagine stanno su un host e il backend su un altro, e un
+// documento vede solo i cookie del PROPRIO host. Il cookie parte comunque
+// verso il backend (lo fa il browser), ma per questo codice e' invisibile —
+// quindi l'header non partiva mai e ogni scrittura tornava 403.
+// In locale non si vedeva: li' e' tutto localhost, cioe' lo stesso sito.
+//
+// In memoria e non in localStorage: ricaricando la pagina si richiede, e cosi'
+// non resta scritto da nessuna parte piu' a lungo del necessario.
+let valoreCsrf = null;
+// Evita rimbalzi infiniti: il recupero della prova si tenta una volta sola.
+let _giaRiprovato = false;
+
+async function assicuraCsrf() {
+  if (valoreCsrf) return valoreCsrf;
+  const risposta = await fetch(BASE + "/auth/csrf", { credentials: "include" });
+  if (!risposta.ok) return null;
+  valoreCsrf = (await risposta.json()).csrf;
+  return valoreCsrf;
 }
 
 // Quanto aspettare una risposta prima di considerarla persa. Generoso di
@@ -76,7 +97,7 @@ async function unTentativo(metodo, percorso, corpo) {
   if (tokenVecchio) headers["Authorization"] = `Bearer ${tokenVecchio}`;
   // La prova anti-CSRF serve solo a quello che cambia qualcosa.
   if (metodo !== "GET") {
-    const prova = valoreCookie("coordsync_csrf");
+    const prova = await assicuraCsrf();
     if (prova) headers["X-CSRF-Token"] = prova;
   }
 
@@ -124,6 +145,21 @@ async function richiesta(metodo, percorso, corpo) {
     // Anche se va male devo togliermi dal conto, altrimenti l'avviso resta
     // acceso per sempre.
     if (hoSegnalato) segnala(-1);
+  }
+
+  // Prova anti-CSRF scaduta: succede tutte le volte che il server rilascia una
+  // sessione nuova (accesso, uscita, cambio azienda), perche' insieme rilascia
+  // anche un valore nuovo e quello che ho in memoria diventa vecchio. Invece
+  // di far vedere un errore incomprensibile, lo si richiede e si riprova UNA
+  // volta sola.
+  if (risposta && risposta.status === 403 && metodo !== "GET" && !_giaRiprovato) {
+    valoreCsrf = null;
+    _giaRiprovato = true;
+    try {
+      return await richiesta(metodo, percorso, corpo);
+    } finally {
+      _giaRiprovato = false;
+    }
   }
 
   if (!risposta) {

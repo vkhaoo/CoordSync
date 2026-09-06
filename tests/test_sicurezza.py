@@ -171,3 +171,65 @@ def test_il_nome_di_un_progetto_non_inietta_html_nelle_email():
 
     assert 'href="http://truffa.example"' not in html
     assert "&lt;a href=" in html
+
+
+# ---------- REVOCA DELLE SESSIONI ----------
+
+def _con_csrf(client):
+    """Gli header che manda il frontend quando la sessione e' nel cookie."""
+    from app.sessione import HEADER_CSRF, NOME_COOKIE_CSRF
+    return {HEADER_CSRF: client.cookies.get(NOME_COOKIE_CSRF)}
+
+def test_cambiando_password_le_altre_sessioni_cadono(client):
+    """Chiunque cambi la password si aspetta che chi era dentro esca. Prima
+    non succedeva: un token rubato restava buono fino a 24 ore dopo."""
+    ladro = registra(client, "Azienda A", "Marco", "marco@a.it")
+    # (stessa sessione, nel ruolo del token rubato)
+    assert client.get("/auth/me", headers=ladro).status_code == 200
+
+    # Marco cambia la password da un'altra parte
+    client.cookies.clear()
+    fresca = client.post("/auth/login",
+                         json={"email": "marco@a.it", "password": "password1"})
+    assert fresca.status_code == 200
+    r = client.post("/auth/cambia-password",
+                    json={"vecchia_password": "password1",
+                          "nuova_password": "nuovaPassword9"},
+                    headers=_con_csrf(client))
+    assert r.status_code == 200
+
+    # la sessione vecchia non vale piu'
+    dopo = client.get("/auth/me", headers=ladro)
+    assert dopo.status_code == 401
+    assert "non piu' valida" in dopo.json()["detail"]
+
+
+def test_chi_cambia_la_password_resta_dentro(client):
+    """Non deve buttare fuori anche se stesso: sarebbe scomodo e basta."""
+    registra(client, "Azienda A", "Marco", "marco@a.it")
+    client.cookies.clear()
+    client.post("/auth/login", json={"email": "marco@a.it", "password": "password1"})
+
+    client.post("/auth/cambia-password",
+                json={"vecchia_password": "password1", "nuova_password": "nuovaPassword9"},
+                headers=_con_csrf(client))
+
+    # il cookie e' stato rinnovato con la generazione nuova
+    assert client.get("/auth/me").status_code == 200
+
+
+def test_anche_il_reset_dal_link_butta_fuori_tutti(client):
+    """Chi reimposta la password quasi sempre lo fa perche' teme che qualcuno
+    sia entrato."""
+    from app.routers.auth import SCOPO_RESET
+    from app.security import crea_token_scopo
+
+    ladro = registra(client, "Azienda A", "Marco", "marco@a.it")
+    io = client.get("/auth/me", headers=ladro).json()
+
+    token = crea_token_scopo(io["id"], SCOPO_RESET, 60)
+    assert client.post("/auth/reset-password",
+                       json={"token": token,
+                             "nuova_password": "nuovaPassword9"}).status_code == 200
+
+    assert client.get("/auth/me", headers=ladro).status_code == 401

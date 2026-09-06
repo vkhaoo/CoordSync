@@ -32,6 +32,13 @@ class Utente(Base):
     # sceglierne una loro (l'admin non deve conoscere la password di nessuno).
     deve_cambiare_password = Column(Boolean, default=False, nullable=False)
 
+    # Numero di "generazione" delle sessioni. Ogni token se lo porta dentro;
+    # quando questo cresce, tutti i token emessi prima smettono di valere.
+    # Serve a far si' che cambiare password (o spegnere il secondo fattore)
+    # butti fuori davvero chi era entrato: senza, chi ti ha rubato la sessione
+    # resta dentro fino alla scadenza, e nessuno se lo aspetta.
+    token_versione = Column(Integer, nullable=False, default=1, server_default="1")
+
     # --- Secondo fattore (facoltativo, spento di default) --------------------
     # Il segreto condiviso col telefono. NULL = non l'ha mai preparato.
     totp_segreto = Column(String, nullable=True)

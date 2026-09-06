@@ -153,17 +153,55 @@ describe("la sessione", () => {
     expect(fetchFinto.mock.calls[0][1].credentials).toBe("include");
   });
 
-  test("la prova anti-CSRF si manda solo su quello che cambia qualcosa", async () => {
-    document.cookie = "coordsync_csrf=prova123";
+  test("la prova anti-CSRF si chiede al SERVER, non a document.cookie", async () => {
+    // Questo test riproduce la condizione della produzione, che e' l'unica
+    // che conta: le pagine stanno su un host e il backend su un altro, quindi
+    // il cookie anti-CSRF ESISTE ma il codice della pagina non lo vede.
+    // document.cookie resta vuoto di proposito: prima la prova si leggeva da
+    // li', non partiva mai, e OGNI scrittura in produzione tornava 403.
+    expect(document.cookie).not.toContain("coordsync_csrf");
+
+    const fetchFinto = vi.fn()
+      // la richiesta del valore anti-CSRF
+      .mockResolvedValueOnce(rispostaFinta({ csrf: "dal-server-123" }))
+      // la scrittura vera
+      .mockResolvedValueOnce(rispostaFinta({ id: 1 }));
+    vi.stubGlobal("fetch", fetchFinto);
+    const { api } = await caricaApi();
+
+    await conIlTempoCheScorre(api.creaProgetto({ nome: "X" }));
+
+    const [urlProva] = fetchFinto.mock.calls[0];
+    expect(String(urlProva)).toContain("/auth/csrf");
+    expect(fetchFinto.mock.calls[1][1].headers["X-CSRF-Token"]).toBe("dal-server-123");
+  });
+
+  test("le letture non chiedono nessuna prova", async () => {
     const fetchFinto = vi.fn().mockResolvedValue(rispostaFinta([]));
     vi.stubGlobal("fetch", fetchFinto);
     const { api } = await caricaApi();
 
     await conIlTempoCheScorre(api.progetti());
-    expect(fetchFinto.mock.calls[0][1].headers["X-CSRF-Token"]).toBeUndefined();
 
-    await conIlTempoCheScorre(api.creaProgetto({ nome: "X" }));
-    expect(fetchFinto.mock.calls[1][1].headers["X-CSRF-Token"]).toBe("prova123");
+    expect(fetchFinto).toHaveBeenCalledTimes(1);   // nessuna chiamata a /auth/csrf
+    expect(fetchFinto.mock.calls[0][1].headers["X-CSRF-Token"]).toBeUndefined();
+  });
+
+  test("se la prova e' scaduta se ne prende una nuova e si riprova", async () => {
+    // Succede a ogni accesso: il server rilascia una sessione nuova e con lei
+    // una prova nuova, e quella in memoria diventa vecchia.
+    const fetchFinto = vi.fn()
+      .mockResolvedValueOnce(rispostaFinta({ csrf: "vecchia" }))
+      .mockResolvedValueOnce(rispostaFinta({ detail: "non riconosciuta" }, 403))
+      .mockResolvedValueOnce(rispostaFinta({ csrf: "nuova" }))
+      .mockResolvedValueOnce(rispostaFinta({ id: 1 }));
+    vi.stubGlobal("fetch", fetchFinto);
+    const { api } = await caricaApi();
+
+    const esito = await conIlTempoCheScorre(api.creaProgetto({ nome: "X" }));
+
+    expect(esito).toEqual({ id: 1 });
+    expect(fetchFinto.mock.calls[3][1].headers["X-CSRF-Token"]).toBe("nuova");
   });
 
   test("il token di prima del cambio continua a funzionare", async () => {

@@ -29,7 +29,8 @@ def verifica_password(in_chiaro: str, impronta: str) -> bool:
     return _hasher.verify(in_chiaro, impronta)
 
 
-def crea_token(utente_id: int, organizzazione_id: int | None = None) -> str:
+def crea_token(utente_id: int, organizzazione_id: int | None = None,
+               versione: int = 1) -> str:
     """Crea un token JWT che dice CHI sei e DENTRO QUALE AZIENDA stai lavorando.
 
     L'azienda sta nel token e non sulla riga dell'utente perche' la stessa
@@ -43,11 +44,14 @@ def crea_token(utente_id: int, organizzazione_id: int | None = None) -> str:
     }
     if organizzazione_id is not None:
         contenuto["org"] = organizzazione_id
+    # La "generazione" della sessione: se sulla riga dell'utente questo numero
+    # cresce, questo token smette di valere (vedi dependencies.py).
+    contenuto["ver"] = versione
     return jwt.encode(contenuto, settings.secret_key, algorithm=_ALGORITMO)
 
 
-def leggi_token(token: str) -> tuple[int, int | None] | None:
-    """Verifica un token e restituisce (id utente, id azienda attiva).
+def leggi_token(token: str) -> tuple[int, int | None, int] | None:
+    """Verifica un token e restituisce (id utente, azienda attiva, generazione).
 
     L'azienda puo' essere None: i token emessi PRIMA del multi-azienda non ce
     l'hanno. In quel caso vale l'azienda di casa dell'utente — cosi' nessuno
@@ -66,7 +70,12 @@ def leggi_token(token: str) -> tuple[int, int | None] | None:
         if "scopo" in contenuto:
             return None
         org = contenuto.get("org")
-        return int(contenuto["sub"]), (int(org) if org is not None else None)
+        # I token emessi prima di questa modifica non hanno "ver": valgono
+        # come generazione 1, che e' quella di tutti finche' nessuno cambia
+        # password. Cosi' la pubblicazione non butta fuori nessuno, ma appena
+        # qualcuno cambia password i suoi token vecchi cadono lo stesso.
+        versione = int(contenuto.get("ver", 1))
+        return int(contenuto["sub"]), (int(org) if org is not None else None), versione
     except (jwt.InvalidTokenError, KeyError, ValueError):
         return None
 

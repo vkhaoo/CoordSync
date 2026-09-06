@@ -165,3 +165,38 @@ def test_in_produzione_il_cookie_viaggia_solo_su_https():
     assert "httponly" in testo
     assert "secure" in testo
     assert "samesite=none" in testo
+
+
+# ---------- LA PROVA ANTI-CSRF SI PUO' CHIEDERE AL SERVER ----------
+
+def test_il_valore_anti_csrf_si_chiede_e_coincide_col_cookie(client):
+    """Il frontend non puo' leggere quel cookie: le pagine stanno su un host e
+    il backend su un altro, e un documento vede solo i cookie del PROPRIO
+    host. Quindi il valore si consegna nel corpo di questa risposta."""
+    registra(client, "Azienda A", "Marco", "marco@a.it")
+    client.cookies.clear()
+    _accedi(client)
+
+    r = client.get("/auth/csrf")
+    assert r.status_code == 200
+    assert r.json()["csrf"] == client.cookies.get(NOME_COOKIE_CSRF)
+
+
+def test_col_valore_chiesto_al_server_la_scrittura_passa(client):
+    """Il giro completo come lo fa il frontend in produzione."""
+    registra(client, "Azienda A", "Marco", "marco@a.it")
+    client.cookies.clear()
+    _accedi(client)
+
+    prova = client.get("/auth/csrf").json()["csrf"]
+    r = client.post("/progetti", json={"nome": "Linea 3"},
+                    headers={HEADER_CSRF: prova})
+    assert r.status_code == 201
+
+
+def test_la_prova_si_ottiene_anche_prima_di_entrare(client):
+    """Anche l'accesso e' una POST: deve poter portare la sua prova."""
+    client.cookies.clear()
+    r = client.get("/auth/csrf")
+    assert r.status_code == 200
+    assert r.json()["csrf"]
