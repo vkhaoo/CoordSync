@@ -315,8 +315,9 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
 - ~~**Un utente in più aziende.**~~ FATTO il 5 settembre 2026, in tre strati:
   la tessera di appartenenza (con il travaso dei dati, a comportamento
   invariato), poi l'azienda attiva nel token con il cambio azienda, poi
-  l'invito a chi ha già un account. Il ruolo vale per azienda. Il selettore
-  compare solo a chi ne ha più d'una.
+  l'invito a chi ha già un account. Il ruolo vale per azienda. Le proprie
+  aziende si vedono sempre dal menu del proprio nome, anche quando è una sola:
+  nasconderle a chi ne ha una lasciava senza il modo di aprirne una seconda.
 - ~~**Dark mode.**~~ FATTO: interruttore nel menu del proprio nome, preferenza
   salvata in questo dispositivo (sul telefono lo si può volere scuro e sul fisso
   no). Il tema si applica prima che la pagina venga dipinta, così non c'è il
@@ -331,13 +332,15 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
   frontend** (attesa massima, tentativi ripetuti sulle sole letture, striscia
   "il server si sta svegliando" e nessun logout quando è solo la rete a
   mancare), **controlli in CI su migrazioni e compilazione del frontend**,
-  **guardia sulla SECRET_KEY** all'avvio in produzione. Restano: **backup
-  automatici del database** (oggi non ce n'è nessuno, ed è il rischio più
-  serio), dominio proprio con email dal dominio (SPF/DKIM/DMARC), piano Render
-  a pagamento quando ci saranno utenti veri.
-- **Test del frontend.** Il backend ha 224 test, l'interfaccia zero: le
-  regressioni lì si scoprono usando l'app. Servirebbe almeno una manciata di
-  prove sui pezzi che fanno ragionamento (`api.js`, il calcolo delle date).
+  **guardia sulla SECRET_KEY** all'avvio in produzione. Fatti anche i **backup
+  automatici del database**: una GitHub Action settimanale che fa il dump e lo
+  **cifra** (il repository è pubblico), in attesa solo dei due segreti da
+  mettere su GitHub. Restano: dominio proprio con email dal dominio
+  (SPF/DKIM/DMARC), piano Render a pagamento quando ci saranno utenti veri.
+- ~~**Test del frontend.**~~ FATTI il 5 settembre 2026: 17 prove su `api.js`
+  (cosa succede quando il server non risponde, e che una SCRITTURA non venga
+  mai riprovata) e su `date.js` (gli orari UTC letti come locali). Girano in CI
+  insieme al resto.
 
 ---
 
