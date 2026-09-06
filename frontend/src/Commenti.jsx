@@ -16,12 +16,52 @@ import { quandoRelativo } from "./date.js";
  * - correggere: solo chi ha scritto;
  * - togliere: chi ha scritto, oppure admin e caposquadra.
  */
+// Toglie accenti e maiuscole, per cercare un nome come lo si scrive di fretta
+// ("nicolo" deve trovare "Nicolò"). Stessa regola del server.
+function piatto(testo) {
+  return testo.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
+// Il pezzo di nome che si sta scrivendo adesso, se si e' dentro una chiocciola.
+// Si guarda solo il testo PRIMA del cursore: scrivendo in mezzo a una frase
+// gia' fatta, il suggerimento deve riguardare il nome che si sta digitando li'.
+function menzioneInCorso(testo, cursore) {
+  const prima = testo.slice(0, cursore);
+  const trovato = prima.match(/@([\p{L}\p{M} ]{0,30})$/u);
+  return trovato ? trovato[1] : null;
+}
+
 export default function Commenti({ commenti, setCommenti, io, gestisco,
-                                   puoiScrivere = true, vietato, onInvia }) {
+                                   persone = [], puoiScrivere = true,
+                                   vietato, onInvia }) {
   const [nuovo, setNuovo] = useState("");
+  const [frammento, setFrammento] = useState(null);   // null = nessun @ aperto
   const [correggo, setCorreggo] = useState(null);   // id del commento in modifica
   const [bozza, setBozza] = useState("");
   const [errore, setErrore] = useState(null);
+
+  // I nomi da suggerire: i colleghi, meno me stesso (nominarsi da soli non
+  // fa niente) e meno chi non c'entra col frammento scritto finora.
+  const suggeriti = frammento === null ? [] : persone
+    .filter((u) => (!io || u.id !== io.id) && piatto(u.nome).includes(piatto(frammento)))
+    .slice(0, 5);
+
+  function scrivendo(e) {
+    setNuovo(e.target.value);
+    setFrammento(menzioneInCorso(e.target.value, e.target.selectionStart));
+  }
+
+  function scegli(persona) {
+    // Sostituisco SOLO il frammento gia' scritto, non tutta la parola: il
+    // resto della frase (anche quello dopo il cursore) resta dov'e'.
+    setNuovo((prec) => {
+      const taglio = prec.lastIndexOf("@" + frammento);
+      if (taglio < 0) return prec;
+      return prec.slice(0, taglio) + "@" + persona.nome + " "
+           + prec.slice(taglio + 1 + frammento.length);
+    });
+    setFrammento(null);
+  }
 
   async function invia(e) {
     e.preventDefault();
@@ -30,6 +70,7 @@ export default function Commenti({ commenti, setCommenti, io, gestisco,
       const creato = await onInvia(nuovo);
       setCommenti((prec) => [...prec, creato]);
       setNuovo("");
+      setFrammento(null);
     } catch (err) { setErrore(err.message); }
   }
 
@@ -106,11 +147,31 @@ export default function Commenti({ commenti, setCommenti, io, gestisco,
       )}
 
       {puoiScrivere ? (
-        <form className="form-commento" onSubmit={invia}>
-          <input placeholder="Scrivi un commento…" value={nuovo}
-                 onChange={(e) => setNuovo(e.target.value)} required />
-          <button type="submit" className="mini">→</button>
-        </form>
+        <div className="scrivi-commento">
+          <form className="form-commento" onSubmit={invia}>
+            <input placeholder="Scrivi un commento… (@ per chiamare qualcuno)"
+                   value={nuovo} onChange={scrivendo}
+                   onKeyUp={(e) => setFrammento(
+                     menzioneInCorso(e.target.value, e.target.selectionStart))}
+                   onBlur={() => setTimeout(() => setFrammento(null), 150)}
+                   required />
+            <button type="submit" className="mini">→</button>
+          </form>
+
+          {/* Si suggeriscono solo i colleghi: il server avvisa comunque
+              soltanto chi quella cosa la vedeva gia'. */}
+          {suggeriti.length > 0 && (
+            <ul className="suggerimenti-menzione">
+              {suggeriti.map((u) => (
+                <li key={u.id}>
+                  <button type="button" className="voce"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => scegli(u)}>{u.nome}</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       ) : (
         vietato && <p className="vuoto piccolo">{vietato}</p>
       )}

@@ -320,6 +320,15 @@ input, select, textarea { font-family: var(--sans); }
 .commento-testo { flex: 1 1 60%; }
 .commento-testo { color: var(--testo); }
 .form-commento { display: flex; gap: 5px; }
+/* Suggerimenti dei nomi mentre si scrive @: SOPRA il campo e non sotto,
+   perche' il campo sta gia' in fondo alla card e sotto non ci sarebbe posto. */
+.scrivi-commento { position: relative; }
+.suggerimenti-menzione {
+  position: absolute; bottom: 100%; left: 0; z-index: 30;
+  list-style: none; margin: 0 0 4px; padding: 4px; min-width: 180px;
+  background: var(--pannello); border: 1px solid var(--linea);
+  border-radius: 8px; box-shadow: var(--ombra-2);
+}
 .form-commento input { flex: 1; min-width: 0; }
 
 /* Form inline */

@@ -366,7 +366,7 @@ export default function Dashboard({ onLogout }) {
           <GestioneReparti />
         </div>
       ) : vista === "macchine" ? (
-        <Macchine io={io} reparti={reparti} vaiA={macchinaDaAprire} />
+        <Macchine io={io} reparti={reparti} utenti={utenti} vaiA={macchinaDaAprire} />
       ) : vista === "agenda" ? (
         <Agenda io={io} utenti={utenti} />
       ) : (

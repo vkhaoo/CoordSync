@@ -34,6 +34,7 @@ from app.schemas.commento import CommentoCreate, CommentoUpdate, CommentoRead
 from app.dependencies import richiedi_azienda
 from app.visibilita import lavoro_visibile, macchina_visibile
 from app.avvisi import avvisa
+from app.menzioni import trova_menzionati, colleghi_che_possono_vedere
 from app.models.notifica import TipoAvviso
 
 router = APIRouter(prefix="/lavori/{lavoro_id}/commenti", tags=["commenti"])
@@ -114,8 +115,20 @@ def aggiungi_commento(lavoro_id: int, dati: CommentoCreate,
 
     # Avviso chi sta su quel lavoro (non me stesso: ci pensa avvisa()).
     anteprima = dati.testo if len(dati.testo) <= 60 else dati.testo[:57] + "..."
-    avvisa(db, lavoro.assegnatari, TipoAvviso.commento,
-           f"{current.nome} ha commentato \"{lavoro.titolo}\": {anteprima}",
+    avvisati = avvisa(db, lavoro.assegnatari, TipoAvviso.commento,
+                      f"{current.nome} ha commentato \"{lavoro.titolo}\": {anteprima}",
+                      mittente=current, lavoro_id=lavoro.id)
+
+    # E chi e' stato NOMINATO nel testo, se non l'ho gia' avvisato come
+    # assegnatario: due campanelle per lo stesso commento sono rumore.
+    gia_avvisati = {a.utente_id for a in avvisati}
+    nominati = trova_menzionati(
+        dati.testo,
+        [u for u in colleghi_che_possono_vedere(db, current, lavoro_id=lavoro.id)
+         if u.id not in gia_avvisati],
+    )
+    avvisa(db, nominati, TipoAvviso.menzione,
+           f"{current.nome} ti ha nominato su \"{lavoro.titolo}\": {anteprima}",
            mittente=current, lavoro_id=lavoro.id)
 
     db.commit()

@@ -24,6 +24,7 @@ class TipoAvviso(str, enum.Enum):
     commento = "commento"           # qualcuno ha scritto su un tuo lavoro
                                     # o sotto una tua voce di macchina
     impegno = "impegno"             # ti hanno messo in agenda un impegno o una riunione
+    menzione = "menzione"           # qualcuno ti ha nominato in un commento
 
 
 class Notifica(Base):

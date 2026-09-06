@@ -325,7 +325,7 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
 
       {aperto && (
         <Commenti commenti={commenti} setCommenti={setCommenti}
-                  io={io} gestisco={gestisco}
+                  io={io} gestisco={gestisco} persone={utenti}
                   puoiScrivere={possoAggiornare}
                   vietato="Solo chi è assegnato può commentare."
                   onInvia={(testo) => api.aggiungiCommento(lavoro.id, { testo })} />

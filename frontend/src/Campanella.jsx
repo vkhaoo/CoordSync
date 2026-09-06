@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { api } from "./api.js";
 import { quandoRelativo } from "./date.js";
 
-const ICONA = { assegnazione: "👤", commento: "💬", impegno: "📅" };
+const ICONA = { assegnazione: "👤", commento: "💬", impegno: "📅", menzione: "@" };
 
 // Ogni quanto ricontrollare se sono arrivati avvisi nuovi.
 // Un minuto e' un compromesso: abbastanza vivo da accorgersene, abbastanza

@@ -19,6 +19,58 @@ from app.models.reparto import Reparto
 from app.models.utente import Utente, RuoloUtente
 
 
+def _guardando_con_gli_occhi_di(db: Session, utente: Utente, organizzazione_id: int):
+    """Prepara un utente perche' le regole qui sotto valgano PER LUI.
+
+    Serve a una domanda sola: "questa cosa, il collega che ho appena nominato,
+    la vedeva gia'?". Le funzioni di questo file leggono org_attiva_id,
+    ruolo_attivo, reparti e id di chi chiede: normalmente le riempie
+    get_current_user su chi e' collegato, qui vanno riempite a mano su un
+    altro.
+
+    Restituisce None se quella persona in quest'azienda non ci lavora — ed e'
+    la risposta piu' importante: vuol dire che non deve vedere niente.
+
+    I due valori vengono RIMESSI com'erano (vedi chi chiama): sono proprieta'
+    non mappate appoggiate all'oggetto, e lasciarle sporche vorrebbe dire che
+    un controllo successivo, nella stessa richiesta, guarderebbe l'azienda
+    sbagliata.
+    """
+    from app.appartenenze import ruolo_in
+    ruolo = ruolo_in(db, utente, organizzazione_id)
+    if ruolo is None:
+        return None
+    return ruolo
+
+
+def vede_lavoro(db: Session, utente: Utente, organizzazione_id: int,
+                lavoro_id: int) -> bool:
+    """Quel lavoro, quella persona, lo vede gia'? (senza cambiarle niente)"""
+    return _vede(db, utente, organizzazione_id,
+                 lambda: lavoro_visibile(db, utente, lavoro_id) is not None)
+
+
+def vede_macchina(db: Session, utente: Utente, organizzazione_id: int,
+                  macchina_id: int) -> bool:
+    """Quella macchina, quella persona, la vede gia'?"""
+    return _vede(db, utente, organizzazione_id,
+                 lambda: macchina_visibile(db, utente, macchina_id) is not None)
+
+
+def _vede(db: Session, utente: Utente, organizzazione_id: int, domanda) -> bool:
+    ruolo = _guardando_con_gli_occhi_di(db, utente, organizzazione_id)
+    if ruolo is None:
+        return False
+
+    prima_org, prima_ruolo = utente._org_attiva_id, utente._ruolo_attivo
+    try:
+        utente._org_attiva_id = organizzazione_id
+        utente._ruolo_attivo = ruolo
+        return domanda()
+    finally:
+        utente._org_attiva_id, utente._ruolo_attivo = prima_org, prima_ruolo
+
+
 def condizione_progetti_visibili(db: Session, current: Utente):
     """La condizione SQL "questo progetto posso vederlo".
 

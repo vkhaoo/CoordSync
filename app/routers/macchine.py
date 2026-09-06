@@ -37,6 +37,7 @@ from app.visibilita import (macchine_visibili, macchina_visibile,
                             reparti_assegnabili, carica_reparti)
 from app.ricerca import condizione_testo
 from app.avvisi import avvisa
+from app.menzioni import trova_menzionati, colleghi_che_possono_vedere
 from app.models.notifica import TipoAvviso
 
 router = APIRouter(tags=["macchine"])
@@ -426,8 +427,19 @@ def commenta_voce(voce_id: int, dati: CommentoCreate, db: Session = Depends(get_
     # macchina la vedono in tanti, e una campanella che suona per ogni
     # commento su ogni impianto smette di volere dire niente.
     anteprima = dati.testo if len(dati.testo) <= 60 else dati.testo[:57] + "..."
-    avvisa(db, [voce.autore], TipoAvviso.commento,
-           f"{current.nome} ha commentato \"{voce.titolo}\": {anteprima}",
+    avvisati = avvisa(db, [voce.autore], TipoAvviso.commento,
+                      f"{current.nome} ha commentato \"{voce.titolo}\": {anteprima}",
+                      mittente=current, voce_id=voce.id)
+
+    # E chi e' stato NOMINATO, se non l'ho gia' avvisato come autore.
+    gia_avvisati = {a.utente_id for a in avvisati}
+    nominati = trova_menzionati(
+        dati.testo,
+        [u for u in colleghi_che_possono_vedere(db, current, macchina_id=voce.macchina_id)
+         if u.id not in gia_avvisati],
+    )
+    avvisa(db, nominati, TipoAvviso.menzione,
+           f"{current.nome} ti ha nominato su \"{voce.titolo}\": {anteprima}",
            mittente=current, voce_id=voce.id)
 
     db.commit()

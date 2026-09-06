@@ -17,7 +17,7 @@ const TIPI = {
 };
 const STATI = { da_fare: "Da fare", in_corso: "In corso", fatto: "Fatto" };
 
-export default function Macchine({ io, reparti, vaiA }) {
+export default function Macchine({ io, reparti, utenti = [], vaiA }) {
   const [macchine, setMacchine] = useState([]);
   const [selezionata, setSelezionata] = useState(null);
   const [scheda, setScheda] = useState(null);      // dettaglio della macchina aperta
@@ -365,7 +365,7 @@ export default function Macchine({ io, reparti, vaiA }) {
                 <h3 className="titolo-colonna">Informazioni utili</h3>
                 {info.map((v) => <VoceCard key={v.id} voce={v} io={io} gestisco={gestisco}
                                            azione={azione} argomenti={argomenti} figlie={[]}
-                                           sezioni={scheda.sezioni} />)}
+                                           sezioni={scheda.sezioni} utenti={utenti} />)}
               </div>
             )}
 
@@ -435,7 +435,7 @@ export default function Macchine({ io, reparti, vaiA }) {
                 {radici.map((v) => (
                   <VoceCard key={v.id} voce={v} io={io} gestisco={gestisco} azione={azione}
                             argomenti={argomenti} figlie={figliePer.get(v.id) || []}
-                            sezioni={scheda.sezioni} />
+                            sezioni={scheda.sezioni} utenti={utenti} />
                 ))}
               </ul>
             )}
@@ -447,7 +447,8 @@ export default function Macchine({ io, reparti, vaiA }) {
 }
 
 // Una riga dello storico.
-function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sezioni = [] }) {
+function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [],
+                   sezioni = [], utenti = [] }) {
   const mia = io && voce.autore && voce.autore.id === io.id;
   const posso = mia || gestisco;
   const [spostando, setSpostando] = useState(false);
@@ -699,7 +700,7 @@ function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sez
 
       {commentiAperti && (
         <Commenti commenti={commenti} setCommenti={setCommenti}
-                  io={io} gestisco={gestisco}
+                  io={io} gestisco={gestisco} persone={utenti}
                   onInvia={(testo) => api.commentaVoce(voce.id, testo)} />
       )}
 
@@ -709,7 +710,7 @@ function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sez
           {figlie.map((f) => (
             <VoceCard key={f.id} voce={f} io={io} gestisco={gestisco}
                       azione={azione} argomenti={argomenti} figlie={[]}
-                      sezioni={sezioni} />
+                      sezioni={sezioni} utenti={utenti} />
           ))}
         </ul>
       )}
