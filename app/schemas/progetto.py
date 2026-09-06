@@ -12,13 +12,14 @@ from pydantic import BaseModel, ConfigDict
 
 from app.schemas.allegato import AllegatoRead
 from app.schemas.reparto import RepartoRead
+from app.schemas.validators import UrlSicuro
 
 
 class ProgettoBase(BaseModel):
     """Campi comuni: quello che l'utente puo' fornire."""
     nome: str
     descrizione: str | None = None   # opzionale: se non arriva, resta None
-    link_documento: str | None = None  # link a un Excel/foglio esterno
+    link_documento: UrlSicuro | None = None  # link a un Excel/foglio esterno
 
 
 class ProgettoCreate(ProgettoBase):
@@ -33,7 +34,7 @@ class ProgettoUpdate(BaseModel):
     """Cosa si puo' MODIFICARE di un progetto (tutti opzionali)."""
     nome: str | None = None
     descrizione: str | None = None
-    link_documento: str | None = None
+    link_documento: UrlSicuro | None = None
     # Lista vuota esplicita = riporta il progetto fra i "generali".
     reparti_ids: list[int] | None = None
     macchina_id: int | None = None

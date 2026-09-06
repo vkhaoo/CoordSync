@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { linkSicuro } from "./link.js";
 
 // Lista di link appesi a una scheda. La stessa ovunque: macchina, sezione,
 // voce dello storico, progetto e lavoro.
@@ -17,7 +18,11 @@ export default function Allegati({ allegati, onAggiungi, onElimina }) {
     <div className="allegati">
       {allegati.map((a) => (
         <span key={a.id} className="chip allegato">
-          <a href={a.url} target="_blank" rel="noreferrer">🔗 {a.titolo || a.url}</a>
+          {linkSicuro(a.url)
+            ? <a href={linkSicuro(a.url)} target="_blank" rel="noreferrer">🔗 {a.titolo || a.url}</a>
+            /* Link non apribile (salvato prima del controllo, o pericoloso):
+               si mostra il testo, senza renderlo cliccabile. */
+            : <span className="tenue" title="Link non valido">🔗 {a.titolo || a.url}</span>}
           <button className="chip-x" title="Togli il link"
                   onClick={() => onElimina(a.id)}>×</button>
         </span>

@@ -3,9 +3,11 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.validators import UrlSicuro
+
 
 class AllegatoCreate(BaseModel):
-    url: str
+    url: UrlSicuro
     titolo: str | None = None   # etichetta leggibile; se manca si mostra il link
 
 

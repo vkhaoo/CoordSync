@@ -121,3 +121,53 @@ def test_una_password_lunghissima_viene_rifiutata(client):
     r = client.post("/auth/register", json={
         "nome": "Marco", "email": "marco@a.it", "password": "a1" + "z" * 100})
     assert r.status_code == 422
+
+
+# ---------- XSS MEMORIZZATO NEI LINK ----------
+
+def test_un_link_javascript_non_si_salva(client):
+    """Il buco piu' grave del secondo giro. Gli allegati sono link liberi e
+    finiscono in un <a href="...">: React NON protegge l'href, quindi un
+    "javascript:..." salvato li' e' codice che parte nel browser di chi ci
+    clicca — e da li' si agisce al posto suo. Il ruolo piu' basso bastava."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+
+    for veleno in ["javascript:fetch('/utenti')",
+                   "JaVaScRiPt:alert(1)",
+                   "  javascript:alert(1)",
+                   "data:text/html,<script>alert(1)</script>"]:
+        r = client.post(f"/progetti/{p['id']}/allegati",
+                        json={"url": veleno, "titolo": "Fattura"}, headers=a)
+        assert r.status_code == 422, f"accettato: {veleno}"
+
+    # e i link veri continuano a funzionare
+    assert client.post(f"/progetti/{p['id']}/allegati",
+                       json={"url": "https://drive.example.com/x.pdf"},
+                       headers=a).status_code == 201
+
+
+def test_nemmeno_come_documento_del_progetto(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    p = client.post("/progetti", json={"nome": "P"}, headers=a).json()
+
+    r = client.patch(f"/progetti/{p['id']}",
+                     json={"link_documento": "javascript:alert(1)"}, headers=a)
+    assert r.status_code == 422
+
+
+# ---------- HTML INIETTATO NELLE EMAIL ----------
+
+def test_il_nome_di_un_progetto_non_inietta_html_nelle_email():
+    """Titolo del lavoro e nome del progetto finiscono nell'HTML di un'email
+    che arriva a un COLLEGA: senza escape, si infila un link finto nella sua
+    posta. Non e' codice che gira, ma e' un ottimo aggancio per una truffa."""
+    from app.email_templates import assegnazione_lavoro
+
+    _, _, html = assegnazione_lavoro(
+        nome="Luca", chi_assegna="Marco",
+        titolo='<a href="http://truffa.example">Clicca per il rimborso</a>',
+        progetto="Linea 3", scadenza=None, link="http://app.example")
+
+    assert 'href="http://truffa.example"' not in html
+    assert "&lt;a href=" in html

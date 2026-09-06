@@ -11,6 +11,7 @@ import CampoRicerca from "./CampoRicerca.jsx";
 import Tendina from "./Tendina.jsx";
 import RicercaGlobale from "./RicercaGlobale.jsx";
 import SceltaAzienda from "./SceltaAzienda.jsx";
+import { linkSicuro } from "./link.js";
 import Campanella from "./Campanella.jsx";
 import MioProfilo from "./MioProfilo.jsx";
 import CambiaPassword from "./CambiaPassword.jsx";
@@ -468,7 +469,8 @@ export default function Dashboard({ onLogout }) {
                   ) : (
                     <>
                       {progettoCorrente.link_documento ? (
-                        <a href={progettoCorrente.link_documento} target="_blank" rel="noreferrer" className="doc-link">
+                        <a href={linkSicuro(progettoCorrente.link_documento) || undefined}
+                           target="_blank" rel="noreferrer" className="doc-link">
                           📄 Documento collegato
                         </a>
                       ) : (

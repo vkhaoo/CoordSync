@@ -33,3 +33,28 @@ def _valida_password(v: str) -> str:
 
 # Tipo riutilizzabile: una stringa che deve rispettare _valida_password.
 PasswordStr = Annotated[str, AfterValidator(_valida_password)]
+
+
+# --- Link scritti dagli utenti ---------------------------------------------
+# Gli allegati sono link liberi, e finiscono dentro un <a href="...">.
+# React NON protegge l'attributo href: un "javascript:qualcosa" salvato qui
+# diventa codice che parte nel browser di chi ci clicca — un collega, un
+# amministratore — e da li' si puo' agire al posto suo. E' XSS memorizzato, e
+# il ruolo piu' basso basta per piazzarlo.
+#
+# Si permettono SOLO http e https. Non e' una lista di cose vietate (quelle si
+# aggirano sempre): e' una lista di cose permesse, che e' l'unico modo di
+# stare tranquilli.
+SCHEMI_PERMESSI = ("http://", "https://")
+
+
+def _valida_url(v: str) -> str:
+    ripulito = v.strip()
+    if not ripulito:
+        raise ValueError("Il link non puo' essere vuoto")
+    if not ripulito.lower().startswith(SCHEMI_PERMESSI):
+        raise ValueError("Il link deve iniziare con http:// o https://")
+    return ripulito
+
+
+UrlSicuro = Annotated[str, AfterValidator(_valida_url)]

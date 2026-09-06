@@ -10,6 +10,23 @@ _ACCIAIO = "#1e2a38"
 _AMBRA = "#e6a817"
 
 
+def _e(valore) -> str:
+    """Rende innocuo un testo scritto da un utente prima di metterlo nell'HTML.
+
+    Nome, azienda, titolo del lavoro e nome del progetto finiscono dentro il
+    corpo HTML di email che arrivano ad ALTRE persone. Senza questo, chiamare
+    un progetto <a href="...">Clicca per il rimborso</a> significa infilare un
+    link finto nella posta di un collega: non e' codice che gira, ma e' un
+    ottimo aggancio per una truffa.
+
+    Si escapa solo il ramo HTML: la versione testuale non ne ha bisogno, e
+    anzi li' l'escape si vedrebbe (una ditta "Rossi & Figli" diventerebbe
+    "Rossi &amp; Figli").
+    """
+    import html as _html
+    return _html.escape(str(valore), quote=True)
+
+
 def _layout(titolo: str, righe_html: str, cta_testo: str = None, cta_link: str = None) -> str:
     """Impagina un'email in HTML: intestazione, corpo e (opzionale) pulsante."""
     bottone = ""
@@ -79,7 +96,7 @@ def cambio_email(nome: str, link: str):
         "Il team di CoordSync"
     )
     html = _layout(
-        titolo=f"Ciao {nome}, confermi questo indirizzo?",
+        titolo=f"Ciao {_e(nome)}, confermi questo indirizzo?",
         righe_html=(
             _riga("Hai chiesto di usare questo indirizzo per entrare in CoordSync.") +
             _riga("Il cambio diventa attivo solo aprendo il collegamento qui sotto: "
@@ -111,7 +128,7 @@ def verifica_email(nome: str, link: str):
         "Il team di CoordSync"
     )
     html = _layout(
-        titolo=f"Ciao {nome}, conferma la tua email",
+        titolo=f"Ciao {_e(nome)}, conferma la tua email",
         righe_html=(
             _riga("Grazie per aver iniziato a usare CoordSync.") +
             _riga("Per completare la registrazione, conferma il tuo indirizzo email:")
@@ -142,9 +159,9 @@ def invito(nome: str, azienda: str, link: str):
         "Il team di CoordSync"
     )
     html = _layout(
-        titolo=f"Ciao {nome}, ti aspettiamo su CoordSync",
+        titolo=f"Ciao {_e(nome)}, ti aspettiamo su CoordSync",
         righe_html=(
-            _riga(f"Sei stato invitato a unirti a <strong>{azienda}</strong> su CoordSync.") +
+            _riga(f"Sei stato invitato a unirti a <strong>{_e(azienda)}</strong> su CoordSync.") +
             _riga("Per attivare il tuo account, scegli la tua password:")
         ),
         cta_testo="Accetta l'invito",
@@ -171,7 +188,7 @@ def reset_password(nome: str, link: str):
         "Il team di CoordSync"
     )
     html = _layout(
-        titolo=f"Ciao {nome}, reimposta la password",
+        titolo=f"Ciao {_e(nome)}, reimposta la password",
         righe_html=(
             _riga("Abbiamo ricevuto una richiesta di reimpostazione della password del tuo account.") +
             _riga("Scegli una nuova password cliccando qui sotto:")
@@ -208,12 +225,12 @@ def promemoria_impegno(nome: str, titolo: str, quando: str, luogo: str | None,
     testo = "\n".join(parti)
 
     righe = _riga(f"Ti ricordo che <strong>fra {fra_quanto}</strong> hai in agenda:")
-    righe += _riga(f'<span style="font-size:17px; color:{_ACCIAIO};"><strong>{titolo}</strong></span>')
-    righe += _riga(f"Quando: {quando}")
+    righe += _riga(f'<span style="font-size:17px; color:{_ACCIAIO};"><strong>{_e(titolo)}</strong></span>')
+    righe += _riga(f"Quando: {_e(quando)}")
     if luogo:
-        righe += _riga(f"Dove: {luogo}")
+        righe += _riga(f"Dove: {_e(luogo)}")
 
-    html = _layout(titolo=f"Ciao {nome}, un promemoria", righe_html=righe,
+    html = _layout(titolo=f"Ciao {_e(nome)}, un promemoria", righe_html=righe,
                    cta_testo="Apri l'agenda", cta_link=link)
     return oggetto, testo, html
 
@@ -242,13 +259,13 @@ def assegnazione_lavoro(nome: str, chi_assegna: str, titolo: str,
     parti += ["", "Lo trovi qui:", link, "", "Il team di CoordSync"]
     testo = "\n".join(parti)
 
-    righe = _riga(f"<strong>{chi_assegna}</strong> ti ha assegnato un lavoro:")
-    righe += _riga(f'<span style="font-size:17px; color:{_ACCIAIO};"><strong>{titolo}</strong></span>')
-    righe += _riga(f"Progetto: {progetto}")
+    righe = _riga(f"<strong>{_e(chi_assegna)}</strong> ti ha assegnato un lavoro:")
+    righe += _riga(f'<span style="font-size:17px; color:{_ACCIAIO};"><strong>{_e(titolo)}</strong></span>')
+    righe += _riga(f"Progetto: {_e(progetto)}")
     if scadenza:
-        righe += _riga(f"Da fare entro: <strong>{scadenza}</strong>")
+        righe += _riga(f"Da fare entro: <strong>{_e(scadenza)}</strong>")
 
-    html = _layout(titolo=f"Ciao {nome}, un lavoro per te", righe_html=righe,
+    html = _layout(titolo=f"Ciao {_e(nome)}, un lavoro per te", righe_html=righe,
                    cta_testo="Apri CoordSync", cta_link=link)
     return oggetto, testo, html
 
@@ -276,9 +293,9 @@ def invito_azienda(nome: str, azienda: str, link: str):
         "Il team di CoordSync"
     )
     html = _layout(
-        titolo=f"Ciao {nome}, ti vogliono in {azienda}",
+        titolo=f"Ciao {_e(nome)}, ti vogliono in {_e(azienda)}",
         righe_html=(
-            _riga(f"Ti hanno invitato a lavorare anche per <strong>{azienda}</strong>.") +
+            _riga(f"Ti hanno invitato a lavorare anche per <strong>{_e(azienda)}</strong>.") +
             _riga("Il tuo account resta lo stesso: accettando, questa azienda si "
                   "aggiunge a quelle fra cui puoi passare, senza una seconda password.")
         ),
