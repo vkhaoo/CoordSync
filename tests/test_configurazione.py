@@ -56,3 +56,18 @@ def test_con_una_chiave_vera_la_produzione_parte():
     controlla_configurazione(_impostazioni(
         database_url="postgresql://utente:parola@host/db",
         secret_key="una-chiave-lunga-e-casuale-che-nessuno-conosce-12345"))
+
+
+def test_la_produzione_si_riconosce_dal_database_non_solo_da_ambiente():
+    """/docs era rimasto acceso online perche' guardava solo AMBIENTE, che
+    nessuno aveva impostato. Ora la produzione si riconosce dal database
+    PostgreSQL, che in produzione c'e' per forza."""
+    from app.config import e_produzione
+
+    # locale: SQLite, niente AMBIENTE -> non e' produzione
+    assert e_produzione(_impostazioni()) is False
+    # produzione: PostgreSQL anche SENZA AMBIENTE -> e' produzione
+    assert e_produzione(_impostazioni(
+        database_url="postgresql://u:p@host/db")) is True
+    # e AMBIENTE da solo basta comunque
+    assert e_produzione(_impostazioni(ambiente="produzione")) is True

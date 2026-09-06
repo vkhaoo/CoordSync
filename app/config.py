@@ -101,6 +101,23 @@ class ConfigurazioneInsicura(RuntimeError):
     """L'app e' configurata in modo che non si puo' accettare in produzione."""
 
 
+def e_produzione(impostazioni: Settings = None) -> bool:
+    """"Siamo in produzione?".
+
+    Si riconosce dal database PostgreSQL (in locale e' SQLite) OPPURE da
+    AMBIENTE=produzione. Il database e' la spia piu' affidabile: AMBIENTE e'
+    facoltativa e ci si dimentica di impostarla — e' successo davvero, con
+    /docs rimasto acceso online perche' guardava solo AMBIENTE. Legare le
+    protezioni al database, che in produzione c'e' per forza, le rende
+    indimenticabili.
+    """
+    imp = impostazioni or settings
+    return (
+        imp.db_url_normalizzato.startswith("postgresql")
+        or imp.ambiente.lower().startswith("produzione")
+    )
+
+
 def controlla_configurazione(impostazioni: Settings = None) -> None:
     """Si arrabbia all'avvio se la produzione gira con la chiave di ripiego.
 
@@ -108,18 +125,9 @@ def controlla_configurazione(impostazioni: Settings = None) -> None:
     chiave chiunque puo' fabbricarsi un token valido per qualsiasi account, e
     un avviso nei log non lo legge nessuno finche' non e' troppo tardi. Un
     deploy che fallisce si nota subito; un'app aperta a chiunque no.
-
-    "Siamo in produzione" si riconosce dal database PostgreSQL (in locale e'
-    SQLite) oppure da AMBIENTE impostato a mano. Non si usa solo AMBIENTE
-    perche' e' facoltativa: se qualcuno dimentica di impostarla, il controllo
-    si spegnerebbe proprio dove serve.
     """
     imp = impostazioni or settings
-    in_produzione = (
-        imp.db_url_normalizzato.startswith("postgresql")
-        or imp.ambiente.lower().startswith("produzione")
-    )
-    if in_produzione and imp.secret_key == CHIAVE_DI_RIPIEGO:
+    if e_produzione(imp) and imp.secret_key == CHIAVE_DI_RIPIEGO:
         raise ConfigurazioneInsicura(
             "SECRET_KEY non e' impostata: l'app userebbe la chiave di esempio "
             "scritta nel codice, e chiunque potrebbe fabbricarsi un accesso. "

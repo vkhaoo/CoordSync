@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.osservabilita import prepara_log, prepara_sentry, traccia_richieste
-from app.config import controlla_configurazione, settings as _settings
+from app.config import controlla_configurazione, e_produzione, settings as _settings
 
 from app import models  # noqa: F401  (importa i modelli cosi' vengono registrati)
 from app.routers import auth
@@ -41,8 +41,10 @@ controlla_configurazione()
 
 # La documentazione interattiva (/docs, /openapi.json) e' comodissima mentre si
 # sviluppa, ma in produzione e' la mappa completa dell'API servita a chiunque:
-# la si spegne quando l'ambiente e' "produzione".
-_in_produzione = _settings.ambiente.lower().startswith("produzione")
+# la si spegne in produzione. Si usa e_produzione() e non la sola variabile
+# AMBIENTE proprio perche' quella si dimentica: /docs era rimasto acceso online
+# per questo.
+_in_produzione = e_produzione()
 app = FastAPI(
     title="CoordSync",
     version="0.1.0",
