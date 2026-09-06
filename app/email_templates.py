@@ -58,6 +58,47 @@ def _riga(testo: str) -> str:
     return f'<tr><td style="font-size:15px; color:#3a4653; line-height:1.6; padding:4px 0;">{testo}</td></tr>'
 
 
+def cambio_email(nome: str, link: str):
+    """Conferma di un indirizzo NUOVO, mandata al nuovo indirizzo.
+
+    Il cambio non e' ancora avvenuto: succede solo cliccando. E' voluto — un
+    errore di battitura nell'indirizzo, se il cambio fosse immediato, ti
+    chiuderebbe fuori dal tuo account senza rimedio. Cosi' invece l'unico modo
+    di completare il cambio e' dimostrare che alla casella nuova ci arrivi.
+    """
+    oggetto = "Conferma il tuo nuovo indirizzo email"
+    testo = (
+        f"Ciao {nome},\n\n"
+        "hai chiesto di usare questo indirizzo per entrare in CoordSync.\n\n"
+        "Il cambio non e' ancora attivo: lo diventa aprendo questo link.\n\n"
+        f"{link}\n\n"
+        "Il link scade tra un'ora. Finche' non lo apri, si entra ancora con "
+        "l'indirizzo di prima.\n\n"
+        "Se non sei stato tu, ignora questa email: senza il tuo clic non "
+        "cambia niente.\n\n"
+        "Il team di CoordSync"
+    )
+    html = _layout(
+        titolo=f"Ciao {nome}, confermi questo indirizzo?",
+        righe_html=(
+            _riga("Hai chiesto di usare questo indirizzo per entrare in CoordSync.") +
+            _riga("Il cambio diventa attivo solo aprendo il collegamento qui sotto: "
+                  "fino ad allora si entra con l'indirizzo di prima.")
+        ),
+        cta_testo="Confermo questo indirizzo",
+        cta_link=link,
+    )
+    html = html.replace(
+        "</tbody></table>",
+        _riga('<span style="font-size:13px; color:#8a94a0;">Il link scade tra '
+              "un'ora. Se non sei stato tu, ignora pure: senza il tuo clic non "
+              'cambia niente.</span>') +
+        "</tbody></table>",
+        1,
+    )
+    return oggetto, testo, html
+
+
 def verifica_email(nome: str, link: str):
     oggetto = "Conferma il tuo indirizzo email"
     testo = (

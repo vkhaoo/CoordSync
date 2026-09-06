@@ -306,8 +306,19 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
   resta alla squadra, l'identità sparisce). ~~Resta il **secondo fattore** (TOTP).~~ **FATTO** il 5 settembre 2026:
   facoltativo e spento di default, con otto codici di recupero mostrati una
   volta sola (chi perde il telefono deve avere una via d'uscita). Non si
-  accende senza prima aver dimostrato che il telefono genera codici giusti. La parte legale
-  (informativa, base giuridica) vuole una consulenza vera.
+  accende senza prima aver dimostrato che il telefono genera codici giusti. Fatta anche la
+  **rettifica dei propri dati** (art. 16): il nome si corregge subito,
+  l'indirizzo email solo confermando un link mandato al nuovo indirizzo — se
+  bastasse scriverlo, un errore di battitura chiuderebbe fuori dal proprio
+  account senza rimedio.
+
+  **Restano cose che non sono codice**: informativa privacy e base giuridica,
+  registro dei trattamenti, contratti con i fornitori (Render, Brevo, Sentry,
+  GitHub) e la verifica di dove stanno fisicamente i dati — Render è
+  americana, e la regione del database decide se c'è un trasferimento
+  extra-UE da coprire. Vogliono una consulenza vera, non un programmatore.
+  Manca inoltre una **regola di conservazione** (per quanto tempo si tengono i
+  dati) e il collegamento a una pagina di informativa dentro l'app.
 - **Token in cookie httpOnly** invece che in localStorage: più robusto contro
   XSS, ma è un intervento trasversale (CORS con credenziali, gestione lato
   backend) che può rompere l'accesso in produzione. È rimasta l'ultima voce

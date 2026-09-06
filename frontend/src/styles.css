@@ -990,3 +990,15 @@ input, select, textarea { font-family: var(--sans); }
   border-color: var(--acciaio-800); }
 .banner-invito .banner-azione.secondaria { background: transparent;
   color: var(--acciaio-900); border-color: var(--acciaio-700); }
+
+/* I propri dati nel menu del nome: il collegamento "cambia" sta sulla riga,
+   staccato dal testo. */
+.blocco-miei-dati { margin-bottom: 0.8rem; }
+/* Il "cambia" sta SULLA riga del dato, non sotto: senza display:inline il
+   pulsante andava a capo da solo (misurato: finiva a sinistra del nome). */
+.blocco-miei-dati .riga-profilo .link-testo {
+  display: inline; margin: 0 0 0 0.5rem; padding: 0; font-size: 0.76rem;
+}
+.blocco-miei-dati input { width: 100%; margin-bottom: 0.4rem; }
+.blocco-miei-dati .form-inline input { margin-bottom: 0; }
+.ok.piccolo { font-size: 0.82rem; line-height: 1.45; margin: 0 0 0.5rem; }

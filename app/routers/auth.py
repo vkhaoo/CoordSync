@@ -29,6 +29,7 @@ from app import due_fattori, limiti, sessione
 from app.email_templates import (
     verifica_email as email_verifica_template,
     reset_password as email_reset_template,
+    cambio_email as email_cambio_template,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -346,6 +347,122 @@ def reset_password(dati: ResetPasswordRichiesta, db: Session = Depends(get_db)):
     utente.deve_cambiare_password = False
     db.commit()
     return {"messaggio": "Password reimpostata. Ora puoi accedere."}
+
+
+# ---------- CORREGGERE I PROPRI DATI ----------
+#
+# Il diritto di rettifica: chi si accorge che il proprio nome e' scritto male,
+# o che deve cambiare indirizzo, deve poterlo fare da solo. Il nome cambia
+# subito; l'email no, e il perche' e' spiegato sotto.
+
+SCOPO_CAMBIO_EMAIL = "cambio_email"
+
+
+class ModificaProfilo(BaseModel):
+    nome: str
+
+
+@router.patch("/me", response_model=UtenteRead)
+def modifica_profilo(dati: ModificaProfilo, db: Session = Depends(get_db),
+                     current: Utente = Depends(get_current_user)):
+    """Corregge il proprio nome.
+
+    Non serve la password: il nome non apre nessuna porta, e chiederla per
+    correggere un accento renderebbe la cosa cosi' scomoda da non farla.
+    """
+    nome = dati.nome.strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="Il nome non puo' essere vuoto")
+
+    current.nome = nome
+    db.commit()
+    db.refresh(current)
+
+    risposta = UtenteRead.model_validate(current).model_dump()
+    risposta["organizzazione_id"] = current.org_attiva_id
+    risposta["ruolo"] = current.ruolo_attivo
+    return risposta
+
+
+class CambioEmail(BaseModel):
+    password: str        # chi si e' seduto al tuo posto non deve poterla cambiare
+    nuova_email: EmailStr
+
+
+@router.post("/cambia-email", status_code=202)
+def chiedi_cambio_email(dati: CambioEmail, db: Session = Depends(get_db),
+                        current: Utente = Depends(get_current_user)):
+    """Chiede di cambiare il proprio indirizzo. NON lo cambia ancora.
+
+    Il cambio avviene solo aprendo il link mandato al nuovo indirizzo, e non
+    e' un fastidio inutile: l'email e' la chiave con cui si entra e l'unico
+    modo di recuperare la password. Se bastasse scriverla, un errore di
+    battitura chiuderebbe fuori dal proprio account senza rimedio — l'unica
+    via di recupero punterebbe a una casella che non esiste.
+
+    Serve anche la password perche' cambiare indirizzo vuol dire, di fatto,
+    spostare l'account: non deve poterlo fare chi si siede al tuo posto
+    mentre sei collegato.
+    """
+    if not current.password_hash or not verifica_password(dati.password, current.password_hash):
+        raise HTTPException(status_code=401, detail="Password non corretta")
+
+    nuova = dati.nuova_email.strip().lower()
+    if nuova == current.email.lower():
+        raise HTTPException(status_code=400,
+                            detail="E' gia' il tuo indirizzo.")
+
+    if db.query(Utente).filter(Utente.email == nuova).first() is not None:
+        raise HTTPException(status_code=409,
+                            detail="Quell'indirizzo e' gia' usato da un altro account.")
+
+    # Chi e dove: dentro il token, cosi' non serve tenere in giro cambi in
+    # sospeso da pulire se poi nessuno conferma.
+    token = crea_token_scopo(f"{current.id}:{nuova}", SCOPO_CAMBIO_EMAIL,
+                             durata_minuti=60)
+    link = f"{settings.frontend_url}/?cambio_email_token={token}"
+    oggetto, testo, html = email_cambio_template(current.nome, link)
+    # L'email va al NUOVO indirizzo: e' li' che si deve dimostrare di arrivare.
+    invia_email(destinatario=nuova, oggetto=oggetto, corpo=testo, corpo_html=html)
+    return {"messaggio": f"Ti ho mandato un link a {nuova}. "
+                         "Il cambio diventa attivo aprendolo."}
+
+
+class ConfermaCambioEmail(BaseModel):
+    token: str
+
+
+@router.post("/conferma-email", status_code=200)
+def conferma_cambio_email(dati: ConfermaCambioEmail, db: Session = Depends(get_db)):
+    """Applica il cambio di indirizzo. Non serve essere collegati: il link e'
+    arrivato a quella casella, e aprirlo e' la prova che serviva."""
+    soggetto = leggi_token_scopo(dati.token, SCOPO_CAMBIO_EMAIL)
+    if soggetto is None:
+        raise HTTPException(status_code=400, detail="Link non valido o scaduto")
+
+    try:
+        utente_id, nuova = soggetto.split(":", 1)
+        utente_id = int(utente_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="Link non valido")
+
+    utente = db.query(Utente).filter(Utente.id == utente_id).first()
+    if utente is None:
+        raise HTTPException(status_code=400, detail="Link non valido")
+
+    # Ricontrollo adesso: fra la richiesta e il clic qualcun altro potrebbe
+    # essersi preso quell'indirizzo.
+    altro = db.query(Utente).filter(Utente.email == nuova,
+                                    Utente.id != utente.id).first()
+    if altro is not None:
+        raise HTTPException(status_code=409,
+                            detail="Nel frattempo quell'indirizzo e' stato preso da un altro account.")
+
+    utente.email = nuova
+    # Verificata per definizione: il link e' arrivato proprio li'.
+    utente.email_verificata = True
+    db.commit()
+    return {"messaggio": "Indirizzo aggiornato. Da adesso entri con questo."}
 
 
 # ---------- CAMBIO PASSWORD (utente loggato) ----------

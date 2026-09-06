@@ -172,6 +172,11 @@ export const api = {
   // L'uscita la deve fare il server: il cookie della sessione e' HttpOnly,
   // quindi da qui non si puo' cancellare.
   esci:     () => richiesta("POST", "/auth/logout"),
+  // Correggere i propri dati (diritto di rettifica).
+  modificaProfilo: (nome) => richiesta("PATCH", "/auth/me", { nome }),
+  cambiaEmail: (password, nuova_email) =>
+    richiesta("POST", "/auth/cambia-email", { password, nuova_email }),
+  confermaEmail: (token) => richiesta("POST", "/auth/conferma-email", { token }),
   reinviaVerifica: () => richiesta("POST", "/auth/reinvia-verifica"),
   richiediReset: (email) => richiesta("POST", "/auth/richiedi-reset", { email }),
   resetPassword: (token, nuova_password) => richiesta("POST", "/auth/reset-password", { token, nuova_password }),

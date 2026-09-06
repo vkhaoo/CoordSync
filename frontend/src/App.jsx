@@ -5,6 +5,7 @@ import ResetPassword from "./ResetPassword.jsx";
 import AccettaInvito from "./AccettaInvito.jsx";
 import AvvisoRete from "./AvvisoRete.jsx";
 import AccettaInvitoAzienda from "./AccettaInvitoAzienda.jsx";
+import ConfermaEmail from "./ConfermaEmail.jsx";
 
 // Leggo eventuali token dall'indirizzo (arrivo da un link email).
 const parametri = new URLSearchParams(window.location.search);
@@ -12,6 +13,8 @@ const tokenReset = parametri.get("reset_token");
 const tokenInvito = parametri.get("invito_token");
 // Invito rivolto a chi ha gia' un account: aggiunge un'azienda alle sue.
 const tokenInvitoAzienda = parametri.get("invito_azienda_token");
+// Conferma di un nuovo indirizzo email: il cambio avviene solo qui.
+const tokenCambioEmail = parametri.get("cambio_email_token");
 
 export default function App() {
   // "stato" = dati che, se cambiano, ridisegnano lo schermo da soli.
@@ -35,7 +38,9 @@ export default function App() {
   useEffect(() => {
     // Le pagine che si aprono da un link email non hanno bisogno di sessione:
     // inutile disturbare il server.
-    if (tokenReset || tokenInvito || tokenInvitoAzienda) { setConnesso(false); return; }
+    if (tokenReset || tokenInvito || tokenInvitoAzienda || tokenCambioEmail) {
+      setConnesso(false); return;
+    }
 
     api.me()
       .then(() => setConnesso(true))
@@ -51,6 +56,12 @@ export default function App() {
   // Se arrivo dal link dell'email, mostro la pagina per la nuova password.
   if (tokenReset) {
     return <><AvvisoRete /><ResetPassword token={tokenReset}
+             onFatto={() => { window.location.href = window.location.origin; }} /></>;
+  }
+
+  // Conferma del nuovo indirizzo email.
+  if (tokenCambioEmail) {
+    return <><AvvisoRete /><ConfermaEmail token={tokenCambioEmail}
              onFatto={() => { window.location.href = window.location.origin; }} /></>;
   }
 

@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { api, setToken } from "./api.js";
 import { temaCorrente, impostaTema } from "./tema.js";
 import DueFattori from "./DueFattori.jsx";
+import MieiDati from "./MieiDati.jsx";
 
 // Il menu del proprio account, aperto cliccando il nome nella barra.
 // Sta qui e non nel pannello Utenti (che e' solo per l'admin) perche'
 // scaricare i propri dati e' un diritto di chiunque, non un privilegio.
-export default function MioProfilo({ io, onLogout, onCambiaAzienda }) {
+export default function MioProfilo({ io, onLogout, onCambiaAzienda, onDatiCambiati }) {
   const [aperto, setAperto] = useState(false);
   const [tema, setTema] = useState(temaCorrente);
   const [errore, setErrore] = useState(null);
@@ -117,7 +118,7 @@ export default function MioProfilo({ io, onLogout, onCambiaAzienda }) {
                 {tema === "scuro" ? "🌙 Scuro" : "☀️ Chiaro"}
               </button>
             </div>
-            <p className="riga-profilo"><strong>{io.nome}</strong><br />{io.email}</p>
+            <MieiDati io={io} onAggiornato={onDatiCambiati} />
 
             {/* Le proprie aziende, SEMPRE visibili — anche quando e' una sola.
                 Prima comparivano solo a chi ne aveva piu' d'una, per non

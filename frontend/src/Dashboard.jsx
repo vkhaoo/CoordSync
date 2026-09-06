@@ -312,7 +312,8 @@ export default function Dashboard({ onLogout }) {
             onVaiAllAgenda={() => setVista("agenda")} />
           <Campanella onVaiAlLavoro={vaiAlLavoro} />
           <MioProfilo io={io} onLogout={onLogout}
-                      onCambiaAzienda={() => setScegliAzienda(true)} />
+                      onCambiaAzienda={() => setScegliAzienda(true)}
+                      onDatiCambiati={(aggiornato) => setIo(aggiornato)} />
           <button className="esci" onClick={onLogout}>Esci</button>
         </div>
       </header>
