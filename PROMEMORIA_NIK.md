@@ -102,6 +102,31 @@ Cosa fare, in ordine di preferenza:
 3. Anche se passi al piano a pagamento, prendi l'abitudine di un dump ogni tanto:
    un backup che non hai mai provato a ripristinare non è un backup.
 
+### [!] Un dominio tuo: serve prima di quanto sembri
+
+Oggi il sito sta su `coordsync.onrender.com` e il backend su
+`coordsync-backend.onrender.com`. Sono **due host diversi**, e questo non e' un
+dettaglio estetico: il cookie della sessione risulta "di terza parte".
+
+Funziona perche' e' marcato `SameSite=None; Secure`, ma **Safari e Firefox
+bloccano i cookie di terza parte in modo predefinito**. Su quei browser il
+rischio concreto e' che l'utente risulti scollegato subito dopo aver fatto
+l'accesso. Non ho modo di provarlo da qui: **provalo tu su un iPhone o su
+Firefox prima che lo scopra un cliente.**
+
+La soluzione e' un dominio tuo, con il sito e l'API sotto lo stesso tetto:
+
+- `app.iltuodominio.it` per il sito
+- `api.iltuodominio.it` per il backend
+- il cookie con `Domain=.iltuodominio.it`
+
+Cosi' i cookie tornano di prima parte e il problema sparisce del tutto — e
+sparisce anche la stessa radice che mi ha fatto rompere le scritture (le due
+parti dell'app smettono di essere "siti estranei" l'una per l'altra).
+
+Ti serve comunque un dominio per le email (SPF/DKIM/DMARC) e per la vetrina:
+e' la stessa spesa che risolve tre cose insieme.
+
 ### [!] Accendi i backup automatici (due segreti, cinque minuti)
 
 Ho scritto il lavoro che li fa: `.github/workflows/backup.yml`. Ogni lunedì
