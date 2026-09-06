@@ -70,7 +70,11 @@ def _impegni_visibili(db: Session, current: Utente, ambito: str):
         return query.filter(_con_partecipante(db, [current.id]))
 
     if ambito == "azienda":
-        return query
+        # Qui serve il filtro sull'AZIENDA DELL'IMPEGNO, non basta quella
+        # dell'organizzatore: chi lavora per due clienti e' membro di
+        # entrambi, e senza questa riga la riunione riservata di uno finiva
+        # sotto gli occhi dei colleghi dell'altro.
+        return query.filter(Impegno.organizzazione_id == current.org_attiva_id)
 
     # "reparto": i colleghi con cui divido almeno un reparto, piu' me stesso.
     ids_reparti = [r.id for r in current.reparti]
@@ -167,6 +171,10 @@ def crea_impegno(dati: ImpegnoCreate, db: Session = Depends(get_db),
         inizio=dati.inizio, fine=dati.fine,
         promemoria_minuti=dati.promemoria_minuti,
         organizzatore_id=current.id,
+        # L'azienda in cui lo si sta prendendo: senza, per capire chi puo'
+        # vederlo si guarderebbe l'organizzatore, che puo' lavorare per due
+        # aziende — e la riunione di una comparirebbe nell'agenda dell'altra.
+        organizzazione_id=current.org_attiva_id,
         lavoro_id=dati.lavoro_id, macchina_id=dati.macchina_id,
     )
     impegno.partecipanti = partecipanti

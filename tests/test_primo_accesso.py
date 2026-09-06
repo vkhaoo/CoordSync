@@ -130,3 +130,17 @@ def test_chi_arriva_per_invito_non_crea_nessuna_azienda(client):
     assert aziende[0]["ruolo"] == "operatore"
     # e vede il posto di lavoro, senza essersi mai creata niente
     assert client.get("/progetti", headers=sua).status_code == 200
+
+
+def test_senza_azienda_ci_si_puo_comunque_portare_via_i_propri_dati(client):
+    """Scaricare i propri dati e' un diritto, e non dipende dall'appartenere a
+    un'azienda. Qui si andava in errore 500: il ruolo esiste solo dentro
+    un'azienda, e chi non ne ha ancora una non ce l'ha."""
+    io = registra_solo_account(client, "Marco", "marco@a.it")
+
+    r = client.get("/auth/me/export", headers=io)
+    assert r.status_code == 200
+    dati = r.json()
+    assert dati["profilo"]["email"] == "marco@a.it"
+    assert dati["profilo"]["ruolo"] is None
+    assert dati["profilo"]["azienda"] is None

@@ -52,6 +52,16 @@ class Impegno(Base):
     # Chi ha organizzato l'impegno. E' lui a poterlo modificare o cancellare
     # (insieme a chi coordina): un invitato non deve poter spostare la riunione
     # a tutti gli altri.
+    # In QUALE azienda e' stato preso questo impegno.
+    #
+    # Senza, un impegno appartiene solo a delle persone, e per capire chi puo'
+    # vederlo si guardava l'azienda dell'organizzatore. Con il multi-azienda
+    # quello e' un buco: un consulente che lavora per due clienti organizza
+    # una riunione per il primo, ed essendo membro anche del secondo, i
+    # colleghi del secondo se la vedevano comparire in agenda.
+    organizzazione_id = Column(Integer, ForeignKey("organizzazioni.id", ondelete="CASCADE"),
+                               nullable=True, index=True)
+
     organizzatore_id = Column(Integer, ForeignKey("utenti.id", ondelete="CASCADE"),
                               nullable=False, index=True)
 

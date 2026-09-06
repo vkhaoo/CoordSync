@@ -291,3 +291,79 @@ def test_chi_e_solo_invitato_non_compare_fra_i_colleghi(client, email_spedite):
     """Non deve finire nel menu "assegna a": potrebbe ancora dire di no."""
     a, b, _ = _due_aziende(client, email_spedite)
     assert [u["nome"] for u in client.get("/utenti", headers=b).json()] == ["Bruno"]
+
+
+# ---------- GLI IMPEGNI NON TRAPELANO FRA AZIENDE ----------
+
+def _mette_marco_anche_in_b(client, a, b):
+    """Marco (azienda A) entra anche nell'azienda B di Bruno."""
+    from app.appartenenze import iscrivi
+    from app.database import SessionLocal
+    from app.models.utente import Utente, RuoloUtente
+
+    db = SessionLocal()
+    try:
+        marco = db.query(Utente).filter(Utente.email == "marco@a.it").first()
+        bruno = db.query(Utente).filter(Utente.email == "bruno@b.it").first()
+        org_b = bruno.organizzazione_id
+        iscrivi(db, marco, org_b, RuoloUtente.caposquadra)
+        db.commit()
+        return org_b
+    finally:
+        db.close()
+
+
+def test_la_riunione_di_un_azienda_non_si_vede_nell_altra(client):
+    """La fuga piu' seria trovata attaccando. Un consulente che lavora per due
+    clienti organizza una riunione per il primo: essendo membro anche del
+    secondo, i colleghi del secondo se la vedevano comparire in agenda.
+
+    E' esattamente lo scenario per cui esiste il multi-azienda, quindi era la
+    fuga peggiore possibile: due clienti dello stesso consulente che si
+    leggono gli impegni a vicenda."""
+    from datetime import datetime, timedelta
+
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    b = registra(client, "Azienda B", "Bruno", "bruno@b.it")
+    client.post("/utenti", json={"nome": "Anna", "email": "anna@a.it",
+                                 "password": "password1", "ruolo": "caposquadra"},
+                headers=a)
+    org_b = _mette_marco_anche_in_b(client, a, b)
+
+    # Marco passa in B e ci organizza una riunione riservata
+    da_b = _headers(client.post("/auth/cambia-azienda",
+                                json={"organizzazione_id": org_b},
+                                headers=a).json()["access_token"])
+    quando = (datetime.now() + timedelta(days=1)).replace(microsecond=0).isoformat()
+    client.post("/agenda", json={"titolo": "Trattativa riservata cliente B",
+                                 "inizio": quando}, headers=da_b)
+
+    # Anna sta SOLO nell'azienda A: non deve vederla
+    anna = _headers(_login(client, "anna@a.it").json()["access_token"])
+    dal = (datetime.now() - timedelta(days=1)).date()
+    al = (datetime.now() + timedelta(days=10)).date()
+    vista = client.get(f"/agenda?dal={dal}&al={al}&ambito=azienda", headers=anna).json()
+
+    assert [i["titolo"] for i in vista["impegni"]] == []
+
+
+def test_ma_i_colleghi_di_quell_azienda_la_vedono(client):
+    """La controprova: chiuso il buco, dentro l'azienda giusta si vede."""
+    from datetime import datetime, timedelta
+
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    b = registra(client, "Azienda B", "Bruno", "bruno@b.it")
+    org_b = _mette_marco_anche_in_b(client, a, b)
+
+    da_b = _headers(client.post("/auth/cambia-azienda",
+                                json={"organizzazione_id": org_b},
+                                headers=a).json()["access_token"])
+    quando = (datetime.now() + timedelta(days=1)).replace(microsecond=0).isoformat()
+    client.post("/agenda", json={"titolo": "Riunione di B", "inizio": quando},
+                headers=da_b)
+
+    dal = (datetime.now() - timedelta(days=1)).date()
+    al = (datetime.now() + timedelta(days=10)).date()
+    vista = client.get(f"/agenda?dal={dal}&al={al}&ambito=azienda", headers=b).json()
+
+    assert "Riunione di B" in [i["titolo"] for i in vista["impegni"]]

@@ -899,7 +899,11 @@ def esporta_i_miei_dati(db: Session = Depends(get_db),
         "profilo": {
             "nome": current.nome,
             "email": current.email,
-            "ruolo": current.ruolo_attivo.value,
+            # Puo' non esserci: chi si e' appena iscritto non fa ancora parte
+            # di nessuna azienda, e il ruolo esiste solo dentro un'azienda.
+            # Prima qui si andava in errore 500 — proprio sull'endpoint che
+            # serve a portarsi via i propri dati, che e' un diritto.
+            "ruolo": current.ruolo_attivo.value if current.ruolo_attivo else None,
             "email_verificata": current.email_verificata,
             "azienda": current.organizzazione.nome if current.organizzazione else None,
             "reparti": [r.nome for r in current.reparti],
