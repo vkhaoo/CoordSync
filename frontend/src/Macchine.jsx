@@ -452,6 +452,55 @@ function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sez
   const [spostando, setSpostando] = useState(false);
   const [modifica, setModifica] = useState(false);
 
+  // Checklist e commenti.
+  //
+  // La checklist NON ha uno stato suo: arriva dentro la voce, e ogni spunta
+  // passa da azione(), che ricarica la scheda. Una copia locale si
+  // scollegherebbe al primo ricaricamento, mostrando un conteggio che non
+  // corrisponde piu' a niente.
+  //
+  // I commenti invece non arrivano con la voce — potrebbero essere tanti e si
+  // leggono solo quando si apre quella riga — quindi se li tiene la card.
+  const [nuovoPasso, setNuovoPasso] = useState("");
+  const [checklistAperta, setChecklistAperta] = useState(false);
+  const [commentiAperti, setCommentiAperti] = useState(false);
+  const [commenti, setCommenti] = useState([]);
+  const [nuovoCommento, setNuovoCommento] = useState("");
+  const [erroreCard, setErroreCard] = useState(null);
+
+  const passi = voce.sotto_attivita || [];
+  const fatti = passi.filter((p) => p.completata).length;
+
+  async function apriChiudiCommenti() {
+    const prossimo = !commentiAperti;
+    setCommentiAperti(prossimo);
+    // Si caricano la prima volta che si apre, non prima: aprire una scheda con
+    // anni di storico non deve tirarsi dietro le discussioni di ogni riga.
+    if (prossimo && commenti.length === 0) {
+      setErroreCard(null);
+      try { setCommenti(await api.commentiVoce(voce.id)); }
+      catch (err) { setErroreCard(err.message); }
+    }
+  }
+
+  async function inviaCommento(e) {
+    e.preventDefault();
+    setErroreCard(null);
+    try {
+      const creato = await api.commentaVoce(voce.id, nuovoCommento);
+      setCommenti((prec) => [...prec, creato]);
+      setNuovoCommento("");
+    } catch (err) { setErroreCard(err.message); }
+  }
+
+  async function aggiungiPasso(e) {
+    e.preventDefault();
+    await azione(async () => {
+      await api.creaSottoVoce(voce.id, nuovoPasso);
+      setNuovoPasso("");
+    });
+  }
+
   // I campi della modifica. Si riempiono nel momento in cui si apre il form
   // (apriModifica), non qui: se nel frattempo la voce e' cambiata — l'ha
   // toccata un collega, o l'ho appena salvata io — devo ripartire da com'e'
@@ -599,9 +648,86 @@ function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sez
 
       {voce.testo && <p className="testo-voce">{voce.testo}</p>}
 
+      {erroreCard && <p className="errore">{erroreCard}</p>}
+
+      {/* Checklist: i passi da fare per chiudere questa voce. La spunta la
+          mette chi ha fatto la cosa, quindi chiunque veda la macchina. */}
+      <div className="checklist">
+        <button className="checklist-toggle"
+                onClick={() => setChecklistAperta((x) => !x)}>
+          <span className="freccia">{checklistAperta ? "▾" : "▸"}</span>
+          {passi.length > 0
+            ? <>Checklist · {fatti}/{passi.length}</>
+            : <>Checklist</>}
+        </button>
+
+        {passi.length > 0 && (
+          <div className="barra barra-sm" style={{ maxWidth: 260, marginBottom: "0.4rem" }}>
+            <div className="barra-piena"
+                 style={{ width: `${Math.round((fatti / passi.length) * 100)}%` }} />
+          </div>
+        )}
+
+        {checklistAperta && (
+          <>
+            <ul className="lista-sotto">
+              {passi.map((p) => (
+                <li key={p.id} className="voce-sotto">
+                  <label className={p.completata ? "spuntata" : ""}>
+                    <input type="checkbox" checked={p.completata}
+                           onChange={() => azione(() =>
+                             api.spuntaSotto(p.id, !p.completata))} />
+                    {p.testo}
+                  </label>
+                  {/* Togliere un passo cambia la voce: solo l'autore o chi gestisce. */}
+                  {posso && (
+                    <button className="chip-x" title="Togli il passo"
+                            onClick={() => azione(() => api.eliminaSotto(p.id))}>×</button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <form className="form-sotto" onSubmit={aggiungiPasso}>
+              <input placeholder="Aggiungi un passo…" value={nuovoPasso}
+                     onChange={(e) => setNuovoPasso(e.target.value)} required />
+              <button type="submit" className="mini">+</button>
+            </form>
+          </>
+        )}
+      </div>
+
       <Allegati allegati={voce.allegati}
                 onAggiungi={(d) => azione(() => api.allegaVoce(voce.id, d))}
                 onElimina={(id) => azione(() => api.eliminaAllegato(id))} />
+
+      {/* Intorno a un guasto si discute: "ho provato a...", "ricontrolla la
+          taratura". Qui non c'e' un assegnatario da cui farsi autorizzare —
+          scrive chiunque veda la macchina. */}
+      <button className="link-commenti" onClick={apriChiudiCommenti}>
+        {commentiAperti ? "Nascondi commenti" : "Commenti"}
+      </button>
+
+      {commentiAperti && (
+        <div className="commenti">
+          {commenti.length === 0 ? (
+            <p className="vuoto piccolo">Nessun commento.</p>
+          ) : (
+            <ul className="lista-commenti">
+              {commenti.map((c) => (
+                <li key={c.id} className="commento">
+                  <span className="commento-autore">{c.autore.nome}</span>
+                  <span className="commento-testo">{c.testo}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form className="form-commento" onSubmit={inviaCommento}>
+            <input placeholder="Scrivi un commento…" value={nuovoCommento}
+                   onChange={(e) => setNuovoCommento(e.target.value)} required />
+            <button type="submit" className="mini">→</button>
+          </form>
+        </div>
+      )}
 
       {/* Quello che sta sotto questo argomento, in ordine di tempo. */}
       {figlie.length > 0 && (

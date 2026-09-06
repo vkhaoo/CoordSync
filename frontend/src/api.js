@@ -288,6 +288,12 @@ export const api = {
   allegaMacchina: (id, dati) => richiesta("POST", `/macchine/${id}/allegati`, dati),
   allegaSezione: (id, dati) => richiesta("POST", `/sezioni/${id}/allegati`, dati),
   allegaVoce:   (id, dati) => richiesta("POST", `/voci/${id}/allegati`, dati),
+  // Commenti e checklist di una voce di macchina. Spuntare e togliere un passo
+  // passano da spuntaSotto/eliminaSotto qui sopra: l'indirizzo
+  // /sotto-attivita/{id} e' lo stesso per i lavori e per le macchine.
+  commentiVoce: (id) => richiesta("GET", `/voci/${id}/commenti`),
+  commentaVoce: (id, testo) => richiesta("POST", `/voci/${id}/commenti`, { testo }),
+  creaSottoVoce: (id, testo) => richiesta("POST", `/voci/${id}/sotto-attivita`, { testo }),
   allegaProgetto: (id, dati) => richiesta("POST", `/progetti/${id}/allegati`, dati),
   allegaLavoro: (id, dati) => richiesta("POST", `/lavori/${id}/allegati`, dati),
   eliminaAllegato: (id) => richiesta("DELETE", `/allegati/${id}`),

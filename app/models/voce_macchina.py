@@ -86,3 +86,15 @@ class VoceMacchina(Base):
     figlie = relationship("VoceMacchina", back_populates="genitore",
                           order_by="VoceMacchina.creato_il")
     allegati = relationship("Allegato", back_populates="voce", cascade="all, delete-orphan")
+
+    # Una voce di taccuino non e' solo un'annotazione da rileggere: intorno a
+    # un guasto si discute ("ho provato a...", "ricontrolla la taratura") e si
+    # tiene il conto dei passi da fare. Sono le stesse due cose che gia' hanno
+    # i lavori di progetto, quindi si riusano quelle tabelle invece di
+    # duplicarle.
+    commenti = relationship("Commento", back_populates="voce",
+                            cascade="all, delete-orphan",
+                            order_by="Commento.creato_il")
+    sotto_attivita = relationship("SottoAttivita", back_populates="voce",
+                                  cascade="all, delete-orphan",
+                                  order_by="SottoAttivita.id")

@@ -19,7 +19,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.allegato import Allegato
+from app.models.commento import Commento
 from app.models.macchina import Macchina, SezioneMacchina
+from app.models.sotto_attivita import SottoAttivita
 from app.models.voce_macchina import VoceMacchina, TipoVoce
 from app.models.utente import Utente, RuoloUtente
 from app.schemas.macchina import (
@@ -27,6 +29,8 @@ from app.schemas.macchina import (
     SezioneCreate, SezioneUpdate, SezioneRead, OrdineSezioni,
     VoceCreate, VoceUpdate, VoceRead,
     AllegatoCreate, AllegatoRead,
+    CommentoCreate, CommentoRead,
+    SottoAttivitaCreate, SottoAttivitaRead,
 )
 from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import (macchine_visibili, macchina_visibile,
@@ -354,6 +358,72 @@ def elimina_voce(voce_id: int, db: Session = Depends(get_db),
         raise HTTPException(status_code=403, detail="Puoi eliminare solo le voci che hai scritto")
     db.delete(voce)
     db.commit()
+
+
+# ---------- COMMENTI E CHECKLIST SULLE VOCI ----------
+#
+# Una voce di taccuino non e' solo un'annotazione da rileggere: intorno a un
+# guasto si discute e si tiene il conto dei passi da fare. Sono le stesse due
+# cose che hanno i lavori di progetto, quindi si riusano quelle tabelle.
+#
+# I PERMESSI seguono la regola del taccuino, non quella dei lavori: SCRIVERE
+# (commentare, aggiungere una spunta, spuntarla) lo puo' fare chiunque veda la
+# macchina, operatori compresi. Sui lavori si pretende di essere assegnati, ma
+# sulle macchine l'assegnazione non esiste proprio: chi trova il guasto e' chi
+# passa di li', ed e' li' che sta il valore di uno storico.
+#
+# TOGLIERE una spunta dalla lista e' invece una modifica alla voce, quindi vale
+# la stessa regola del modificare la voce: l'autore, oppure chi gestisce.
+
+
+@router.get("/voci/{voce_id}/commenti", response_model=list[CommentoRead])
+def elenca_commenti_voce(voce_id: int, db: Session = Depends(get_db),
+                         current: Utente = Depends(richiedi_azienda)):
+    voce = _voce_o_404(db, current, voce_id)
+    return (
+        db.query(Commento)
+        .filter(Commento.voce_id == voce.id)
+        .order_by(Commento.creato_il)
+        .all()
+    )
+
+
+@router.post("/voci/{voce_id}/commenti", response_model=CommentoRead, status_code=201)
+def commenta_voce(voce_id: int, dati: CommentoCreate, db: Session = Depends(get_db),
+                  current: Utente = Depends(richiedi_azienda)):
+    voce = _voce_o_404(db, current, voce_id)
+    # L'autore e' chi e' collegato: non si commenta "a nome di" un altro.
+    commento = Commento(testo=dati.testo, voce_id=voce.id, autore_id=current.id)
+    db.add(commento)
+    db.commit()
+    db.refresh(commento)
+    return commento
+
+
+@router.get("/voci/{voce_id}/sotto-attivita", response_model=list[SottoAttivitaRead])
+def elenca_checklist_voce(voce_id: int, db: Session = Depends(get_db),
+                          current: Utente = Depends(richiedi_azienda)):
+    voce = _voce_o_404(db, current, voce_id)
+    return voce.sotto_attivita
+
+
+@router.post("/voci/{voce_id}/sotto-attivita", response_model=SottoAttivitaRead,
+             status_code=201)
+def aggiungi_checklist_voce(voce_id: int, dati: SottoAttivitaCreate,
+                            db: Session = Depends(get_db),
+                            current: Utente = Depends(richiedi_azienda)):
+    voce = _voce_o_404(db, current, voce_id)
+    passo = SottoAttivita(testo=dati.testo, voce_id=voce.id)
+    db.add(passo)
+    db.commit()
+    db.refresh(passo)
+    return passo
+
+
+# Spuntare e togliere una voce di checklist passano dagli endpoint condivisi
+# PATCH e DELETE /sotto-attivita/{id}, che sanno riconoscere sotto quale dei
+# due genitori stanno (vedi routers/sotto_attivita.py). Stessa forma di
+# DELETE /allegati/{id} qui sotto.
 
 
 # ---------- ALLEGATI ----------

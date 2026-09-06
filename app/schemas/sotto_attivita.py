@@ -16,6 +16,8 @@ class SottoAttivitaRead(BaseModel):
     id: int
     testo: str
     completata: bool
-    lavoro_id: int
+    # Il genitore: uno dei due e' valorizzato, l'altro resta a null.
+    lavoro_id: int | None = None
+    voce_id: int | None = None
 
     model_config = ConfigDict(from_attributes=True)

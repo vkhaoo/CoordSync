@@ -5,7 +5,11 @@ from pydantic import BaseModel, ConfigDict
 
 from app.models.voce_macchina import TipoVoce, StatoVoce
 from app.schemas.allegato import AllegatoCreate, AllegatoRead   # noqa: F401 (riesportati)
+from app.schemas.commento import CommentoCreate, CommentoRead   # noqa: F401 (riesportati)
 from app.schemas.reparto import RepartoRead
+from app.schemas.sotto_attivita import (   # noqa: F401 (riesportati)
+    SottoAttivitaCreate, SottoAttivitaRead,
+)
 
 
 # ---------- SEZIONI ----------
@@ -89,6 +93,10 @@ class VoceRead(BaseModel):
     autore: AutoreRead | None = None
     sezioni: list[SezioneRead] = []
     allegati: list[AllegatoRead] = []
+    # La checklist viaggia insieme alla voce: e' corta e serve subito, a
+    # colpo d'occhio ("2 di 5"). I COMMENTI no: possono essere tanti e si
+    # leggono solo quando si apre quella voce, quindi si chiedono a parte.
+    sotto_attivita: list[SottoAttivitaRead] = []
     model_config = ConfigDict(from_attributes=True)
 
 
