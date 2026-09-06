@@ -21,6 +21,14 @@ class ImpegnoCreate(ImpegnoBase):
     lavoro_id: int | None = None
     macchina_id: int | None = None
 
+    # Ripetizione. Vuota = impegno singolo.
+    #
+    # 'ripeti_fino' e' OBBLIGATORIA quando si ripete: senza una fine si
+    # genererebbero righe finche' il database non si stufa, e un'agenda che
+    # arriva al 2093 non la ripulisce piu' nessuno.
+    ripeti: str | None = None
+    ripeti_fino: datetime | None = None
+
 
 class ImpegnoUpdate(BaseModel):
     titolo: str | None = None
@@ -46,6 +54,9 @@ class ImpegnoRead(ImpegnoBase):
     partecipanti: list[PersonaRead] = []
     lavoro_id: int | None = None
     macchina_id: int | None = None
+    # Valorizzato solo sugli impegni che fanno parte di una ripetizione: serve
+    # al frontend per proporre "cancella tutta la serie".
+    serie_id: int | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

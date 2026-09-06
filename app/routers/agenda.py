@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.appartenenze import condizione_membro
 from app.database import get_db
+from app.ricorrenze import RIPETIZIONI, date_successive
 from app.models.impegno import Impegno, partecipante_impegno
 from app.models.lavoro import Lavoro, StatoLavoro
 from app.models.progetto import Progetto
@@ -181,6 +182,40 @@ def crea_impegno(dati: ImpegnoCreate, db: Session = Depends(get_db),
     db.add(impegno)
     db.flush()   # serve l'id per collegarci gli avvisi
 
+    # --- le ripetizioni ---
+    if dati.ripeti:
+        if dati.ripeti not in RIPETIZIONI:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Ripetizione sconosciuta. Valgono: {', '.join(RIPETIZIONI)}")
+        if dati.ripeti_fino is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Per ripetere un impegno serve dire fino a quando")
+
+        # Il primo della serie e' questo: la serie prende il suo numero.
+        impegno.serie_id = impegno.id
+        durata = (dati.fine - dati.inizio) if dati.fine is not None else None
+
+        for quando in date_successive(dati.inizio, dati.ripeti, dati.ripeti_fino):
+            copia = Impegno(
+                titolo=dati.titolo, note=dati.note, luogo=dati.luogo,
+                inizio=quando,
+                # La fine si sposta insieme all'inizio: un impegno di due ore
+                # resta di due ore anche fra sei settimane.
+                fine=(quando + durata) if durata is not None else None,
+                promemoria_minuti=dati.promemoria_minuti,
+                organizzatore_id=current.id,
+                organizzazione_id=current.org_attiva_id,
+                lavoro_id=dati.lavoro_id, macchina_id=dati.macchina_id,
+                serie_id=impegno.id,
+            )
+            copia.partecipanti = partecipanti
+            db.add(copia)
+
+    # Si avvisa UNA volta sola, per tutta la serie: una campanella per ognuna
+    # delle cinquanta occorrenze sarebbe solo un modo per far spegnere gli
+    # avvisi a tutti.
     _avvisa_partecipanti(db, current, impegno, partecipanti)
 
     db.commit()
@@ -279,10 +314,32 @@ def modifica_impegno(impegno_id: int, dati: ImpegnoUpdate, db: Session = Depends
 
 
 @router.delete("/{impegno_id}", status_code=204)
-def elimina_impegno(impegno_id: int, db: Session = Depends(get_db),
+def elimina_impegno(impegno_id: int, tutta_la_serie: bool = False,
+                    db: Session = Depends(get_db),
                     current: Utente = Depends(richiedi_azienda)):
+    """Toglie un impegno, o tutta la ripetizione a cui appartiene.
+
+    Il valore predefinito e' la SINGOLA occorrenza, non la serie: annullare per
+    sbaglio sei mesi di manutenzioni volendo spostare quella di giovedi' e' un
+    danno che non si vede subito e non si rimedia.
+    """
     impegno = _impegno_mio_o_404(db, current, impegno_id)
-    db.delete(impegno)
+
+    if tutta_la_serie and impegno.serie_id is not None:
+        # Si passa da _impegno_mio_o_404 per la prima, poi si tolgono le altre
+        # della STESSA serie e della stessa azienda: il numero di serie da solo
+        # non e' un permesso.
+        fratelli = (
+            db.query(Impegno)
+            .filter(Impegno.serie_id == impegno.serie_id,
+                    Impegno.organizzazione_id == impegno.organizzazione_id,
+                    Impegno.organizzatore_id == impegno.organizzatore_id)
+            .all()
+        )
+        for uno in fratelli:
+            db.delete(uno)
+    else:
+        db.delete(impegno)
     db.commit()
 
 

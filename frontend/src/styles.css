@@ -1108,3 +1108,8 @@ input, select, textarea { font-family: var(--sans); }
     box-shadow: none; max-width: none; max-height: none; overflow: visible; padding: 0;
   }
 }
+
+/* La vista SETTIMANA usa la stessa griglia del mese, ma con una riga sola:
+   le celle possono essere piu' alte, e ci sta scritto di piu' in ognuna —
+   che e' tutto il motivo per cui si guarda la settimana invece del mese. */
+.calendario.settimana .cella { min-height: 150px; }

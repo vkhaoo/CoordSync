@@ -279,7 +279,11 @@ export const api = {
   prossimiImpegni: (giorni = 7) => richiesta("GET", `/agenda/prossimi?giorni=${giorni}`),
   creaImpegno:  (dati) => richiesta("POST", "/agenda", dati),
   modificaImpegno: (id, dati) => richiesta("PATCH", `/agenda/${id}`, dati),
-  eliminaImpegno: (id) => richiesta("DELETE", `/agenda/${id}`),
+  // tutta_la_serie vale solo per gli impegni che si ripetono. Il valore
+  // predefinito e' la singola occorrenza: annullare per sbaglio sei mesi di
+  // manutenzioni volendo spostare quella di giovedi' non si rimedia.
+  eliminaImpegno: (id, tuttaLaSerie = false) =>
+    richiesta("DELETE", `/agenda/${id}` + (tuttaLaSerie ? "?tutta_la_serie=true" : "")),
 
   // --- Scheda macchina (storico dell'impianto) ---
   macchine:     () => richiesta("GET", "/macchine"),

@@ -22,6 +22,14 @@ function celleDelMese(anno, mese) {
     new Date(inizio.getFullYear(), inizio.getMonth(), inizio.getDate() + i));
 }
 
+// I sette giorni della settimana che contiene questa data, da lunedi'.
+function celleDellaSettimana(data) {
+  const sfasamento = (data.getDay() + 6) % 7;   // 0 = lunedi'
+  const lunedi = new Date(data.getFullYear(), data.getMonth(), data.getDate() - sfasamento);
+  return Array.from({ length: 7 }, (_, i) =>
+    new Date(lunedi.getFullYear(), lunedi.getMonth(), lunedi.getDate() + i));
+}
+
 function oraDi(iso) {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -32,6 +40,7 @@ export default function Agenda({ io, utenti }) {
   const [anno, setAnno] = useState(oggi.getFullYear());
   const [mese, setMese] = useState(oggi.getMonth());
   const [ambito, setAmbito] = useState("miei");
+  const [vista, setVista] = useState("mese");   // "mese", "settimana" o "giorno"
   const [giornoScelto, setGiornoScelto] = useState(aChiave(oggi));
 
   const [impegni, setImpegni] = useState([]);
@@ -48,15 +57,29 @@ export default function Agenda({ io, utenti }) {
   const [note, setNote] = useState("");
   const [promemoria, setPromemoria] = useState("");
   const [partecipanti, setPartecipanti] = useState([]);   // [] = solo io
+  const [ripeti, setRipeti] = useState("");        // "" = una volta sola
+  const [ripetiFino, setRipetiFino] = useState("");
 
   const coordino = io && (io.ruolo === "admin" || io.ruolo === "caposquadra");
-  const celle = celleDelMese(anno, mese);
+
+  // Le celle da disegnare dipendono da come si sta guardando l'agenda.
+  //
+  // Il MESE serve a pianificare, la SETTIMANA a lavorare (e' l'unica in cui si
+  // legge davvero cosa c'e' ogni giorno), il GIORNO a chi in cantiere vuole
+  // solo sapere cosa fa adesso. La griglia e' la stessa, cambia quanti giorni
+  // ci stanno dentro: nel giorno non c'e' proprio, perche' il dettaglio qui
+  // sotto dice gia' tutto.
+  const scelta = new Date(giornoScelto + "T00:00:00");
+  const celle = vista === "mese" ? celleDelMese(anno, mese)
+              : vista === "settimana" ? celleDellaSettimana(scelta)
+              : [];
 
   async function carica() {
     setErrore(null);
     try {
-      const dal = aChiave(celle[0]);
-      const al = aChiave(celle[celle.length - 1]);
+      // Nel giorno non ci sono celle: si chiede quel giorno soltanto.
+      const dal = celle.length ? aChiave(celle[0]) : giornoScelto;
+      const al = celle.length ? aChiave(celle[celle.length - 1]) : giornoScelto;
       const [dati, p] = await Promise.all([
         api.agenda(dal, al, ambito),
         api.prossimiImpegni(7),
@@ -68,10 +91,24 @@ export default function Agenda({ io, utenti }) {
     finally { setCaricando(false); }
   }
 
-  useEffect(() => { carica(); }, [anno, mese, ambito]);
+  useEffect(() => { carica(); }, [anno, mese, ambito, vista, giornoScelto]);
 
-  function cambiaMese(delta) {
-    const d = new Date(anno, mese + delta, 1);
+  // Le frecce spostano di quello che si sta guardando: un mese, una settimana
+  // o un giorno. Un'unica funzione, se no le tre viste si comporterebbero in
+  // tre modi diversi e ci si perde.
+  function sposta(delta) {
+    if (vista === "mese") {
+      const d = new Date(anno, mese + delta, 1);
+      setAnno(d.getFullYear());
+      setMese(d.getMonth());
+      return;
+    }
+    const passo = vista === "settimana" ? 7 : 1;
+    const d = new Date(scelta.getFullYear(), scelta.getMonth(),
+                       scelta.getDate() + passo * delta);
+    setGiornoScelto(aChiave(d));
+    // Cambiando settimana si puo' finire nel mese dopo: il titolo deve
+    // seguire, se no dice ancora "Marzo" mentre si guarda aprile.
     setAnno(d.getFullYear());
     setMese(d.getMonth());
   }
@@ -103,15 +140,41 @@ export default function Agenda({ io, utenti }) {
       // Vuoto = solo io. Con altri dentro diventa una riunione: un impegno
       // solo, che compare nell'agenda di tutti.
       if (partecipanti.length > 0) corpo.partecipanti_ids = [io.id, ...partecipanti];
+      if (ripeti) {
+        corpo.ripeti = ripeti;
+        // Il server pretende una fine, e ha ragione: senza, si genererebbero
+        // righe fino alla fine dei tempi.
+        corpo.ripeti_fino = `${ripetiFino}T23:59:00`;
+      }
       await api.creaImpegno(corpo);
       setTitolo(""); setLuogo(""); setNote(""); setOraFine(""); setPartecipanti([]);
+      setRipeti(""); setRipetiFino("");
       await carica();
     } catch (err) { setErrore(err.message); }
   }
 
-  async function elimina(id) {
+  async function elimina(impegno) {
+    // Su un impegno che si ripete si CHIEDE cosa si vuole togliere, invece di
+    // decidere per conto proprio: le due cose sono molto diverse, e una delle
+    // due non si rimedia.
+    let tuttaLaSerie = false;
+    if (impegno.serie_id) {
+      const risposta = window.prompt(
+        [`"${impegno.titolo}" si ripete.`,
+         "",
+         "Scrivi UNO per togliere solo questo giorno,",
+         "oppure TUTTI per togliere l'intera ripetizione."].join("\n"),
+        "UNO");
+      if (!risposta) return;
+      const scelta = risposta.trim().toUpperCase();
+      if (scelta !== "UNO" && scelta !== "TUTTI") return;
+      tuttaLaSerie = scelta === "TUTTI";
+    } else if (!window.confirm(`Eliminare "${impegno.titolo}"?`)) {
+      return;
+    }
+
     setErrore(null);
-    try { await api.eliminaImpegno(id); await carica(); }
+    try { await api.eliminaImpegno(impegno.id, tuttaLaSerie); await carica(); }
     catch (err) { setErrore(err.message); }
   }
 
@@ -139,13 +202,26 @@ export default function Agenda({ io, utenti }) {
 
       <div className="testa-agenda">
         <div className="navigazione-mese">
-          <button className="mini annulla" onClick={() => cambiaMese(-1)}>‹</button>
-          <h2 className="titolo-progetto">{MESI[mese]} {anno}</h2>
-          <button className="mini annulla" onClick={() => cambiaMese(1)}>›</button>
+          <button className="mini annulla" onClick={() => sposta(-1)}>‹</button>
+          <h2 className="titolo-progetto">
+            {vista === "giorno"
+              ? scelta.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })
+              : vista === "settimana"
+                ? `Settimana del ${celle[0].getDate()} ${MESI[celle[0].getMonth()]}`
+                : `${MESI[mese]} ${anno}`}
+          </h2>
+          <button className="mini annulla" onClick={() => sposta(1)}>›</button>
           <button className="sez" onClick={() => {
             const o = new Date();
             setAnno(o.getFullYear()); setMese(o.getMonth()); setGiornoScelto(aChiave(o));
           }}>Oggi</button>
+        </div>
+
+        <div className="barra-sezioni">
+          {[["mese", "Mese"], ["settimana", "Settimana"], ["giorno", "Giorno"]].map(([k, e]) => (
+            <button key={k} className={vista === k ? "sez attiva" : "sez"}
+                    onClick={() => setVista(k)}>{e}</button>
+          ))}
         </div>
         <div className="barra-sezioni">
           {[["miei", "I miei"], ["reparto", "Il mio reparto"], ["azienda", "Tutta l'azienda"]].map(([k, e]) => (
@@ -155,7 +231,8 @@ export default function Agenda({ io, utenti }) {
         </div>
       </div>
 
-      <div className="calendario">
+      {celle.length > 0 && (
+      <div className={vista === "settimana" ? "calendario settimana" : "calendario"}>
         {GIORNI.map((g) => <div key={g} className="intestazione-giorno">{g}</div>)}
         {celle.map((d) => {
           const k = aChiave(d);
@@ -180,6 +257,7 @@ export default function Agenda({ io, utenti }) {
           );
         })}
       </div>
+      )}
 
       {/* Dettaglio del giorno scelto */}
       <div className="dettaglio-giorno">
@@ -203,7 +281,7 @@ export default function Agenda({ io, utenti }) {
                 {(i.organizzatore.id === io.id || coordino) && (
                   <div className="lavoro-azioni">
                     <button className="azione-icona elimina" title="Elimina impegno"
-                            onClick={() => { if (window.confirm(`Eliminare "${i.titolo}"?`)) elimina(i.id); }}>🗑</button>
+                            onClick={() => elimina(i)}>🗑</button>
                   </div>
                 )}
               </div>
@@ -222,6 +300,7 @@ export default function Agenda({ io, utenti }) {
                 {i.promemoria_minuti && (
                   <span className="chip piccolo">promemoria {i.promemoria_minuti} min prima</span>
                 )}
+                {i.serie_id && <span className="chip piccolo">si ripete</span>}
               </div>
               {i.note && <p className="testo-voce">{i.note}</p>}
             </li>
@@ -273,6 +352,22 @@ export default function Agenda({ io, utenti }) {
               ))}
             </div>
           )}
+          <div className="riga-voce">
+            <select value={ripeti} onChange={(e) => setRipeti(e.target.value)}
+                    title="Ripetizione">
+              <option value="">Una volta sola</option>
+              <option value="settimanale">Ogni settimana</option>
+              <option value="quindicinale">Ogni due settimane</option>
+              <option value="quattro_settimane">Ogni quattro settimane</option>
+              <option value="mensile">Ogni mese</option>
+            </select>
+            {ripeti && (
+              <input type="date" value={ripetiFino} required
+                     title="Fino a quando si ripete"
+                     onChange={(e) => setRipetiFino(e.target.value)} />
+            )}
+          </div>
+
           <textarea placeholder="Note (facoltative)…" rows={2} value={note}
                     onChange={(e) => setNote(e.target.value)} />
           <div className="riga-voce">

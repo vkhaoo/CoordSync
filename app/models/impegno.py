@@ -47,6 +47,15 @@ class Impegno(Base):
     # Segnato quando il promemoria e' partito, per non mandarlo due volte.
     promemoria_inviato_il = Column(DateTime, nullable=True)
 
+    # Le RIPETIZIONI. Un impegno che si ripete non e' una regola salvata da
+    # qualche parte: sono impegni veri, uno per data, legati da questo numero
+    # (l'id del primo della serie). Cosi' ogni occorrenza si sposta e si
+    # cancella da sola, ha il suo promemoria, e tutto il resto dell'app
+    # continua a funzionare senza sapere che le ripetizioni esistono.
+    #
+    # NULL = impegno singolo, che e' la stragrande maggioranza.
+    serie_id = Column(Integer, nullable=True, index=True)
+
     creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Chi ha organizzato l'impegno. E' lui a poterlo modificare o cancellare
