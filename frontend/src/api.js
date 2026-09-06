@@ -210,6 +210,10 @@ export const api = {
   esci:     () => richiesta("POST", "/auth/logout"),
   // Correggere i propri dati (diritto di rettifica).
   modificaProfilo: (nome) => richiesta("PATCH", "/auth/me", { nome }),
+  // Si manda SOLO l'interruttore toccato: il campo assente e il campo a false
+  // sono cose diverse, e il server le distingue.
+  cambiaPreferenzaEmail: (quale, acceso) =>
+    richiesta("PATCH", "/auth/me", { [quale]: acceso }),
   cambiaEmail: (password, nuova_email) =>
     richiesta("POST", "/auth/cambia-email", { password, nuova_email }),
   confermaEmail: (token) => richiesta("POST", "/auth/conferma-email", { token }),

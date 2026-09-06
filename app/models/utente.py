@@ -49,6 +49,21 @@ class Utente(Base):
     # d'uscita se il telefono si perde.
     totp_recupero = Column(Text, nullable=True)
 
+    # Quali EMAIL ricevere. Solo quelle che avvisano di qualcosa fatto da
+    # altri: le email di servizio (conferma indirizzo, recupero password,
+    # invito, cambio email) non si spengono, perche' senza non si entra piu'.
+    #
+    # Accese di default, e non spente: chi non tocca niente deve continuare a
+    # essere avvisato di un lavoro che gli assegnano. Una preferenza che
+    # spegne le cose da sola si scopre solo quando si e' gia' perso qualcosa.
+    #
+    # La campanella dentro l'app resta sempre accesa: non disturba nessuno,
+    # e sarebbe il posto dove ritrovare quello che l'email non ha detto.
+    email_assegnazioni = Column(Boolean, nullable=False, default=True,
+                                server_default="1")
+    email_promemoria = Column(Boolean, nullable=False, default=True,
+                              server_default="1")
+
     # L'azienda "di casa": la prima di cui si e' entrati a far parte. Resta il
     # punto di partenza quando si entra, ma non e' piu' l'unica a cui si puo'
     # appartenere: le altre stanno nelle appartenenze qui sotto.

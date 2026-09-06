@@ -32,4 +32,6 @@ class UtenteRead(UtenteBase):
     email_verificata: bool
     deve_cambiare_password: bool   # il frontend blocca l'accesso finche' e' True
     reparti: list[RepartoRead] = []   # i reparti di cui faccio parte
+    email_assegnazioni: bool = True
+    email_promemoria: bool = True
     model_config = ConfigDict(from_attributes=True)

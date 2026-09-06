@@ -36,6 +36,8 @@ def _avvisa_via_email(chi_assegna: Utente, destinatario: Utente, lavoro) -> None
         return
     if destinatario.id == chi_assegna.id:
         return   # assegnarsi un lavoro da soli non merita un'email da se stessi
+    if not destinatario.email_assegnazioni:
+        return   # l'ha spenta lui. L'avviso in campanella resta comunque
     try:
         from app.config import settings
         from app.email_templates import assegnazione_lavoro

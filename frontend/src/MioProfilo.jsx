@@ -98,6 +98,15 @@ export default function MioProfilo({ io, onLogout, onCambiaAzienda, onDatiCambia
 
   if (!io) return null;
 
+  async function cambiaEmail(quale, acceso) {
+    // Se il salvataggio fallisce non tocco niente: meglio una spunta che non
+    // si muove di una che dice il contrario di com'e' davvero sul server.
+    try {
+      const aggiornato = await api.cambiaPreferenzaEmail(quale, acceso);
+      if (onDatiCambiati) onDatiCambiati(aggiornato);
+    } catch { /* la spunta resta com'era */ }
+  }
+
   return (
     <div className="mio-profilo" ref={contenitore}>
       <button className="mio-ruolo bottone-profilo" onClick={() => setAperto((a) => !a)}
@@ -119,6 +128,27 @@ export default function MioProfilo({ io, onLogout, onCambiaAzienda, onDatiCambia
               </button>
             </div>
             <MieiDati io={io} onAggiornato={onDatiCambiati} />
+
+            {/* Quali email ricevere. Ci sono solo quelle che avvisano di
+                qualcosa fatto da altri: la conferma dell'indirizzo, il
+                recupero password e gli inviti non si spengono, perche' senza
+                quelle non si entra piu'. */}
+            <div className="blocco-aziende">
+              <span className="etichetta-tendina">Email che ricevi</span>
+              <label className="spunta">
+                <input type="checkbox" checked={io.email_assegnazioni !== false}
+                       onChange={(e) => cambiaEmail("email_assegnazioni", e.target.checked)} />
+                Quando mi assegnano un lavoro
+              </label>
+              <label className="spunta">
+                <input type="checkbox" checked={io.email_promemoria !== false}
+                       onChange={(e) => cambiaEmail("email_promemoria", e.target.checked)} />
+                Il promemoria degli impegni in agenda
+              </label>
+              <p className="vuoto piccolo">
+                La campanella qui dentro resta accesa comunque.
+              </p>
+            </div>
 
             {/* Le proprie aziende, SEMPRE visibili — anche quando e' una sola.
                 Prima comparivano solo a chi ne aveva piu' d'una, per non

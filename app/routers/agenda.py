@@ -360,6 +360,8 @@ def invia_promemoria(richiesta: Request, db: Session = Depends(get_db)):
         for persona in impegno.partecipanti:
             if not persona.email:
                 continue
+            if not persona.email_promemoria:
+                continue   # l'ha spenta lei: l'impegno resta comunque in agenda
             oggetto, testo, html = promemoria_impegno(
                 persona.nome, impegno.titolo, quando, impegno.luogo,
                 _fra_quanto(impegno.promemoria_minuti), settings.frontend_url)

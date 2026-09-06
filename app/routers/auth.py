@@ -421,22 +421,39 @@ SCOPO_CAMBIO_EMAIL = "cambio_email"
 
 
 class ModificaProfilo(BaseModel):
-    nome: str
+    """Cosa si puo' correggere di se stessi senza password.
+
+    Tutti facoltativi: si manda solo quello che si cambia. Il campo assente e
+    il campo a False sono cose diverse, e le distingue exclude_unset.
+    """
+    nome: str | None = None
+    email_assegnazioni: bool | None = None
+    email_promemoria: bool | None = None
 
 
 @router.patch("/me", response_model=UtenteRead)
 def modifica_profilo(dati: ModificaProfilo, db: Session = Depends(get_db),
                      current: Utente = Depends(get_current_user)):
-    """Corregge il proprio nome.
+    """Corregge il proprio nome e le proprie preferenze sulle email.
 
-    Non serve la password: il nome non apre nessuna porta, e chiederla per
-    correggere un accento renderebbe la cosa cosi' scomoda da non farla.
+    Non serve la password: nessuna di queste cose apre una porta, e chiederla
+    per correggere un accento renderebbe la cosa cosi' scomoda da non farla.
+
+    Le email di SERVIZIO (conferma indirizzo, recupero password, invito) non
+    compaiono qui apposta: senza quelle non si entra piu'.
     """
-    nome = dati.nome.strip()
-    if not nome:
-        raise HTTPException(status_code=400, detail="Il nome non puo' essere vuoto")
+    forniti = dati.model_dump(exclude_unset=True)
 
-    current.nome = nome
+    if "nome" in forniti:
+        nome = (forniti["nome"] or "").strip()
+        if not nome:
+            raise HTTPException(status_code=400, detail="Il nome non puo' essere vuoto")
+        current.nome = nome
+
+    for interruttore in ("email_assegnazioni", "email_promemoria"):
+        if interruttore in forniti:
+            setattr(current, interruttore, bool(forniti[interruttore]))
+
     db.commit()
     db.refresh(current)
 
