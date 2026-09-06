@@ -233,3 +233,32 @@ def test_anche_il_reset_dal_link_butta_fuori_tutti(client):
                              "nuova_password": "nuovaPassword9"}).status_code == 200
 
     assert client.get("/auth/me", headers=ladro).status_code == 401
+
+
+# ---------- CONFRONTO DEI SEGRETI A TEMPO COSTANTE ----------
+
+def test_la_chiave_dei_promemoria_si_confronta_a_tempo_costante():
+    """Con "!=" il confronto si ferma al primo carattere diverso, e il tempo
+    di risposta racconta quanti caratteri iniziali erano giusti: su un
+    endpoint senza freno, che si puo' martellare per fare la media, la chiave
+    si indovina un pezzo alla volta. Qui si verifica che il codice usi
+    compare_digest, che ci mette sempre lo stesso tempo."""
+    import inspect
+
+    from app.routers import agenda
+
+    sorgente = inspect.getsource(agenda)
+    assert "compare_digest" in sorgente
+    assert 'headers.get("X-Chiave-Promemoria") != chiave' not in sorgente
+
+
+def test_la_chiave_sbagliata_resta_rifiutata(client, monkeypatch):
+    """La correzione non deve aver cambiato il comportamento."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "chiave_promemoria", "la-chiave-giusta")
+
+    assert client.post("/agenda/promemoria/invia",
+                       headers={"X-Chiave-Promemoria": "sbagliata"}).status_code == 401
+    assert client.post("/agenda/promemoria/invia",
+                       headers={"X-Chiave-Promemoria": "la-chiave-giusta"}).status_code == 200

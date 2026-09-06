@@ -16,6 +16,7 @@ Chi vede cosa:
 Le scadenze mostrate sono sempre e solo quelle dei lavori che gia' posso
 vedere: l'agenda non e' una scorciatoia per aggirare i reparti.
 """
+import secrets
 from datetime import datetime, date, time
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -318,7 +319,13 @@ def invia_promemoria(richiesta: Request, db: Session = Depends(get_db)):
     if not chiave:
         raise HTTPException(status_code=503,
                             detail="Invio promemoria non configurato")
-    if richiesta.headers.get("X-Chiave-Promemoria") != chiave:
+    # compare_digest e non "!=": il confronto normale fra stringhe si ferma al
+    # primo carattere diverso, quindi il TEMPO di risposta racconta quanti
+    # caratteri iniziali erano giusti. Su un endpoint senza freno, che si puo'
+    # martellare per fare la media, e' un modo concreto di indovinare la chiave
+    # un pezzo alla volta. Questo confronto ci mette sempre lo stesso tempo.
+    ricevuta = richiesta.headers.get("X-Chiave-Promemoria") or ""
+    if not secrets.compare_digest(ricevuta, chiave):
         raise HTTPException(status_code=401, detail="Chiave non valida")
 
     adesso = datetime.now()
