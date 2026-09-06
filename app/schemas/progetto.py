@@ -30,6 +30,16 @@ class ProgettoCreate(ProgettoBase):
     macchina_id: int | None = None  # collegamento facoltativo a una macchina
 
 
+class ProgettoDuplica(BaseModel):
+    """Per duplicare serve solo il nome nuovo: il resto viene dall'originale.
+
+    Il nome NON si genera da soli ("Copia di ...") perche' un progetto vero ha
+    un nome che dice qualcosa — la commessa, il cliente, l'anno — e "Copia di
+    Linea 3" fra sei mesi non lo distingue da niente.
+    """
+    nome: str
+
+
 class ProgettoUpdate(BaseModel):
     """Cosa si puo' MODIFICARE di un progetto (tutti opzionali)."""
     nome: str | None = None

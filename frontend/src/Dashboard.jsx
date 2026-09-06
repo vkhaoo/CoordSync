@@ -235,6 +235,25 @@ export default function Dashboard({ onLogout }) {
     } catch (err) { setErrore(err.message); }
   }
 
+  async function duplicaProgetto(progetto) {
+    // Il nome lo si chiede sempre: "Copia di Linea 3" fra sei mesi non
+    // distingue niente da niente, e un progetto vero ha un nome che dice la
+    // commessa, il cliente o l'anno.
+    const nome = window.prompt(
+      ["Come si chiama il progetto nuovo?",
+       "",
+       "Si copiano i lavori con le loro checklist e i link.",
+       "Non si copiano stati, scadenze, commenti e assegnazioni."].join("\n"),
+      progetto.nome);
+    if (!nome || !nome.trim()) return;
+
+    setErrore(null);
+    try {
+      const copia = await api.duplicaProgetto(progetto.id, nome.trim());
+      await caricaProgetti(copia.id);   // mi porto subito dentro quello nuovo
+    } catch (err) { setErrore(err.message); }
+  }
+
   async function eliminaProgetto(progetto) {
     if (!window.confirm(`Eliminare il progetto "${progetto.nome}" e tutti i suoi lavori? L'azione è irreversibile.`)) return;
     setErrore(null);
@@ -435,6 +454,8 @@ export default function Dashboard({ onLogout }) {
                       <div className="lavoro-azioni">
                         <button className="azione-icona" title="Rinomina progetto"
                                 onClick={() => { setNomeBozza(progettoCorrente.nome); setModificaNome(true); }}>✎</button>
+                        <button className="azione-icona" title="Duplica come modello"
+                                onClick={() => duplicaProgetto(progettoCorrente)}>⧉</button>
                         <button className="azione-icona elimina" title="Elimina progetto"
                                 onClick={() => eliminaProgetto(progettoCorrente)}>🗑</button>
                       </div>

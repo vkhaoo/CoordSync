@@ -5,7 +5,10 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.progetto import Progetto
 from app.models.utente import Utente
-from app.schemas.progetto import ProgettoCreate, ProgettoRead, ProgettoUpdate
+from app.models.lavoro import Lavoro
+from app.models.sotto_attivita import SottoAttivita
+from app.schemas.progetto import (ProgettoCreate, ProgettoRead, ProgettoUpdate,
+                                  ProgettoDuplica)
 from app.models.utente import RuoloUtente
 from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import (progetti_visibili, progetto_visibile,
@@ -49,6 +52,80 @@ def crea_progetto(
     db.commit()
     db.refresh(progetto)
     return progetto
+
+
+@router.post("/{progetto_id}/duplica", response_model=ProgettoRead, status_code=201)
+def duplica_progetto(
+    progetto_id: int,
+    dati: ProgettoDuplica,
+    db: Session = Depends(get_db),
+    current: Utente = Depends(richiedi_ruolo(RuoloUtente.admin, RuoloUtente.caposquadra)),
+):
+    """Rifa' un progetto uguale, vuoto, per una commessa che si ripete.
+
+    SI COPIA LA STRUTTURA, NON LA STORIA. Un impianto uguale al precedente
+    vuole gli stessi venti lavori con le stesse checklist, non il racconto di
+    come e' andata la volta scorsa.
+
+    Si copiano: descrizione, reparti, link al documento, macchina collegata,
+    i lavori (titolo, descrizione, priorita', macchina) con le loro checklist
+    e i link appesi — che sono materiale di riferimento, schemi e manuali che
+    servono di nuovo.
+
+    NON si copiano, e ognuno per una ragione sua:
+
+    - gli STATI: tutto riparte da "da fare", se no il progetto nuovo
+      nascerebbe gia' mezzo completato;
+    - le SPUNTE della checklist, per lo stesso motivo;
+    - le SCADENZE: le date della commessa vecchia non dicono niente su quella
+      nuova, e lasciarle vorrebbe dire far nascere un progetto gia' in ritardo;
+    - i COMMENTI: sono la conversazione di quella volta li';
+    - gli ASSEGNATARI. Questa e' la scelta meno ovvia: spesso e' la stessa
+      squadra. Ma copiarli farebbe partire subito venti avvisi (e venti email)
+      per un lavoro che nessuno ha ancora deciso di dare a nessuno, e chi
+      duplica lo fa proprio per ripianificare.
+    """
+    originale = progetto_visibile(db, current, progetto_id)
+    if originale is None:
+        raise HTTPException(status_code=404, detail="Progetto non trovato")
+
+    copia = Progetto(
+        nome=dati.nome,
+        descrizione=originale.descrizione,
+        link_documento=originale.link_documento,
+        organizzazione_id=current.org_attiva_id,
+        macchina_id=originale.macchina_id,
+    )
+    # I reparti si copiano tali e quali: chi puo' vedere l'originale puo'
+    # vedere anche la copia, ne' piu' ne' meno.
+    copia.reparti = list(originale.reparti)
+    db.add(copia)
+    db.flush()   # serve l'id prima di appenderci i lavori
+
+    for vecchio in originale.lavori:
+        nuovo = Lavoro(
+            titolo=vecchio.titolo,
+            descrizione=vecchio.descrizione,
+            priorita=vecchio.priorita,
+            progetto_id=copia.id,
+            macchina_id=vecchio.macchina_id,
+        )
+        db.add(nuovo)
+        db.flush()
+        for passo in vecchio.sotto_attivita:
+            db.add(SottoAttivita(testo=passo.testo, completata=False,
+                                 lavoro_id=nuovo.id))
+        for link in vecchio.allegati:
+            db.add(Allegato(url=link.url, titolo=link.titolo,
+                            autore_id=current.id, lavoro_id=nuovo.id))
+
+    for link in originale.allegati:
+        db.add(Allegato(url=link.url, titolo=link.titolo,
+                        autore_id=current.id, progetto_id=copia.id))
+
+    db.commit()
+    db.refresh(copia)
+    return copia
 
 
 @router.patch("/{progetto_id}", response_model=ProgettoRead)

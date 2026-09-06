@@ -261,6 +261,7 @@ export const api = {
   },
   tuttiILavori: () => richiesta("GET", "/lavori"),
   creaProgetto: (dati) => richiesta("POST", "/progetti", dati),
+  duplicaProgetto: (id, nome) => richiesta("POST", `/progetti/${id}/duplica`, { nome }),
   aggiornaProgetto: (id, dati) => richiesta("PATCH", `/progetti/${id}`, dati),
   eliminaProgetto: (id) => richiesta("DELETE", `/progetti/${id}`),
   creaLavoro:   (dati) => richiesta("POST", "/lavori", dati),
