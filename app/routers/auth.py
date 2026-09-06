@@ -26,6 +26,7 @@ from app.schemas.validators import PasswordStr
 from app.dependencies import get_current_user
 from app.notifiche import invia_email
 from app import due_fattori, limiti, sessione
+from app.rete import ip_reale
 from app.email_templates import (
     verifica_email as email_verifica_template,
     reset_password as email_reset_template,
@@ -64,7 +65,7 @@ class TokenRisposta(BaseModel):
 
 
 @router.post("/register", response_model=TokenRisposta, status_code=201)
-def register(dati: RegisterRichiesta, risposta: Response,
+def register(dati: RegisterRichiesta, richiesta: Request, risposta: Response,
              db: Session = Depends(get_db)):
     """Crea un ACCOUNT. Non un'azienda.
 
@@ -77,6 +78,8 @@ def register(dati: RegisterRichiesta, risposta: Response,
     Il token che si riceve non punta a nessuna azienda: apre il proprio
     profilo e la schermata di scelta, e basta (vedi dependencies.py).
     """
+    if _troppe_email(richiesta):
+        raise _TROPPE
     if db.query(Utente).filter(Utente.email == dati.email).first() is not None:
         raise HTTPException(status_code=409, detail="Email gia' registrata")
 
@@ -153,7 +156,7 @@ class LoginRichiesta(BaseModel):
 @router.post("/login", response_model=TokenRisposta)
 def login(dati: LoginRichiesta, richiesta: Request, risposta: Response,
           db: Session = Depends(get_db)):
-    ip = richiesta.client.host if richiesta.client else "sconosciuto"
+    ip = ip_reale(richiesta)
 
     # Prima di tutto: chi ha gia' sbagliato troppe volte aspetta.
     attesa = limiti.attesa_richiesta(dati.email, ip)
@@ -208,7 +211,7 @@ def verifica_due_fattori(dati: VerificaDueFattori, richiesta: Request,
     I tentativi qui contano come quelli della password: senza, il secondo
     fattore sarebbe sei cifre da indovinare a raffica.
     """
-    ip = richiesta.client.host if richiesta.client else "sconosciuto"
+    ip = ip_reale(richiesta)
 
     utente_id = leggi_token_scopo(dati.token, SCOPO_2FA)
     if utente_id is None:
@@ -294,12 +297,38 @@ def verifica_email(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/reinvia-verifica", status_code=202)
-def reinvia_verifica(current: Utente = Depends(get_current_user)):
+def reinvia_verifica(richiesta: Request,
+                     current: Utente = Depends(get_current_user)):
     """Reinvia il link di verifica all'utente loggato (se non gia' verificato)."""
+    if _troppe_email(richiesta):
+        raise _TROPPE
     if current.email_verificata:
         return {"messaggio": "Email gia' verificata"}
     _invia_verifica(current)
     return {"messaggio": "Email di verifica inviata"}
+
+
+# ---------- FRENO SUGLI ENDPOINT CHE MANDANO EMAIL ----------
+# Registrazione, reset, reinvio verifica e cambio indirizzo mandano email.
+# Senza un freno, sono un modo gratis per riempire di posta un indirizzo
+# qualunque e per bruciare il credito del servizio di invio. Il tetto e' largo
+# (una persona vera non chiede dieci reset in un'ora), stretto abbastanza da
+# fermare l'abuso automatico.
+from datetime import timedelta as _timedelta
+
+MAX_EMAIL_PER_IP = 15
+FINESTRA_EMAIL = _timedelta(hours=1)
+
+
+def _troppe_email(richiesta: Request) -> bool:
+    return limiti.troppo_spesso(f"email:{ip_reale(richiesta)}",
+                                MAX_EMAIL_PER_IP, FINESTRA_EMAIL)
+
+
+_TROPPE = HTTPException(
+    status_code=429,
+    detail="Troppe richieste da qui. Aspetta un po' e riprova.",
+)
 
 
 # ---------- RECUPERO PASSWORD ----------
@@ -317,10 +346,13 @@ class ResetPasswordRichiesta(BaseModel):
 
 
 @router.post("/richiedi-reset", status_code=202)
-def richiedi_reset(dati: RichiediResetRichiesta, db: Session = Depends(get_db)):
+def richiedi_reset(dati: RichiediResetRichiesta, richiesta: Request,
+                   db: Session = Depends(get_db)):
     """L'utente chiede il reset inserendo l'email. Se esiste, gli mandiamo il link.
     Rispondiamo SEMPRE ok (anche se l'email non esiste) per non rivelare quali
     email sono registrate (evita 'email enumeration')."""
+    if _troppe_email(richiesta):
+        raise _TROPPE
     utente = db.query(Utente).filter(Utente.email == dati.email).first()
     if utente is not None:
         token = crea_token_scopo(utente.id, SCOPO_RESET, durata_minuti=60)
@@ -390,7 +422,8 @@ class CambioEmail(BaseModel):
 
 
 @router.post("/cambia-email", status_code=202)
-def chiedi_cambio_email(dati: CambioEmail, db: Session = Depends(get_db),
+def chiedi_cambio_email(dati: CambioEmail, richiesta: Request,
+                        db: Session = Depends(get_db),
                         current: Utente = Depends(get_current_user)):
     """Chiede di cambiare il proprio indirizzo. NON lo cambia ancora.
 
@@ -404,6 +437,8 @@ def chiedi_cambio_email(dati: CambioEmail, db: Session = Depends(get_db),
     spostare l'account: non deve poterlo fare chi si siede al tuo posto
     mentre sei collegato.
     """
+    if _troppe_email(richiesta):
+        raise _TROPPE
     if not current.password_hash or not verifica_password(dati.password, current.password_hash):
         raise HTTPException(status_code=401, detail="Password non corretta")
 

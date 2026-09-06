@@ -72,3 +72,27 @@ def azzera(email: str, ip: str) -> None:
 def azzera_tutto() -> None:
     """Serve ai test, per non farli inciampare l'uno nell'altro."""
     _fallimenti.clear()
+    _azioni.clear()
+
+
+# --- Freno generico per le azioni "costose verso l'esterno" ----------------
+# Il contatore sopra conta i FALLIMENTI (e li azzera quando si entra). Qui
+# invece si contano le RICHIESTE, riuscite o no: serve per le cose che mandano
+# email (registrazione, reset, reinvio verifica, cambio indirizzo). Senza un
+# freno, quegli endpoint sono un modo gratis per bombardare di email un
+# indirizzo qualunque e per bruciare il credito del servizio di invio.
+_azioni: dict[str, list[datetime]] = {}
+
+
+def troppo_spesso(chiave: str, massimo: int, finestra: timedelta) -> bool:
+    """Segna un'azione e dice se se ne sono fatte troppe di recente.
+
+    A differenza dei tentativi di accesso non c'e' un "azzera": queste azioni
+    non hanno un "successo" che pulisce il conto, si diradano da sole col
+    passare del tempo.
+    """
+    adesso = datetime.now(timezone.utc)
+    recenti = [q for q in _azioni.get(chiave, []) if adesso - q < finestra]
+    recenti.append(adesso)
+    _azioni[chiave] = recenti
+    return len(recenti) > massimo
