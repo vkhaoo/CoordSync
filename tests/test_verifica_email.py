@@ -60,4 +60,4 @@ def test_a_chi_e_gia_verificato_non_si_manda_niente(client):
 
 def test_senza_accesso_non_si_chiede_niente(client):
     """L'endpoint riguarda l'utente collegato: senza token non esiste."""
-    assert client.post("/auth/reinvia-verifica").status_code == 403
+    assert client.post("/auth/reinvia-verifica").status_code == 401

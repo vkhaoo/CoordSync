@@ -29,6 +29,13 @@ import tempfile
 _DB_TEST = pathlib.Path(tempfile.gettempdir()) / f"coordsync_test_{os.getpid()}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_DB_TEST.as_posix()}"
 
+# I test parlano in http, e un cookie "secure" il browser (e il client dei
+# test) lo manda solo in https: resterebbe li' senza tornare mai indietro, e
+# sembrerebbe che la sessione non funzioni. In produzione vale l'impostazione
+# vera — c'e' un test apposta che verifica che li' il cookie sia secure.
+os.environ["COOKIE_SECURE"] = "false"
+os.environ["COOKIE_SAMESITE"] = "lax"
+
 import pytest
 from fastapi.testclient import TestClient
 

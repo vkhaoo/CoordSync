@@ -138,24 +138,52 @@ describe("gli errori diventano frasi comprensibili", () => {
   });
 });
 
-describe("il token", () => {
-  test("si allega alle richieste e sopravvive al ricaricamento", async () => {
+describe("la sessione", () => {
+  test("i cookie viaggiano con ogni richiesta", async () => {
+    // Senza credentials:"include" il browser non allega i cookie a un
+    // indirizzo diverso da quello della pagina — e in produzione frontend e
+    // backend stanno su due indirizzi diversi. Senza questa riga, l'app
+    // sarebbe scollegata online e funzionante in locale.
     const fetchFinto = vi.fn().mockResolvedValue(rispostaFinta([]));
     vi.stubGlobal("fetch", fetchFinto);
-    const { api, setToken } = await caricaApi();
+    const { api } = await caricaApi();
 
-    setToken("abc123");
     await conIlTempoCheScorre(api.progetti());
 
-    const intestazioni = fetchFinto.mock.calls[0][1].headers;
-    expect(intestazioni.Authorization).toBe("Bearer abc123");
-    // ed e' finito nel browser, cosi' ricaricando la pagina si resta dentro
-    expect(localStorage.getItem("coordsync_token")).toBe("abc123");
+    expect(fetchFinto.mock.calls[0][1].credentials).toBe("include");
   });
 
-  test("uscendo sparisce", async () => {
+  test("la prova anti-CSRF si manda solo su quello che cambia qualcosa", async () => {
+    document.cookie = "coordsync_csrf=prova123";
+    const fetchFinto = vi.fn().mockResolvedValue(rispostaFinta([]));
+    vi.stubGlobal("fetch", fetchFinto);
+    const { api } = await caricaApi();
+
+    await conIlTempoCheScorre(api.progetti());
+    expect(fetchFinto.mock.calls[0][1].headers["X-CSRF-Token"]).toBeUndefined();
+
+    await conIlTempoCheScorre(api.creaProgetto({ nome: "X" }));
+    expect(fetchFinto.mock.calls[1][1].headers["X-CSRF-Token"]).toBe("prova123");
+  });
+
+  test("il token di prima del cambio continua a funzionare", async () => {
+    // Chi era collegato quando la sessione e' passata ai cookie ha ancora un
+    // token in localStorage: va mandato finche' non scade, se no il giorno
+    // della pubblicazione verrebbero buttati fuori tutti insieme.
+    localStorage.setItem("coordsync_token", "vecchio123");
+    const fetchFinto = vi.fn().mockResolvedValue(rispostaFinta([]));
+    vi.stubGlobal("fetch", fetchFinto);
+    const { api } = await caricaApi();
+
+    await conIlTempoCheScorre(api.progetti());
+
+    expect(fetchFinto.mock.calls[0][1].headers.Authorization).toBe("Bearer vecchio123");
+  });
+
+  test("uscendo si butta via anche il token vecchio", async () => {
+    localStorage.setItem("coordsync_token", "vecchio123");
     const { setToken, getToken } = await caricaApi();
-    setToken("abc123");
+
     setToken(null);
 
     expect(getToken()).toBeNull();

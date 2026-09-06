@@ -32,6 +32,28 @@ tutte rimaste dove erano, come argomenti a sé stanti.
 
 ---
 
+## [!] Da controllare al prossimo deploy
+
+### [!] I cookie della sessione e le origini CORS
+
+La sessione non sta più in `localStorage` ma in un **cookie che JavaScript non
+può leggere**. Perché funzioni online servono due cose, e sono già i valori di
+default del codice: `COOKIE_SECURE=true` e `COOKIE_SAMESITE=none`. Non devi
+impostare niente — a meno che tu non le abbia messe a mano su Render con altri
+valori.
+
+Quello che invece **devi controllare** è `CORS_ORIGINS` su Render → backend →
+Environment: deve contenere esattamente l'indirizzo del sito
+(`https://coordsync.onrender.com`). Con i cookie non basta più un'origine
+qualsiasi: se lì c'è scritto un indirizzo diverso, o un asterisco, il browser
+rifiuta di allegare il cookie e nessuno riesce più a entrare.
+
+Se dopo il deploy l'accesso non funziona: è quasi sicuramente quello. Nel
+frattempo chi era già collegato continua a lavorare col vecchio sistema fino a
+scadenza (24 ore), quindi hai il tempo di sistemare senza bloccare nessuno.
+
+---
+
 ## [!] Scadenze e cose che possono morire da sole
 
 ### [!] Il database gratuito di Render scade dopo 90 giorni

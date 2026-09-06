@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     secret_key: str = CHIAVE_DI_RIPIEGO
     token_durata_minuti: int = 60 * 24  # 24 ore
 
+    # --- Cookie della sessione ---
+    # In produzione frontend e backend stanno su due indirizzi diversi, quindi
+    # il cookie e' "fra siti" e serve samesite=none, che i browser accettano
+    # solo se il cookie e' anche secure (cioe' via HTTPS).
+    # In locale, se si prova senza HTTPS, si mette COOKIE_SECURE=false e
+    # COOKIE_SAMESITE=lax.
+    cookie_secure: bool = True
+    cookie_samesite: str = "none"
+
     # Origini permesse per il CORS (chi puo' chiamare l'API dal browser).
     # In locale: il server di sviluppo. In produzione: l'indirizzo del frontend.
     # Formato: indirizzi separati da virgola.

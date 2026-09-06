@@ -4,19 +4,44 @@
 
 // L'indirizzo del backend. In locale usa il default; in produzione si imposta
 // la variabile VITE_API_URL con l'indirizzo del backend online.
-const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+//
+// "localhost" e non "127.0.0.1", anche se sono la stessa macchina: per i
+// cookie contano come due SITI diversi, e il cookie della sessione non
+// verrebbe mai allegato. La porta invece non conta, quindi localhost:5173 che
+// chiama localhost:8000 e' tutto in famiglia.
+const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-// Il token viene salvato nel browser (localStorage) cosi' resta anche dopo
-// aver ricaricato la pagina. Al primo caricamento lo rileggo da li'.
+// --- La sessione ----------------------------------------------------------
+// Il token NON si tiene piu' qui: sta in un cookie che il browser gestisce da
+// solo e che JavaScript non puo' leggere. Da questo file, quindi, la sessione
+// non si vede — ed e' esattamente il punto: quello che il codice della pagina
+// non puo' leggere non puo' nemmeno essere rubato da codice ostile.
+//
+// Resta una cosa da fare a mano: il cookie viene allegato dal browser anche
+// alle richieste che partono da un altro sito, quindi per tutto quello che
+// CAMBIA qualcosa si rimanda indietro un valore che si legge da un secondo
+// cookie, quello si' leggibile. Un sito estraneo non riesce a leggerlo, e
+// quindi non riesce a scrivere l'header.
 const CHIAVE_TOKEN = "coordsync_token";
-let token = localStorage.getItem(CHIAVE_TOKEN);
+
+// Il token vecchio, se c'e' ancora: chi era collegato prima del cambio deve
+// poter continuare a lavorare finche' non scade. Si legge una volta sola,
+// all'avvio, e non se ne salvano piu' di nuovi.
+let tokenVecchio = null;
+try { tokenVecchio = localStorage.getItem(CHIAVE_TOKEN); } catch { }
 
 export function setToken(t) {
-  token = t;
-  if (t) localStorage.setItem(CHIAVE_TOKEN, t);   // salvo
-  else localStorage.removeItem(CHIAVE_TOKEN);       // logout: rimuovo
+  // La sessione la apre e la chiude il server, con i cookie. Qui resta solo
+  // il compito di buttare via l'eventuale token vecchio.
+  tokenVecchio = null;
+  try { localStorage.removeItem(CHIAVE_TOKEN); } catch { }
 }
-export function getToken() { return token; }
+export function getToken() { return tokenVecchio; }
+
+function valoreCookie(nome) {
+  const trovato = document.cookie.split("; ").find((c) => c.startsWith(nome + "="));
+  return trovato ? decodeURIComponent(trovato.split("=").slice(1).join("=")) : null;
+}
 
 // Quanto aspettare una risposta prima di considerarla persa. Generoso di
 // proposito: sul piano gratuito il servizio si addormenta dopo 15 minuti e la
@@ -47,13 +72,23 @@ async function unTentativo(metodo, percorso, corpo) {
   const timer = setTimeout(() => stop.abort(), ATTESA_MASSIMA);
 
   const headers = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Solo per chi ha ancora in tasca un token del vecchio modo.
+  if (tokenVecchio) headers["Authorization"] = `Bearer ${tokenVecchio}`;
+  // La prova anti-CSRF serve solo a quello che cambia qualcosa.
+  if (metodo !== "GET") {
+    const prova = valoreCookie("coordsync_csrf");
+    if (prova) headers["X-CSRF-Token"] = prova;
+  }
 
   try {
     return await fetch(BASE + percorso, {
       method: metodo,
       headers,
       body: corpo ? JSON.stringify(corpo) : undefined,
+      // Senza questo il browser NON allega i cookie a un indirizzo diverso da
+      // quello della pagina, e in produzione frontend e backend stanno su due
+      // indirizzi diversi.
+      credentials: "include",
       signal: stop.signal,
     });
   } finally {
@@ -134,6 +169,9 @@ export const api = {
   registra: (dati) => richiesta("POST", "/auth/register", dati),
   login:    (dati) => richiesta("POST", "/auth/login", dati),
   me:       () => richiesta("GET", "/auth/me"),
+  // L'uscita la deve fare il server: il cookie della sessione e' HttpOnly,
+  // quindi da qui non si puo' cancellare.
+  esci:     () => richiesta("POST", "/auth/logout"),
   reinviaVerifica: () => richiesta("POST", "/auth/reinvia-verifica"),
   richiediReset: (email) => richiesta("POST", "/auth/richiedi-reset", { email }),
   resetPassword: (token, nuova_password) => richiesta("POST", "/auth/reset-password", { token, nuova_password }),

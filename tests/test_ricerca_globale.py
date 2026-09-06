@@ -107,7 +107,7 @@ def test_i_caratteri_jolly_non_fanno_danni(client):
 
 
 def test_senza_accesso_non_si_cerca(client):
-    assert client.get("/ricerca?q=valvola").status_code == 403
+    assert client.get("/ricerca?q=valvola").status_code == 401
 
 
 # ---------- NON TROVA QUELLO CHE NON SI DEVE VEDERE ----------

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api, setToken, getToken } from "./api.js";
 import Dashboard from "./Dashboard.jsx";
 import ResetPassword from "./ResetPassword.jsx";
@@ -16,8 +16,10 @@ const tokenInvitoAzienda = parametri.get("invito_azienda_token");
 export default function App() {
   // "stato" = dati che, se cambiano, ridisegnano lo schermo da soli.
   const [modo, setModo] = useState("login");      // "login", "registra" o "recupero"
-  // All'avvio sono gia' connesso se un token e' salvato nel browser.
-  const [connesso, setConnesso] = useState(Boolean(getToken()));
+  // All'avvio non si puo' piu' sapere da soli se la sessione c'e': il cookie
+  // che la tiene e' invisibile a JavaScript. Si chiede al server.
+  // null = ancora non lo so.
+  const [connesso, setConnesso] = useState(null);
   const [errore, setErrore] = useState(null);
   const [messaggio, setMessaggio] = useState(null);
 
@@ -29,6 +31,22 @@ export default function App() {
   // token di passaggio che da solo non apre niente, e deve mettere il codice.
   const [attesa2fa, setAttesa2fa] = useState(null);
   const [codice2fa, setCodice2fa] = useState("");
+
+  useEffect(() => {
+    // Le pagine che si aprono da un link email non hanno bisogno di sessione:
+    // inutile disturbare il server.
+    if (tokenReset || tokenInvito || tokenInvitoAzienda) { setConnesso(false); return; }
+
+    api.me()
+      .then(() => setConnesso(true))
+      .catch((err) => {
+        // 401 vuol dire "non sei collegato": si va al modulo di accesso.
+        // Qualunque altro guasto (server addormentato, rete assente) NON deve
+        // buttare fuori nessuno: si va avanti come collegati, e sara' la
+        // dashboard a mostrare l'errore con il suo "Riprova".
+        setConnesso(err.stato === 401 ? false : true);
+      });
+  }, []);
 
   // Se arrivo dal link dell'email, mostro la pagina per la nuova password.
   if (tokenReset) {
@@ -128,10 +146,20 @@ export default function App() {
     );
   }
 
+  if (connesso === null) {
+    return <><AvvisoRete /><div className="schermata"><p>Caricamento…</p></div></>;
+  }
+
   // Se sono connesso, mostro la dashboard vera.
   if (connesso) {
     return <><AvvisoRete />
-             <Dashboard onLogout={() => { setToken(null); setConnesso(false); }} /></>;
+             <Dashboard onLogout={async () => {
+               // Il cookie lo cancella il server; setToken butta via
+               // l'eventuale token vecchio rimasto in localStorage.
+               try { await api.esci(); } catch { }
+               setToken(null);
+               setConnesso(false);
+             }} /></>;
   }
 
   // Altrimenti mostro il form di accesso/registrazione/recupero.

@@ -111,13 +111,15 @@ def test_gli_errori_finiscono_nei_log(client):
     assert "404" in righe[0]
 
 
-def test_anche_chi_non_ha_il_permesso_finisce_nei_log(client):
-    """Senza token e' 403: va registrato, perche' un 403 improvviso e
-    ripetuto e' il sintomo di qualcosa che non va."""
+def test_anche_chi_non_e_collegato_finisce_nei_log(client):
+    """Senza sessione e' 401, e va registrato lo stesso: una raffica di
+    richieste rifiutate e' il sintomo di qualcosa che non va — qualcuno che
+    tenta, o piu' probabilmente una nostra pagina che continua a chiedere con
+    una sessione ormai scaduta."""
     with _in_ascolto() as ascoltatore:
-        assert client.get("/progetti").status_code == 403
+        assert client.get("/progetti").status_code == 401
 
-    assert any("/progetti" in r and "403" in r for r in ascoltatore.righe), ascoltatore.righe
+    assert any("/progetti" in r and "401" in r for r in ascoltatore.righe), ascoltatore.righe
 
 
 def test_health_risponde(client):

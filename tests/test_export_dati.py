@@ -25,7 +25,11 @@ def _id_utente(client, admin, email):
 
 
 def test_serve_essere_loggati(client):
-    assert client.get("/auth/me/export").status_code == 403
+    # 401 e non 403: "non sei collegato" e' un'altra cosa da "sei collegato ma
+    # non puoi". Prima rispondeva 403 perche' lo decideva il pezzo di FastAPI
+    # che leggeva l'header; da quando la sessione sta in un cookie la risposta
+    # la scegliamo noi, e questa e' quella giusta.
+    assert client.get("/auth/me/export").status_code == 401
 
 
 def test_l_export_contiene_il_profilo(client):

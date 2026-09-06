@@ -17,25 +17,43 @@ Sono due, e la differenza conta:
 richiedi_ruolo, che serve per i permessi, passa da richiedi_azienda: un ruolo
 esiste solo dentro un'azienda.
 """
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from app import sessione
 from app.appartenenze import ruolo_in
 from app.database import get_db
 from app.models.utente import Utente
 from app.security import leggi_token
 
-# Estrae automaticamente il token dall'header Authorization: Bearer ...
-_bearer = HTTPBearer()
-
 
 def get_current_user(
-    credenziali: HTTPAuthorizationCredentials = Depends(_bearer),
+    richiesta: Request,
     db: Session = Depends(get_db),
 ) -> Utente:
-    """Chi sta chiedendo. L'azienda attiva puo' anche non esserci."""
-    letto = leggi_token(credenziali.credentials)
+    """Chi sta chiedendo. L'azienda attiva puo' anche non esserci.
+
+    Il token arriva dal COOKIE della sessione, che JavaScript non puo'
+    leggere. Si accetta ancora l'header Authorization per non buttare fuori
+    tutti insieme quelli che erano gia' collegati quando e' cambiato il modo
+    (vedi app/sessione.py).
+    """
+    token, da_cookie = sessione.token_dalla_richiesta(richiesta)
+    if token is None:
+        raise HTTPException(status_code=401, detail="Non sei collegato")
+
+    # Se la sessione arriva da un cookie, il browser lo allega da solo anche
+    # alle richieste che partono da un altro sito: per tutto quello che
+    # CAMBIA qualcosa serve la prova che la richiesta viene davvero dalle
+    # nostre pagine.
+    if da_cookie and richiesta.method not in sessione.METODI_SICURI:
+        if not sessione.csrf_valido(richiesta):
+            raise HTTPException(
+                status_code=403,
+                detail="Richiesta non riconosciuta: ricarica la pagina e riprova.",
+            )
+
+    letto = leggi_token(token)
     if letto is None:
         raise HTTPException(status_code=401, detail="Token non valido o scaduto")
     utente_id, org_dal_token = letto

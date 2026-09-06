@@ -7,7 +7,7 @@ Router di autenticazione: registrazione e login.
 """
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -25,7 +25,7 @@ from app.security import (
 from app.schemas.validators import PasswordStr
 from app.dependencies import get_current_user
 from app.notifiche import invia_email
-from app import due_fattori, limiti
+from app import due_fattori, limiti, sessione
 from app.email_templates import (
     verifica_email as email_verifica_template,
     reset_password as email_reset_template,
@@ -63,7 +63,8 @@ class TokenRisposta(BaseModel):
 
 
 @router.post("/register", response_model=TokenRisposta, status_code=201)
-def register(dati: RegisterRichiesta, db: Session = Depends(get_db)):
+def register(dati: RegisterRichiesta, risposta: Response,
+             db: Session = Depends(get_db)):
     """Crea un ACCOUNT. Non un'azienda.
 
     Iscriversi e aprire un'azienda erano la stessa cosa, e non tornava: per
@@ -91,7 +92,9 @@ def register(dati: RegisterRichiesta, db: Session = Depends(get_db)):
     db.refresh(utente)
 
     _invia_verifica(utente)
-    return TokenRisposta(access_token=crea_token(utente.id))
+    token = crea_token(utente.id)
+    sessione.imposta(risposta, token)
+    return TokenRisposta(access_token=token)
 
 
 class NuovaAzienda(BaseModel):
@@ -105,7 +108,8 @@ class AziendaCreata(BaseModel):
 
 
 @router.post("/aziende", response_model=AziendaCreata, status_code=201)
-def crea_azienda(dati: NuovaAzienda, db: Session = Depends(get_db),
+def crea_azienda(dati: NuovaAzienda, risposta: Response,
+                 db: Session = Depends(get_db),
                  current: Utente = Depends(get_current_user)):
     """Apre una nuova azienda e ne fa amministratore chi la crea.
 
@@ -133,8 +137,9 @@ def crea_azienda(dati: NuovaAzienda, db: Session = Depends(get_db),
         current.ruolo = RuoloUtente.admin
     db.commit()
 
-    return AziendaCreata(id=org.id, nome=org.nome,
-                         access_token=crea_token(current.id, org.id))
+    token = crea_token(current.id, org.id)
+    sessione.imposta(risposta, token)
+    return AziendaCreata(id=org.id, nome=org.nome, access_token=token)
 
 
 # ---------- LOGIN ----------
@@ -145,7 +150,8 @@ class LoginRichiesta(BaseModel):
 
 
 @router.post("/login", response_model=TokenRisposta)
-def login(dati: LoginRichiesta, richiesta: Request, db: Session = Depends(get_db)):
+def login(dati: LoginRichiesta, richiesta: Request, risposta: Response,
+          db: Session = Depends(get_db)):
     ip = richiesta.client.host if richiesta.client else "sconosciuto"
 
     # Prima di tutto: chi ha gia' sbagliato troppe volte aspetta.
@@ -179,7 +185,9 @@ def login(dati: LoginRichiesta, richiesta: Request, db: Session = Depends(get_db
 
     # Si entra nell'azienda di casa: da li' si potra' cambiare senza
     # rifare l'accesso (POST /auth/cambia-azienda).
-    return TokenRisposta(access_token=crea_token(utente.id, utente.organizzazione_id))
+    token = crea_token(utente.id, utente.organizzazione_id)
+    sessione.imposta(risposta, token)
+    return TokenRisposta(access_token=token)
 
 
 class VerificaDueFattori(BaseModel):
@@ -189,7 +197,7 @@ class VerificaDueFattori(BaseModel):
 
 @router.post("/2fa/verifica", response_model=TokenRisposta)
 def verifica_due_fattori(dati: VerificaDueFattori, richiesta: Request,
-                         db: Session = Depends(get_db)):
+                         risposta: Response, db: Session = Depends(get_db)):
     """Secondo passo dell'accesso: il codice che cambia ogni 30 secondi.
 
     Accetta anche un codice di RECUPERO, che pero' brucia: chi ha perso il
@@ -220,8 +228,9 @@ def verifica_due_fattori(dati: VerificaDueFattori, richiesta: Request,
 
     if due_fattori.codice_valido(utente.totp_segreto, dati.codice):
         limiti.azzera(utente.email, ip)
-        return TokenRisposta(
-            access_token=crea_token(utente.id, utente.organizzazione_id))
+        token = crea_token(utente.id, utente.organizzazione_id)
+        sessione.imposta(risposta, token)
+        return TokenRisposta(access_token=token)
 
     # Non era il codice del telefono: forse e' uno di recupero.
     rimasti = due_fattori.consuma_codice_recupero(
@@ -231,11 +240,24 @@ def verifica_due_fattori(dati: VerificaDueFattori, richiesta: Request,
         utente.totp_recupero = ",".join(rimasti)
         db.commit()
         limiti.azzera(utente.email, ip)
-        return TokenRisposta(
-            access_token=crea_token(utente.id, utente.organizzazione_id))
+        token = crea_token(utente.id, utente.organizzazione_id)
+        sessione.imposta(risposta, token)
+        return TokenRisposta(access_token=token)
 
     limiti.registra_fallimento(utente.email, ip)
     raise HTTPException(status_code=401, detail="Codice non valido")
+
+
+@router.post("/logout", status_code=204)
+def logout(risposta: Response):
+    """Chiude la sessione cancellando i cookie.
+
+    Serve un endpoint apposta perche' il cookie della sessione e' HttpOnly:
+    il frontend non puo' cancellarlo da solo, puo' solo chiedere al server di
+    farlo. Non serve essere collegati: se il cookie non c'e' o non vale
+    niente, il risultato e' comunque quello giusto.
+    """
+    sessione.cancella(risposta)
 
 
 @router.get("/me", response_model=UtenteRead)
@@ -618,7 +640,8 @@ class CambioAzienda(BaseModel):
 
 
 @router.post("/cambia-azienda", response_model=TokenRisposta)
-def cambia_azienda(dati: CambioAzienda, db: Session = Depends(get_db),
+def cambia_azienda(dati: CambioAzienda, risposta: Response,
+                   db: Session = Depends(get_db),
                    current: Utente = Depends(get_current_user)):
     """Passa a un'altra delle proprie aziende, senza rifare l'accesso.
 
@@ -636,8 +659,9 @@ def cambia_azienda(dati: CambioAzienda, db: Session = Depends(get_db),
         # quell'azienda esiste.
         raise HTTPException(status_code=404, detail="Azienda non trovata")
 
-    return TokenRisposta(
-        access_token=crea_token(current.id, dati.organizzazione_id))
+    token = crea_token(current.id, dati.organizzazione_id)
+    sessione.imposta(risposta, token)
+    return TokenRisposta(access_token=token)
 
 
 # ---------- ESPORTAZIONE DEI PROPRI DATI ----------
