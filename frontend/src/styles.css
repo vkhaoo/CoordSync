@@ -1069,11 +1069,42 @@ input, select, textarea { font-family: var(--sans); }
 .piede-qr { font-size: 0.8rem; color: #5f6b78; margin: 0.4rem 0 0; }
 
 @media print {
-  /* Sulla carta va solo l'etichetta: niente barra, niente elenco lavori,
-     niente sfondo scuro che si porterebbe via mezza cartuccia. */
+  /* Sulla carta va SOLO il foglio aperto — l'etichetta o la scheda: niente
+     barra, niente elenco lavori, niente sfondo scuro che si porterebbe via
+     mezza cartuccia. Ne puo' essere aperto uno alla volta, quindi la stessa
+     regola vale per tutti e due. */
   body * { visibility: hidden; }
-  .foglio-qr, .foglio-qr * { visibility: visible; }
+  .foglio-qr, .foglio-qr *,
+  .foglio-scheda, .foglio-scheda * { visibility: visible; }
   .comandi-qr { display: none; }
   .velo-qr { position: static; background: none; padding: 0; display: block; }
   .foglio-qr { box-shadow: none; max-width: none; }
+}
+
+/* --- La scheda macchina in forma di documento --- */
+.foglio-scheda {
+  background: #fff; color: #17202a; border-radius: 12px; padding: 1rem 1.2rem;
+  max-width: 720px; width: 100%; max-height: 88vh; overflow-y: auto;
+  box-shadow: var(--ombra-3);
+}
+.documento { font-size: 0.9rem; line-height: 1.55; }
+.testa-documento { border-bottom: 2px solid #17202a; padding-bottom: 0.5rem; margin-bottom: 0.8rem; }
+.testa-documento h1 { margin: 0 0 0.2rem; font-size: 1.5rem; }
+.riga-documento { margin: 0.15rem 0; }
+.documento .tenue { color: #5f6b78; }
+.voce-documento {
+  border-bottom: 1px solid #dde3e9; padding-bottom: 0.6rem; margin-bottom: 0.6rem;
+  /* Una voce non si spezza a meta' fra due fogli: sulla carta il titolo su una
+     pagina e la sua storia su quella dopo si perdono. */
+  break-inside: avoid;
+}
+.voce-documento h2 { margin: 0 0 0.15rem; font-size: 1rem; }
+.elenco-documento { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+.elenco-documento li { overflow-wrap: anywhere; }
+.commenti-documento { list-style: none; padding-left: 0.6rem; border-left: 2px solid #dde3e9; }
+
+@media print {
+  .foglio-scheda {
+    box-shadow: none; max-width: none; max-height: none; overflow: visible; padding: 0;
+  }
 }

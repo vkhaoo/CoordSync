@@ -4,6 +4,7 @@ import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
 import Commenti from "./Commenti.jsx";
 import QrMacchina from "./QrMacchina.jsx";
+import SchedaStampa from "./SchedaStampa.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
 import Tendina from "./Tendina.jsx";
 import { dalServer } from "./date.js";
@@ -34,6 +35,7 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
 
   // Form
   const [qrAperto, setQrAperto] = useState(false);   // l'etichetta da stampare
+  const [stampaAperta, setStampaAperta] = useState(false);   // la scheda su carta
   const [nuovaMacchina, setNuovaMacchina] = useState("");
   const [nuovaSezione, setNuovaSezione] = useState("");
   // Anche qui: si apre la scheda per leggere lo storico, non per scriverci.
@@ -235,6 +237,8 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
                       spesso non e' chi amministra. */}
                   <button className="azione-icona" title="Etichetta QR da stampare"
                           onClick={() => setQrAperto(true)}>⬚</button>
+                  <button className="azione-icona" title="Stampa la scheda"
+                          onClick={() => setStampaAperta(true)}>🖶</button>
                   {gestisco && (
                     <button className="azione-icona elimina" title="Elimina macchina"
                             onClick={eliminaMacchina}>🗑</button>
@@ -452,6 +456,13 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
 
       {qrAperto && scheda && (
         <QrMacchina macchina={scheda} onChiudi={() => setQrAperto(false)} />
+      )}
+
+      {/* Si stampa quello che si sta guardando, filtri compresi: e' la cosa
+          meno sorprendente. */}
+      {stampaAperta && scheda && (
+        <SchedaStampa scheda={scheda} voci={voci}
+                      onChiudi={() => setStampaAperta(false)} />
       )}
     </div>
   );
