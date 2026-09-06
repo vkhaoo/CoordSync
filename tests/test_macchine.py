@@ -175,6 +175,50 @@ def test_voce_nel_generale_in_sezione_o_in_entrambi(client):
     assert entrambi["in_generale"] is True and len(entrambi["sezioni"]) == 1
 
 
+def test_la_sezione_di_una_voce_si_puo_cambiare_dopo(client):
+    """Sbagliare sezione scrivendo di fretta e' normale: dev'essere rimediabile.
+
+    Si cambia tutto il gruppo in una volta — sezioni, "generale", titolo — cosi'
+    non restano stati a meta'.
+    """
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m = _macchina(client, a)
+    faz = client.post(f"/macchine/{m['id']}/sezioni", json={"nome": "FAZ"}, headers=a).json()
+    conf = client.post(f"/macchine/{m['id']}/sezioni", json={"nome": "Confezione"}, headers=a).json()
+
+    v = client.post(f"/macchine/{m['id']}/voci", json={
+        "tipo": "analisi", "titolo": "Vibrazioni", "in_generale": False,
+        "sezioni_ids": [faz["id"]]}, headers=a).json()
+
+    r = client.patch(f"/voci/{v['id']}", json={
+        "titolo": "Vibrazioni sul gruppo di uscita",
+        "sezioni_ids": [conf["id"]], "in_generale": True}, headers=a)
+    assert r.status_code == 200
+    assert [s["nome"] for s in r.json()["sezioni"]] == ["Confezione"]
+    assert r.json()["in_generale"] is True
+    assert r.json()["titolo"] == "Vibrazioni sul gruppo di uscita"
+
+    # E si puo' anche toglierla da ogni sezione, lasciandola solo nel generale.
+    r = client.patch(f"/voci/{v['id']}", json={"sezioni_ids": []}, headers=a)
+    assert r.status_code == 200 and r.json()["sezioni"] == []
+
+
+def test_non_posso_spostare_una_voce_in_una_sezione_di_un_altra_macchina(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    mia = _macchina(client, a, nome="Pressa 1")
+    altra = _macchina(client, a, nome="Pressa 2")
+    sez_altra = client.post(f"/macchine/{altra['id']}/sezioni",
+                            json={"nome": "FAZ"}, headers=a).json()
+
+    v = client.post(f"/macchine/{mia['id']}/voci", json={
+        "tipo": "analisi", "titolo": "Misure"}, headers=a).json()
+
+    r = client.patch(f"/voci/{v['id']}", json={"sezioni_ids": [sez_altra["id"]]}, headers=a)
+    assert r.status_code == 404
+    # E la voce e' rimasta com'era: niente mezzo salvataggio.
+    assert client.get(f"/macchine/{mia['id']}/voci", headers=a).json()[0]["sezioni"] == []
+
+
 def test_voce_lavoro_ha_stato_le_altre_no(client):
     a = registra(client, "Azienda A", "Marco", "marco@a.it")
     m = _macchina(client, a)

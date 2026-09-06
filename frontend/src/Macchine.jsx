@@ -363,7 +363,8 @@ export default function Macchine({ io, reparti, vaiA }) {
               <div className="blocco-info">
                 <h3 className="titolo-colonna">Informazioni utili</h3>
                 {info.map((v) => <VoceCard key={v.id} voce={v} io={io} gestisco={gestisco}
-                                           azione={azione} argomenti={argomenti} figlie={[]} />)}
+                                           azione={azione} argomenti={argomenti} figlie={[]}
+                                           sezioni={scheda.sezioni} />)}
               </div>
             )}
 
@@ -432,7 +433,8 @@ export default function Macchine({ io, reparti, vaiA }) {
               <ul className="lista-lavori">
                 {radici.map((v) => (
                   <VoceCard key={v.id} voce={v} io={io} gestisco={gestisco} azione={azione}
-                            argomenti={argomenti} figlie={figliePer.get(v.id) || []} />
+                            argomenti={argomenti} figlie={figliePer.get(v.id) || []}
+                            sezioni={scheda.sezioni} />
                 ))}
               </ul>
             )}
@@ -444,20 +446,107 @@ export default function Macchine({ io, reparti, vaiA }) {
 }
 
 // Una riga dello storico.
-function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [] }) {
+function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sezioni = [] }) {
   const mia = io && voce.autore && voce.autore.id === io.id;
   const posso = mia || gestisco;
   const [spostando, setSpostando] = useState(false);
+  const [modifica, setModifica] = useState(false);
+
+  // I campi della modifica. Si riempiono nel momento in cui si apre il form
+  // (apriModifica), non qui: se nel frattempo la voce e' cambiata — l'ha
+  // toccata un collega, o l'ho appena salvata io — devo ripartire da com'e'
+  // adesso, non da com'era quando la scheda si e' disegnata.
+  const [mTipo, setMTipo] = useState(voce.tipo);
+  const [mStato, setMStato] = useState(voce.stato || "da_fare");
+  const [mTitolo, setMTitolo] = useState(voce.titolo);
+  const [mTesto, setMTesto] = useState(voce.testo || "");
+  const [mGenerale, setMGenerale] = useState(voce.in_generale);
+  const [mSezioni, setMSezioni] = useState(voce.sezioni.map((s) => s.id));
+
+  function apriModifica() {
+    setMTipo(voce.tipo);
+    setMStato(voce.stato || "da_fare");
+    setMTitolo(voce.titolo);
+    setMTesto(voce.testo || "");
+    setMGenerale(voce.in_generale);
+    setMSezioni(voce.sezioni.map((s) => s.id));
+    setSpostando(false);
+    setModifica(true);
+  }
+
+  function alternaSezione(id) {
+    setMSezioni((prec) => prec.includes(id) ? prec.filter((x) => x !== id) : [...prec, id]);
+  }
+
+  async function salva(e) {
+    e.preventDefault();
+    // Mando tutto il gruppo di campi insieme, anche quelli non toccati: il
+    // server lo tratta come una modifica sola, e non restano stati a meta'
+    // (il titolo nuovo con le sezioni vecchie) se qualcosa va storto.
+    await azione(() => api.modificaVoce(voce.id, {
+      tipo: mTipo,
+      stato: mTipo === "lavoro" ? mStato : null,
+      titolo: mTitolo,
+      testo: mTesto || null,
+      in_generale: mGenerale,
+      sezioni_ids: mSezioni,
+    }));
+    setModifica(false);
+  }
 
   // Sotto quali argomenti si puo' mettere questa voce: non se stessa, e non
   // le altre se lei stessa ha gia' delle voci sotto (un solo livello).
   const possibili = figlie.length > 0 ? [] : argomenti.filter((a) => a.id !== voce.id);
+
+  if (modifica) {
+    return (
+      <li className={`lavoro voce-macchina tipo-${voce.tipo}`}>
+        <form className="form-voce" onSubmit={salva}>
+          <div className="riga-voce">
+            <select value={mTipo} onChange={(e) => setMTipo(e.target.value)}>
+              {Object.entries(TIPI).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+            {mTipo === "lavoro" && (
+              <select value={mStato} onChange={(e) => setMStato(e.target.value)}>
+                {Object.entries(STATI).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            )}
+            <input value={mTitolo} onChange={(e) => setMTitolo(e.target.value)}
+                   placeholder="Titolo…" required autoFocus />
+          </div>
+          <textarea rows={3} value={mTesto} placeholder="Descrizione (facoltativa)…"
+                    onChange={(e) => setMTesto(e.target.value)} />
+          <div className="riga-voce piazzamento">
+            <label className="spunta">
+              <input type="checkbox" checked={mGenerale}
+                     onChange={(e) => setMGenerale(e.target.checked)} />
+              Nella parte generale
+            </label>
+            {sezioni.map((s) => (
+              <label key={s.id} className="spunta">
+                <input type="checkbox" checked={mSezioni.includes(s.id)}
+                       onChange={() => alternaSezione(s.id)} />
+                {s.nome}
+              </label>
+            ))}
+            <button type="submit" className="principale piccolo">Salva</button>
+            <button type="button" className="mini annulla" title="Annulla"
+                    onClick={() => setModifica(false)}>×</button>
+          </div>
+        </form>
+      </li>
+    );
+  }
 
   return (
     <li className={`lavoro voce-macchina tipo-${voce.tipo}`}>
       <div className="lavoro-testa">
         <span className="lavoro-titolo">{voce.titolo}</span>
         <div className="lavoro-azioni">
+          {posso && !spostando && (
+            <button className="azione-icona" title="Modifica voce"
+                    onClick={apriModifica}>✎</button>
+          )}
           {posso && possibili.length > 0 && !spostando && (
             <button className="azione-icona" title="Mettila sotto un argomento"
                     onClick={() => setSpostando(true)}>⤵</button>
@@ -519,7 +608,8 @@ function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [] }) {
         <ul className="voci-figlie">
           {figlie.map((f) => (
             <VoceCard key={f.id} voce={f} io={io} gestisco={gestisco}
-                      azione={azione} argomenti={argomenti} figlie={[]} />
+                      azione={azione} argomenti={argomenti} figlie={[]}
+                      sezioni={sezioni} />
           ))}
         </ul>
       )}
