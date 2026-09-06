@@ -445,11 +445,22 @@ export default function Dashboard({ onLogout }) {
 
                 {/* Avanzamento: quanti lavori "fatti" su totale */}
                 {lavori.length > 0 && (() => {
-                  const fatti = lavori.filter((l) => l.stato === "fatto").length;
-                  const perc = Math.round((fatti / lavori.length) * 100);
+                  // I lavori ANNULLATI escono dal conto, sopra e sotto la
+                  // riga: non sono lavoro fatto, ma nemmeno lavoro che resta
+                  // da fare. Lasciandoli al denominatore un progetto finito
+                  // non arriverebbe mai al 100%.
+                  const contati = lavori.filter((l) => l.stato !== "annullato");
+                  const fatti = contati.filter((l) => l.stato === "fatto").length;
+                  const perc = contati.length
+                    ? Math.round((fatti / contati.length) * 100) : 0;
                   return (
                     <div className="avanzamento">
-                      <div className="avanzamento-testo">{fatti}/{lavori.length} completati ({perc}%)</div>
+                      <div className="avanzamento-testo">
+                        {fatti}/{contati.length} completati ({perc}%)
+                        {lavori.length > contati.length && (
+                          <> · {lavori.length - contati.length} annullati</>
+                        )}
+                      </div>
                       <div className="barra"><div className="barra-piena" style={{ width: `${perc}%` }} /></div>
                     </div>
                   );

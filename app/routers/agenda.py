@@ -207,12 +207,14 @@ def leggi_agenda(dal: date, al: date,
         .all()
     )
 
-    # Le scadenze: solo lavori che gia' vedo, non ancora conclusi.
+    # Le scadenze: solo lavori che gia' vedo, non ancora conclusi. Un lavoro
+    # ANNULLATO non ha piu' una scadenza da rispettare: non deve comparire in
+    # agenda, se no continua a suonare per una cosa che si e' deciso di non fare.
     query_scadenze = (
         lavori_visibili(db, current)
         .filter(Lavoro.data_scadenza.isnot(None),
                 Lavoro.data_scadenza >= dal, Lavoro.data_scadenza <= al,
-                Lavoro.stato != StatoLavoro.fatto)
+                Lavoro.stato.notin_(StatoLavoro.conclusi()))
     )
     if ambito == "miei":
         query_scadenze = query_scadenze.filter(

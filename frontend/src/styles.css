@@ -27,6 +27,9 @@
   --st-incorso: #2f7fd1;
   --st-attesa: #d98c1f;
   --st-fatto: #35a15a;
+  /* Annullato: grigio spento, piu' scarico di "da fare". Non e' un traguardo
+     come "fatto", ed e' giusto che non attiri l'occhio. */
+  --st-annullato: #9aa3ac;
 
   --inchiostro: #1a2734;
   --testo: #2c3a48;
@@ -206,6 +209,10 @@ input, select, textarea { font-family: var(--sans); }
 .lavoro.card-in_attesa { border-left-color: var(--st-attesa); background: linear-gradient(90deg, #fdf7ec, var(--pannello) 12%); }
 .lavoro.card-fatto { border-left-color: var(--st-fatto); background: linear-gradient(90deg, #f2f9ee, var(--pannello) 12%); }
 .lavoro.card-fatto .lavoro-titolo { color: var(--tenue); text-decoration: line-through; }
+/* Annullato: barrato come "fatto" ma smorzato tutto quanto, perche' non e'
+   un lavoro concluso, e' un lavoro che non si fara'. */
+.lavoro.card-annullato { border-left-color: var(--st-annullato); opacity: 0.62; }
+.lavoro.card-annullato .lavoro-titolo { color: var(--tenue); text-decoration: line-through; }
 
 .lavoro-testa { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
 /* min-width:0 + overflow-wrap: i titoli lunghi vanno a capo DENTRO la card,
@@ -229,6 +236,7 @@ input, select, textarea { font-family: var(--sans); }
 .stato-select.stato-in_corso { background: #e3eefb; color: #17568f; }
 .stato-select.stato-in_attesa { background: #fbeed6; color: #895009; }
 .stato-select.stato-fatto { background: #e5f3da; color: #34701a; }
+.stato-select.stato-annullato { background: #eceff2; color: #6d7681; text-decoration: line-through; }
 
 .lavoro-meta { margin-top: 0.5rem; display: flex; gap: 0.9rem; align-items: center; font-size: 0.8rem; color: var(--tenue); flex-wrap: wrap; }
 .prio { font-size: 0.66rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -604,6 +612,7 @@ input, select, textarea { font-family: var(--sans); }
   --st-incorso: #5aa2e8;
   --st-attesa: #e0a445;
   --st-fatto: #4cbd76;
+  --st-annullato: #6f7b88;
   --errore: #e8776a;
   --ok: #5cc47f;
 

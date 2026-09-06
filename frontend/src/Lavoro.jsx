@@ -5,7 +5,11 @@ import { dalServer } from "./date.js";
 
 const ETICHETTA_STATO = {
   da_fare: "Da fare", in_corso: "In corso", in_attesa: "In attesa", fatto: "Fatto",
+  annullato: "Annullato",
 };
+// Gli stati in cui un lavoro non chiede piu' niente a nessuno. "In attesa"
+// NON e' fra questi: e' fermo, ma e' ancora da fare.
+export const CONCLUSI = ["fatto", "annullato"];
 const ETICHETTA_PRIORITA = {
   bassa: "Bassa", normale: "Normale", alta: "Alta", urgente: "Urgente",
 };
@@ -17,7 +21,9 @@ const PRIORITA = Object.keys(ETICHETTA_PRIORITA);
 const GIORNI_AVVISO = 3;
 
 function infoScadenza(lavoro) {
-  if (!lavoro.data_scadenza || lavoro.stato === "fatto") return null;
+  // Un lavoro annullato non ha piu' una scadenza da rispettare: smette di
+  // apparire in ritardo, come gia' fa quello fatto.
+  if (!lavoro.data_scadenza || CONCLUSI.includes(lavoro.stato)) return null;
   const oggi = new Date();
   oggi.setHours(0, 0, 0, 0);
   // "T00:00:00" forza la mezzanotte LOCALE (senza, la data ISO verrebbe letta come UTC).

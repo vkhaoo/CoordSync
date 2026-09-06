@@ -10,11 +10,28 @@ from app.database import Base
 
 class StatoLavoro(str, enum.Enum):
     """Gli stati possibili di un lavoro. Usare un enum evita errori di battitura
-    (nessuno puo' scrivere 'fattoo' o 'in corsoo': i valori sono fissi)."""
+    (nessuno puo' scrivere 'fattoo' o 'in corsoo': i valori sono fissi).
+
+    'annullato' non e' un doppione di 'fatto' ne' di 'in_attesa': e' un lavoro
+    che non si fara' PIU'. In attesa vuol dire fermo ma vivo (mancano i pezzi);
+    annullato vuol dire deciso di no. Tenerli distinti serve a due cose: la
+    barra di avanzamento non deve piu' contarlo — un lavoro annullato non e'
+    lavoro rimasto da fare — e la sua scadenza non deve piu' suonare.
+
+    Perche' un quinto stato invece di cancellare il lavoro: se lo si cancella
+    sparisce anche il perche', e "questo l'avevamo deciso e poi tolto" e'
+    un'informazione che serve sei mesi dopo.
+    """
     da_fare = "da_fare"
     in_corso = "in_corso"
     in_attesa = "in_attesa"
     fatto = "fatto"
+    annullato = "annullato"
+
+    @classmethod
+    def conclusi(cls) -> tuple["StatoLavoro", ...]:
+        """Gli stati in cui un lavoro non chiede piu' niente a nessuno."""
+        return (cls.fatto, cls.annullato)
 
 
 class PrioritaLavoro(str, enum.Enum):
