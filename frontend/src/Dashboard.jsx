@@ -311,7 +311,8 @@ export default function Dashboard({ onLogout }) {
             onVaiAlProgetto={(id) => { setVista("lavori"); setSelezionato(id); }}
             onVaiAllaMacchina={(id) => { setVista("macchine"); setMacchinaDaAprire(id); }}
             onVaiAllAgenda={() => setVista("agenda")} />
-          <Campanella onVaiAlLavoro={vaiAlLavoro} />
+          <Campanella onVaiAlLavoro={vaiAlLavoro}
+                      onVaiAllaMacchina={(id) => { setVista("macchine"); setMacchinaDaAprire(id); }} />
           <MioProfilo io={io} onLogout={onLogout}
                       onCambiaAzienda={() => setScegliAzienda(true)}
                       onDatiCambiati={(aggiornato) => setIo(aggiornato)} />

@@ -224,3 +224,45 @@ def test_fuori_dal_mio_reparto_non_esiste(client):
     assert client.get(f"/voci/{v['id']}/commenti", headers=dino).status_code == 404
     assert client.patch(f"/sotto-attivita/{passo['id']}",
                         json={"completata": True}, headers=dino).status_code == 404
+
+
+# ---------- LA CAMPANELLA ----------
+
+def test_chi_ha_scritto_la_voce_viene_avvisato(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    op = _utente(client, a, "Op", "op@a.it", "operatore")
+    m, v = _voce(client, a)   # la voce e' di Marco
+
+    client.post(f"/voci/{v['id']}/commenti",
+                json={"testo": "Ho ricontrollato la taratura"}, headers=op)
+
+    avvisi = client.get("/notifiche", headers=a).json()
+    mio = [n for n in avvisi["notifiche"] if n["voce_id"] == v["id"]]
+    assert len(mio) == 1
+    assert "Op ha commentato" in mio[0]["testo"]
+    # E porta sulla macchina giusta: senza, l'avviso non servirebbe a niente.
+    assert mio[0]["macchina_id"] == m["id"]
+
+
+def test_commentare_una_propria_voce_non_suona_a_se_stessi(client):
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    m, v = _voce(client, a)
+
+    client.post(f"/voci/{v['id']}/commenti", json={"testo": "nota per me"}, headers=a)
+    assert client.get("/notifiche", headers=a).json()["non_lette"] == 0
+
+
+def test_l_avviso_resta_leggibile_se_la_voce_sparisce(client):
+    """Un avviso e' la fotografia di un fatto avvenuto: cancellare la voce non
+    deve cancellare il racconto, solo il collegamento."""
+    a = registra(client, "Azienda A", "Marco", "marco@a.it")
+    op = _utente(client, a, "Op", "op@a.it", "operatore")
+    m, v = _voce(client, a)
+    client.post(f"/voci/{v['id']}/commenti", json={"testo": "ciao"}, headers=op)
+
+    assert client.delete(f"/voci/{v['id']}", headers=a).status_code == 204
+
+    avvisi = client.get("/notifiche", headers=a).json()["notifiche"]
+    assert any("ha commentato" in n["testo"] for n in avvisi)
+    for n in avvisi:
+        assert n["voce_id"] is None and n["macchina_id"] is None

@@ -26,6 +26,10 @@ class NotificaRead(BaseModel):
     creato_il: datetime
     lavoro_id: int | None = None
     impegno_id: int | None = None
+    voce_id: int | None = None
+    # Ricavato dalla voce (vedi il modello): e' quello che serve alla
+    # campanella per aprire la scheda giusta.
+    macchina_id: int | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

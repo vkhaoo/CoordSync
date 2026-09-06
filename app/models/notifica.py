@@ -22,6 +22,7 @@ from app.database import Base
 class TipoAvviso(str, enum.Enum):
     assegnazione = "assegnazione"   # ti hanno messo su un lavoro
     commento = "commento"           # qualcuno ha scritto su un tuo lavoro
+                                    # o sotto una tua voce di macchina
     impegno = "impegno"             # ti hanno messo in agenda un impegno o una riunione
 
 
@@ -43,5 +44,19 @@ class Notifica(Base):
     # nessuna parte.
     lavoro_id = Column(Integer, ForeignKey("lavori.id", ondelete="SET NULL"), nullable=True)
     impegno_id = Column(Integer, ForeignKey("impegni.id", ondelete="SET NULL"), nullable=True)
+    voce_id = Column(Integer, ForeignKey("voci_macchina.id", ondelete="SET NULL"), nullable=True)
 
     utente = relationship("Utente")
+    voce = relationship("VoceMacchina")
+
+    @property
+    def macchina_id(self) -> int | None:
+        """Su quale macchina porta questo avviso.
+
+        Non e' una colonna: si ricava dalla voce. Salvarlo a parte vorrebbe
+        dire tenere allineati due dati che dicono la stessa cosa, e un giorno
+        non lo sarebbero piu'. Se la voce e' stata cancellata torna None e
+        l'avviso resta leggibile ma non porta piu' da nessuna parte — la
+        stessa cosa che gia' fanno lavoro_id e impegno_id.
+        """
+        return self.voce.macchina_id if self.voce is not None else None

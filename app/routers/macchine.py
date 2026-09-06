@@ -36,6 +36,8 @@ from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import (macchine_visibili, macchina_visibile,
                             reparti_assegnabili, carica_reparti)
 from app.ricerca import condizione_testo
+from app.avvisi import avvisa
+from app.models.notifica import TipoAvviso
 
 router = APIRouter(tags=["macchine"])
 
@@ -395,6 +397,16 @@ def commenta_voce(voce_id: int, dati: CommentoCreate, db: Session = Depends(get_
     # L'autore e' chi e' collegato: non si commenta "a nome di" un altro.
     commento = Commento(testo=dati.testo, voce_id=voce.id, autore_id=current.id)
     db.add(commento)
+
+    # Avviso chi ha scritto la voce: e' l'unica persona di cui si sa con
+    # certezza che quella annotazione la segue. Non tutta l'azienda — una
+    # macchina la vedono in tanti, e una campanella che suona per ogni
+    # commento su ogni impianto smette di volere dire niente.
+    anteprima = dati.testo if len(dati.testo) <= 60 else dati.testo[:57] + "..."
+    avvisa(db, [voce.autore], TipoAvviso.commento,
+           f"{current.nome} ha commentato \"{voce.titolo}\": {anteprima}",
+           mittente=current, voce_id=voce.id)
+
     db.commit()
     db.refresh(commento)
     return commento

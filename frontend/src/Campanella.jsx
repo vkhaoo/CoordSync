@@ -9,7 +9,7 @@ const ICONA = { assegnazione: "👤", commento: "💬", impegno: "📅" };
 // raro da non tempestare di richieste un server che dorme dopo 15 minuti.
 const OGNI = 60_000;
 
-export default function Campanella({ onVaiAlLavoro }) {
+export default function Campanella({ onVaiAlLavoro, onVaiAllaMacchina }) {
   const [dati, setDati] = useState({ non_lette: 0, notifiche: [] });
   const [aperta, setAperta] = useState(false);
   const contenitore = useRef(null);
@@ -52,7 +52,11 @@ export default function Campanella({ onVaiAlLavoro }) {
     }
     setAperta(false);
     await carica();
+    // Un avviso porta dove sta la cosa di cui parla. Se il posto non c'e'
+    // piu' (lavoro cancellato, voce cancellata) il campo arriva vuoto e non
+    // si va da nessuna parte: l'avviso resta comunque leggibile.
     if (avviso.lavoro_id && onVaiAlLavoro) onVaiAlLavoro(avviso.lavoro_id);
+    else if (avviso.macchina_id && onVaiAllaMacchina) onVaiAllaMacchina(avviso.macchina_id);
   }
 
   return (
@@ -77,7 +81,8 @@ export default function Campanella({ onVaiAlLavoro }) {
           {dati.notifiche.length === 0 ? (
             <p className="vuoto piccolo" style={{ padding: "0.6rem 0.9rem" }}>
               Nessun avviso. Qui arrivano i lavori che ti assegnano, i commenti
-              sui tuoi lavori e gli impegni che ti mettono in agenda.
+              sui tuoi lavori e sulle tue voci di macchina, e gli impegni che
+              ti mettono in agenda.
             </p>
           ) : (
             <ul className="lista-avvisi">
