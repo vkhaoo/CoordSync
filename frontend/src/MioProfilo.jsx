@@ -119,16 +119,21 @@ export default function MioProfilo({ io, onLogout, onCambiaAzienda }) {
             </div>
             <p className="riga-profilo"><strong>{io.nome}</strong><br />{io.email}</p>
 
-            {/* Il selettore delle aziende compare SOLO a chi ne ha piu' d'una:
-                chi lavora in un posto solo non deve nemmeno accorgersi che
-                questa cosa esiste. */}
-            {aziende.filter((a) => !a.invito).length > 1 && (
+            {/* Le proprie aziende, SEMPRE visibili — anche quando e' una sola.
+                Prima comparivano solo a chi ne aveva piu' d'una, per non
+                mettere in mezzo una cosa che quasi nessuno usa: sbagliato,
+                perche' cosi' chi ne aveva una restava senza nessun modo di
+                aprirne una seconda, e senza nemmeno capire dove guardare. */}
+            {aziende.filter((a) => !a.invito).length > 0 && (
               <div className="blocco-aziende">
                 <div className="testa-blocco-aziende">
-                  <span className="etichetta-tendina">Stai lavorando in</span>
+                  <span className="etichetta-tendina">
+                    {aziende.filter((a) => !a.invito).length > 1
+                      ? "Stai lavorando in" : "La tua azienda"}
+                  </span>
                   {onCambiaAzienda && (
                     <button className="link-testo" onClick={onCambiaAzienda}>
-                      Vedi a riquadri
+                      Vedi tutte, o creane una
                     </button>
                   )}
                 </div>
