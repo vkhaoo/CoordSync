@@ -3,7 +3,7 @@ import { api } from "./api.js";
 import Allegati from "./Allegati.jsx";
 import { dalServer } from "./date.js";
 
-const ETICHETTA_STATO = {
+export const ETICHETTA_STATO = {
   da_fare: "Da fare", in_corso: "In corso", in_attesa: "In attesa", fatto: "Fatto",
   annullato: "Annullato",
 };

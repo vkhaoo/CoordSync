@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "./api.js";
-import Lavoro from "./Lavoro.jsx";
+import Lavoro, { ETICHETTA_STATO } from "./Lavoro.jsx";
 import GestioneUtenti from "./GestioneUtenti.jsx";
 import GestioneReparti from "./GestioneReparti.jsx";
 import Macchine from "./Macchine.jsx";
@@ -21,16 +21,11 @@ const ETICHETTA_PRIORITA = {
   bassa: "Bassa", normale: "Normale", alta: "Alta", urgente: "Urgente",
 };
 
-// Ordina i lavori: prima per priorità (urgente in cima), e i "Fatto" vanno in fondo.
-const RANGO_PRIORITA = { urgente: 0, alta: 1, normale: 2, bassa: 3 };
-function ordinaLavori(lista) {
-  return [...lista].sort((a, b) => {
-    const aFatto = a.stato === "fatto" ? 1 : 0;
-    const bFatto = b.stato === "fatto" ? 1 : 0;
-    if (aFatto !== bFatto) return aFatto - bFatto;                 // i "Fatto" dopo
-    return RANGO_PRIORITA[a.priorita] - RANGO_PRIORITA[b.priorita]; // poi per priorità
-  });
-}
+// L'ordine dei lavori lo decide il SERVER, anche quello predefinito (conclusi
+// in fondo, poi per priorita'). Prima lo faceva questa funzione sulla lista
+// gia' scaricata: funziona finche' i lavori arrivano tutti, ma il giorno in
+// cui arriveranno a pagine riordinare quella che si ha in mano darebbe un
+// ordine sbagliato.
 
 export default function Dashboard({ onLogout }) {
   const [progetti, setProgetti] = useState([]);
@@ -69,6 +64,16 @@ export default function Dashboard({ onLogout }) {
   // Ricerca: nei lavori la fa il server, sui nomi dei progetti basta il browser.
   const [cercaLavori, setCercaLavori] = useState("");
   const [filtroProgetti, setFiltroProgetti] = useState("");
+  // Filtri dell'elenco lavori. Li applica il server (vedi api.lavori): sono
+  // tutti nello stesso oggetto cosi' l'effetto che ricarica li guarda insieme.
+  const [filtri, setFiltri] = useState({
+    stato: "", soloMiei: false, assegnatoA: "", ordina: "",
+  });
+  const filtriAttivi = filtri.stato || filtri.soloMiei || filtri.assegnatoA || filtri.ordina;
+
+  function cambiaFiltro(campo, valore) {
+    setFiltri((prec) => ({ ...prec, [campo]: valore }));
+  }
 
   // Funzioni di caricamento (fuori dagli useEffect, cosi' le richiamo dopo le creazioni).
   async function caricaProgetti(selezionaId) {
@@ -79,9 +84,9 @@ export default function Dashboard({ onLogout }) {
     else if (selezionato == null && dati.length > 0) setSelezionato(dati[0].id);
   }
 
-  async function caricaLavori(progettoId, cerca = cercaLavori) {
+  async function caricaLavori(progettoId, cerca = cercaLavori, quali = filtri) {
     if (progettoId == null) { setLavori([]); return; }
-    setLavori(await api.lavori(progettoId, cerca));
+    setLavori(await api.lavori(progettoId, cerca, quali));
   }
 
   // All'apertura: verifico chi sono. Se il token e' scaduto/invalido (401),
@@ -128,7 +133,7 @@ export default function Dashboard({ onLogout }) {
   // Ogni volta che cambia il progetto selezionato: ricarico i suoi lavori.
   useEffect(() => {
     caricaLavori(selezionato).catch((e) => setErrore(e.message));
-  }, [selezionato, cercaLavori]);
+  }, [selezionato, cercaLavori, filtri]);
 
   // Colleghi e reparti si ricaricano ogni volta che torno alla vista lavori:
   // se ho appena creato un reparto o aggiunto un utente dai pannelli admin,
@@ -542,13 +547,56 @@ export default function Dashboard({ onLogout }) {
               <CampoRicerca valore={cercaLavori} onCambia={setCercaLavori}
                             segnaposto="Cerca fra i lavori (titolo o descrizione)…" />
 
+              {/* Filtri e ordinamento. Si sommano fra loro e con la ricerca:
+                  restringono, non allargano. */}
+              <div className="barra-filtri">
+                <label className="spunta">
+                  <input type="checkbox" checked={filtri.soloMiei}
+                         onChange={(e) => cambiaFiltro("soloMiei", e.target.checked)} />
+                  Solo i miei
+                </label>
+
+                <select value={filtri.stato}
+                        onChange={(e) => cambiaFiltro("stato", e.target.value)}>
+                  <option value="">Tutti gli stati</option>
+                  {Object.entries(ETICHETTA_STATO).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+
+                {/* Con "solo i miei" acceso la scelta della persona non ha
+                    piu' senso: il server la ignorerebbe, quindi la si spegne
+                    invece di lasciare un comando che non fa niente. */}
+                <select value={filtri.assegnatoA} disabled={filtri.soloMiei}
+                        onChange={(e) => cambiaFiltro("assegnatoA", e.target.value)}>
+                  <option value="">Chiunque</option>
+                  {utenti.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                </select>
+
+                <select value={filtri.ordina}
+                        onChange={(e) => cambiaFiltro("ordina", e.target.value)}>
+                  <option value="">Ordine consueto</option>
+                  <option value="scadenza">Per scadenza</option>
+                  <option value="priorita">Per priorità</option>
+                  <option value="recenti">Più recenti</option>
+                </select>
+
+                {filtriAttivi && (
+                  <button className="link-testo"
+                          onClick={() => setFiltri({ stato: "", soloMiei: false,
+                                                     assegnatoA: "", ordina: "" })}>
+                    Azzera filtri
+                  </button>
+                )}
+              </div>
+
               {lavori.length === 0 ? (
-                <p className="vuoto">{cercaLavori
-                  ? `Nessun lavoro trovato per "${cercaLavori}".`
+                <p className="vuoto">{cercaLavori || filtriAttivi
+                  ? "Nessun lavoro con questi filtri."
                   : "Nessun lavoro in questo progetto."}</p>
               ) : (
                 <ul className="lista-lavori">
-                  {ordinaLavori(lavori).map((l) => (
+                  {lavori.map((l) => (
                     <Lavoro
                       key={l.id}
                       lavoro={l}

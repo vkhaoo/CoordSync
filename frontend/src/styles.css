@@ -278,6 +278,15 @@ input, select, textarea { font-family: var(--sans); }
 .voce-sotto label { display: flex; flex-direction: row; align-items: center; gap: 0.55rem; flex: 1; font-size: 0.88rem; cursor: pointer; color: var(--testo); }
 .voce-sotto label.spuntata { color: var(--tenue-2); text-decoration: line-through; }
 .voce-sotto input[type="checkbox"] { flex: 0 0 auto; margin: 0; width: 15px; height: 15px; accent-color: var(--st-incorso); }
+/* Barra dei filtri sopra l'elenco dei lavori: va a capo da sola sugli
+   schermi stretti, invece di spingere fuori l'ultimo comando. */
+.barra-filtri {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+  margin: 0 0 0.7rem;
+}
+.barra-filtri select { min-width: 0; }
+.barra-filtri .spunta { white-space: nowrap; }
+
 .form-sotto { display: flex; gap: 5px; }
 .form-sotto input { flex: 1; min-width: 0; }
 

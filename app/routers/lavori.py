@@ -1,5 +1,5 @@
 """Router dei Lavori: protetto, isolato per organizzazione, con permessi per ruolo."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -13,7 +13,7 @@ from app.visibilita import (lavori_visibili, lavoro_visibile, progetto_visibile,
 from app.ricerca import condizione_testo
 from app.models.commento import Commento
 from app.models.sotto_attivita import SottoAttivita
-from sqlalchemy import or_
+from sqlalchemy import or_, case
 from app.models.allegato import Allegato
 from app.schemas.allegato import AllegatoCreate, AllegatoRead
 
@@ -54,9 +54,48 @@ def crea_lavoro(dati: LavoroCreate, db: Session = Depends(get_db),
     return lavoro
 
 
+# L'ordine in cui le priorita' contano davvero. Non e' quello alfabetico
+# ("alta" verrebbe prima di "urgente") ne' quello dell'enum: va scritto.
+_PESO_PRIORITA = {"urgente": 0, "alta": 1, "normale": 2, "bassa": 3}
+
+
+def _ordinamento(ordina: str | None):
+    """Come mettere in fila i lavori.
+
+    L'ordine lo decide il SERVER e non il browser, anche quello predefinito.
+    Prima lo faceva il browser sulla lista gia' scaricata: funziona finche' i
+    lavori arrivano tutti: il giorno in cui si scaricheranno a pagine,
+    riordinare la pagina che si ha in mano darebbe un ordine sbagliato — la
+    prima pagina non contiene necessariamente i primi.
+
+    - predefinito: i lavori conclusi in fondo, poi per priorita' vera;
+    - scadenza: prima le piu' vicine, e i lavori SENZA scadenza in fondo. Il
+      caso ci vuole per forza: in SQL un NULL non e' ne' grande ne' piccolo, e
+      i due database lo mettono in punti diversi (PostgreSQL in fondo quando si
+      ordina crescendo, SQLite in cima). Senza, l'elenco cambierebbe fra
+      sviluppo e produzione — il tipo di differenza che i test non vedono.
+    """
+    peso_priorita = case(_PESO_PRIORITA, value=Lavoro.priorita, else_=9)
+
+    if ordina == "scadenza":
+        senza = case((Lavoro.data_scadenza.is_(None), 1), else_=0)
+        return [senza, Lavoro.data_scadenza.asc(), Lavoro.id.desc()]
+    if ordina == "priorita":
+        return [peso_priorita, Lavoro.id.desc()]
+    if ordina == "recenti":
+        return [Lavoro.creato_il.desc(), Lavoro.id.desc()]
+
+    # Predefinito: quello che il browser faceva prima, spostato qui.
+    conclusi = case((Lavoro.stato.in_(StatoLavoro.conclusi()), 1), else_=0)
+    return [conclusi, peso_priorita, Lavoro.id.desc()]
+
+
 @router.get("", response_model=list[LavoroRead])
 def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = None,
                   q: str | None = None,
+                  assegnato_a: int | None = None,
+                  solo_miei: bool = False,
+                  ordina: str | None = Query(None, pattern="^(scadenza|priorita|recenti)$"),
                   db: Session = Depends(get_db),
                   current: Utente = Depends(richiedi_azienda)):
     """I lavori che posso vedere.
@@ -64,12 +103,27 @@ def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = No
     'q' cerca nel titolo, nella descrizione, nei COMMENTI e nelle voci di
     CHECKLIST: spesso quello che si ricorda non e' il titolo del lavoro ma una
     frase scritta in un commento ("dove avevo scritto di quella valvola?").
+
+    I filtri si SOMMANO: chiedere insieme stato, persona e testo restringe,
+    non allarga. E nessuno di loro allarga la visibilita': si parte sempre da
+    lavori_visibili, poi si toglie.
     """
     query = lavori_visibili(db, current)
     if progetto_id is not None:
         query = query.filter(Lavoro.progetto_id == progetto_id)
     if stato is not None:
         query = query.filter(Lavoro.stato == stato)
+
+    # "Solo i miei" ha la precedenza su 'assegnato_a': se arrivano tutti e due
+    # vince quello che parla di me, cosi' non si puo' costruire una richiesta
+    # che dice "i miei, ma di un altro".
+    chi = current.id if solo_miei else assegnato_a
+    if chi is not None:
+        # NON si controlla che 'chi' sia un collega visibile: non serve, e
+        # farlo direbbe qualcosa in piu' di chi esiste. Chiedere i lavori di
+        # un id qualunque restituisce al massimo i lavori che gia' vedo, cioe'
+        # spesso nessuno.
+        query = query.filter(Lavoro.assegnatari.any(Utente.id == chi))
 
     cerca = condizione_testo([Lavoro.titolo, Lavoro.descrizione], q)
     if cerca is not None:
@@ -86,7 +140,8 @@ def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = No
         query = query.filter(or_(cerca,
                                  Lavoro.id.in_(nei_commenti),
                                  Lavoro.id.in_(nella_checklist)))
-    return query.all()
+
+    return query.order_by(*_ordinamento(ordina)).all()
 
 
 @router.patch("/{lavoro_id}/stato", response_model=LavoroRead)

@@ -244,8 +244,17 @@ export const api = {
   // Ricerca unica: una parola, cinque tipi di risultato.
   cercaDappertutto: (q) => richiesta("GET", `/ricerca?q=${encodeURIComponent(q)}`),
   progetti: ()     => richiesta("GET", "/progetti"),
-  lavori:   (progettoId, q = "") => richiesta("GET",
-    `/lavori?progetto_id=${progettoId}` + (q ? `&q=${encodeURIComponent(q)}` : "")),
+  // I filtri si sommano e li applica il SERVER: cosi' regge anche quando un
+  // progetto accumula centinaia di lavori, e l'ordine resta giusto.
+  lavori:   (progettoId, q = "", filtri = {}) => {
+    const parti = [`progetto_id=${progettoId}`];
+    if (q) parti.push(`q=${encodeURIComponent(q)}`);
+    if (filtri.stato) parti.push(`stato=${filtri.stato}`);
+    if (filtri.soloMiei) parti.push("solo_miei=true");
+    else if (filtri.assegnatoA) parti.push(`assegnato_a=${filtri.assegnatoA}`);
+    if (filtri.ordina) parti.push(`ordina=${filtri.ordina}`);
+    return richiesta("GET", `/lavori?${parti.join("&")}`);
+  },
   tuttiILavori: () => richiesta("GET", "/lavori"),
   creaProgetto: (dati) => richiesta("POST", "/progetti", dati),
   aggiornaProgetto: (id, dati) => richiesta("PATCH", `/progetti/${id}`, dati),
