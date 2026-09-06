@@ -117,7 +117,10 @@ async function unTentativo(metodo, percorso, corpo) {
   }
 }
 
-async function richiesta(metodo, percorso, corpo) {
+// 'conTotale' fa tornare { elementi, totale } invece della sola lista: il
+// totale sta nell'intestazione X-Totale, che il browser lascia leggere solo
+// perche' il server la dichiara fra quelle esposte (vedi main.py).
+async function richiesta(metodo, percorso, corpo, conTotale = false) {
   let risposta;
   let ultimoGuasto;
 
@@ -197,7 +200,15 @@ async function richiesta(metodo, percorso, corpo) {
     throw errore;
   }
   // 204 = nessun contenuto; altrimenti leggo il JSON.
-  return risposta.status === 204 ? null : risposta.json();
+  if (risposta.status === 204) return null;
+  const dati = await risposta.json();
+  if (!conTotale) return dati;
+
+  const totale = Number(risposta.headers.get("X-Totale"));
+  // Se l'intestazione manca (un server vecchio, o un CORS che non la espone)
+  // si ripiega su quanti ne sono arrivati: peggio del vero, ma non fa
+  // comparire un "mostra altri" che non porta niente.
+  return { elementi: dati, totale: Number.isFinite(totale) ? totale : dati.length };
 }
 
 // Le funzioni che i componenti useranno, con nomi chiari.
@@ -250,14 +261,14 @@ export const api = {
   progetti: ()     => richiesta("GET", "/progetti"),
   // I filtri si sommano e li applica il SERVER: cosi' regge anche quando un
   // progetto accumula centinaia di lavori, e l'ordine resta giusto.
-  lavori:   (progettoId, q = "", filtri = {}) => {
-    const parti = [`progetto_id=${progettoId}`];
+  lavori:   (progettoId, q = "", filtri = {}, salta = 0) => {
+    const parti = [`progetto_id=${progettoId}`, `salta=${salta}`];
     if (q) parti.push(`q=${encodeURIComponent(q)}`);
     if (filtri.stato) parti.push(`stato=${filtri.stato}`);
     if (filtri.soloMiei) parti.push("solo_miei=true");
     else if (filtri.assegnatoA) parti.push(`assegnato_a=${filtri.assegnatoA}`);
     if (filtri.ordina) parti.push(`ordina=${filtri.ordina}`);
-    return richiesta("GET", `/lavori?${parti.join("&")}`);
+    return richiesta("GET", `/lavori?${parti.join("&")}`, undefined, true);
   },
   tuttiILavori: () => richiesta("GET", "/lavori"),
   creaProgetto: (dati) => richiesta("POST", "/progetti", dati),
@@ -298,7 +309,9 @@ export const api = {
   riordinaSezioni: (macchinaId, sezioni_ids) =>
     richiesta("PUT", `/macchine/${macchinaId}/sezioni/ordine`, { sezioni_ids }),
   eliminaSezione: (id) => richiesta("DELETE", `/sezioni/${id}`),
-  voci:         (macchinaId, q = "") => richiesta("GET", `/macchine/${macchinaId}/voci${q}`),
+  voci:         (macchinaId, q = "", salta = 0) => richiesta(
+    "GET", `/macchine/${macchinaId}/voci${q ? q + "&" : "?"}salta=${salta}`,
+    undefined, true),
   creaVoce:     (macchinaId, dati) => richiesta("POST", `/macchine/${macchinaId}/voci`, dati),
   modificaVoce: (id, dati) => richiesta("PATCH", `/voci/${id}`, dati),
   eliminaVoce:  (id) => richiesta("DELETE", `/voci/${id}`),

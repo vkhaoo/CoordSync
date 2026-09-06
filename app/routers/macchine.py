@@ -13,7 +13,7 @@ admin/caposquadra.
 Visibilita': la macchina segue il reparto, esattamente come i progetti.
 La regola vive in visibilita.py, qui non si riscrive.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -36,6 +36,7 @@ from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import (macchine_visibili, macchina_visibile,
                             reparti_assegnabili, carica_reparti)
 from app.ricerca import condizione_testo
+from app.pagine import PAGINA, MASSIMO_PAGINA
 from app.avvisi import avvisa
 from app.menzioni import trova_menzionati, colleghi_che_possono_vedere
 from app.models.notifica import TipoAvviso
@@ -327,6 +328,9 @@ def crea_voce(macchina_id: int, dati: VoceCreate, db: Session = Depends(get_db),
 @router.get("/macchine/{macchina_id}/voci", response_model=list[VoceRead])
 def elenca_voci(macchina_id: int, tipo: TipoVoce | None = None,
                 sezione_id: int | None = None, q: str | None = None,
+                limite: int = Query(PAGINA, ge=1, le=MASSIMO_PAGINA),
+                salta: int = Query(0, ge=0),
+                risposta: Response = None,
                 db: Session = Depends(get_db),
                 current: Utente = Depends(richiedi_azienda)):
     """Le voci della macchina. Senza filtri e' lo storico completo, in ordine
@@ -336,7 +340,12 @@ def elenca_voci(macchina_id: int, tipo: TipoVoce | None = None,
     di storico e' l'unico modo pratico per ritrovare quella volta che si era
     rotta la valvola — e spesso quello che si ricorda non e' il titolo della
     voce, ma una frase scritta rispondendo ("dove avevo scritto della
-    guarnizione?"). E' la stessa regola che vale sui lavori di progetto."""
+    guarnizione?"). E' la stessa regola che vale sui lavori di progetto.
+
+    A PAGINE, dalla piu' recente. Uno storico di macchina cresce per anni ed
+    e' proprio il posto dove serve di piu': una scheda con dieci anni di voci
+    non deve scaricarli tutti per mostrare cos'e' successo la settimana
+    scorsa. Il totale sta nell'intestazione X-Totale."""
     _macchina_o_404(db, current, macchina_id)
 
     query = db.query(VoceMacchina).filter(VoceMacchina.macchina_id == macchina_id)
@@ -347,7 +356,13 @@ def elenca_voci(macchina_id: int, tipo: TipoVoce | None = None,
         query = query.filter(VoceMacchina.tipo == tipo)
     if sezione_id is not None:
         query = query.filter(VoceMacchina.sezioni.any(SezioneMacchina.id == sezione_id))
-    return query.order_by(VoceMacchina.creato_il.desc()).all()
+    if risposta is not None:
+        risposta.headers["X-Totale"] = str(query.count())
+
+    return (
+        query.order_by(VoceMacchina.creato_il.desc())
+        .offset(salta).limit(limite).all()
+    )
 
 
 @router.patch("/voci/{voce_id}", response_model=VoceRead)

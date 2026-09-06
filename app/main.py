@@ -103,6 +103,14 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Le intestazioni che il browser lascia LEGGERE al codice della pagina.
+    #
+    # Senza questa riga X-Totale arriva ma resta invisibile a JavaScript, e
+    # solo quando le pagine e il backend stanno su due host diversi: cioe' in
+    # produzione, mentre in locale funziona benissimo. E' la stessa forma del
+    # guaio del cookie anti-CSRF — un difetto che l'unica configurazione in
+    # cui si sviluppa non puo' mostrare.
+    expose_headers=["X-Totale"],
 )
 
 # Aggancia gli endpoint dei progetti all'app.

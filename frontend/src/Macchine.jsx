@@ -24,6 +24,7 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
   const [selezionata, setSelezionata] = useState(null);
   const [scheda, setScheda] = useState(null);      // dettaglio della macchina aperta
   const [voci, setVoci] = useState([]);
+  const [totaleVoci, setTotaleVoci] = useState(0);
   const [errore, setErrore] = useState(null);
   const [caricando, setCaricando] = useState(true);
 
@@ -58,7 +59,7 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
   }
 
   async function caricaScheda(id) {
-    if (id == null) { setScheda(null); setVoci([]); return; }
+    if (id == null) { setScheda(null); setVoci([]); setTotaleVoci(0); return; }
     const q = [];
     if (filtroTipo) q.push(`tipo=${filtroTipo}`);
     if (filtroSezione) q.push(`sezione_id=${filtroSezione}`);
@@ -68,7 +69,23 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
       api.voci(id, q.length ? `?${q.join("&")}` : ""),
     ]);
     setScheda(s);
-    setVoci(v);
+    setVoci(v.elementi);
+    setTotaleVoci(v.totale);
+  }
+
+  // Uno storico di macchina cresce per anni: arriva a pagine, e il seguito si
+  // accoda invece di ricaricare tutto.
+  async function altreVoci() {
+    setErrore(null);
+    try {
+      const q = [];
+      if (filtroTipo) q.push(`tipo=${filtroTipo}`);
+      if (filtroSezione) q.push(`sezione_id=${filtroSezione}`);
+      if (cerca) q.push(`q=${encodeURIComponent(cerca)}`);
+      const v = await api.voci(selezionata, q.length ? `?${q.join("&")}` : "", voci.length);
+      setVoci((prec) => [...prec, ...v.elementi]);
+      setTotaleVoci(v.totale);
+    } catch (e) { setErrore(e.message); }
   }
 
   // Arrivo dalla ricerca in alto: apro la macchina che mi e' stata indicata.
@@ -449,6 +466,12 @@ export default function Macchine({ io, reparti, utenti = [], vaiA }) {
                             sezioni={scheda.sezioni} utenti={utenti} />
                 ))}
               </ul>
+            )}
+
+            {voci.length < totaleVoci && (
+              <button className="principale piccolo bottone-crea" onClick={altreVoci}>
+                Mostra altre ({totaleVoci - voci.length})
+              </button>
             )}
           </>
         )}

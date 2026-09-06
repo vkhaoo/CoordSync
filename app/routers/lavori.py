@@ -1,5 +1,5 @@
 """Router dei Lavori: protetto, isolato per organizzazione, con permessi per ruolo."""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -11,6 +11,7 @@ from app.dependencies import richiedi_azienda, richiedi_ruolo
 from app.visibilita import (lavori_visibili, lavoro_visibile, progetto_visibile,
                             macchina_visibile)
 from app.ricerca import condizione_testo
+from app.pagine import PAGINA, MASSIMO_PAGINA
 from app.models.commento import Commento
 from app.models.sotto_attivita import SottoAttivita
 from sqlalchemy import or_, case
@@ -96,6 +97,9 @@ def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = No
                   assegnato_a: int | None = None,
                   solo_miei: bool = False,
                   ordina: str | None = Query(None, pattern="^(scadenza|priorita|recenti)$"),
+                  limite: int = Query(PAGINA, ge=1, le=MASSIMO_PAGINA),
+                  salta: int = Query(0, ge=0),
+                  risposta: Response = None,
                   db: Session = Depends(get_db),
                   current: Utente = Depends(richiedi_azienda)):
     """I lavori che posso vedere.
@@ -107,6 +111,12 @@ def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = No
     I filtri si SOMMANO: chiedere insieme stato, persona e testo restringe,
     non allarga. E nessuno di loro allarga la visibilita': si parte sempre da
     lavori_visibili, poi si toglie.
+
+    A PAGINE. Ne arrivano 50 alla volta; quanti ce ne sono in tutto si legge
+    nell'intestazione X-Totale, cosi' il frontend sa se ha senso chiedere il
+    resto. Serve a un progetto che accumula centinaia di lavori: scaricarli
+    tutti per mostrarne venti diventa lento proprio quando l'app comincia a
+    essere usata sul serio.
     """
     query = lavori_visibili(db, current)
     if progetto_id is not None:
@@ -141,7 +151,16 @@ def elenca_lavori(progetto_id: int | None = None, stato: StatoLavoro | None = No
                                  Lavoro.id.in_(nei_commenti),
                                  Lavoro.id.in_(nella_checklist)))
 
-    return query.order_by(*_ordinamento(ordina)).all()
+    # Il TOTALE si conta prima di tagliare: serve al frontend per sapere se
+    # c'e' altro da chiedere, e si conta senza ordinamento perche' ordinare
+    # per contare e' lavoro buttato.
+    if risposta is not None:
+        risposta.headers["X-Totale"] = str(query.count())
+
+    return (
+        query.order_by(*_ordinamento(ordina))
+        .offset(salta).limit(limite).all()
+    )
 
 
 @router.patch("/{lavoro_id}/stato", response_model=LavoroRead)

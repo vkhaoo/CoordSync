@@ -31,6 +31,9 @@ export default function Dashboard({ onLogout, apriMacchina = null }) {
   const [progetti, setProgetti] = useState([]);
   const [selezionato, setSelezionato] = useState(null);
   const [lavori, setLavori] = useState([]);
+  // Quanti ce ne sono in tutto, non solo in questa pagina: serve a sapere se
+  // ha senso mostrare "mostra altri".
+  const [totaleLavori, setTotaleLavori] = useState(0);
   const [utenti, setUtenti] = useState([]);   // colleghi dell'azienda (per l'assegnazione)
   const [reparti, setReparti] = useState([]); // reparti dell'azienda (per la visibilità)
   const [io, setIo] = useState(null);         // l'utente loggato (per sapere il mio ruolo)
@@ -88,8 +91,22 @@ export default function Dashboard({ onLogout, apriMacchina = null }) {
   }
 
   async function caricaLavori(progettoId, cerca = cercaLavori, quali = filtri) {
-    if (progettoId == null) { setLavori([]); return; }
-    setLavori(await api.lavori(progettoId, cerca, quali));
+    if (progettoId == null) { setLavori([]); setTotaleLavori(0); return; }
+    const { elementi, totale } = await api.lavori(progettoId, cerca, quali);
+    setLavori(elementi);
+    setTotaleLavori(totale);
+  }
+
+  // "Mostra altri": si CHIEDE il seguito e lo si accoda, invece di ricaricare
+  // tutto da capo. Il punto da cui ripartire e' quanti ne ho gia' in mano.
+  async function altriLavori() {
+    setErrore(null);
+    try {
+      const { elementi, totale } = await api.lavori(
+        selezionato, cercaLavori, filtri, lavori.length);
+      setLavori((prec) => [...prec, ...elementi]);
+      setTotaleLavori(totale);
+    } catch (err) { setErrore(err.message); }
   }
 
   // All'apertura: verifico chi sono. Se il token e' scaduto/invalido (401),
@@ -631,6 +648,12 @@ export default function Dashboard({ onLogout, apriMacchina = null }) {
                     />
                   ))}
                 </ul>
+              )}
+
+              {lavori.length < totaleLavori && (
+                <button className="principale piccolo bottone-crea" onClick={altriLavori}>
+                  Mostra altri ({totaleLavori - lavori.length})
+                </button>
               )}
             </>
           ) : (
