@@ -124,12 +124,14 @@ export default function MioProfilo({ io, onLogout, onCambiaAzienda }) {
                 questa cosa esiste. */}
             {aziende.filter((a) => !a.invito).length > 1 && (
               <div className="blocco-aziende">
-                <span className="etichetta-tendina">Stai lavorando in</span>
-                {onCambiaAzienda && (
-                  <button className="link-testo" onClick={onCambiaAzienda}>
-                    Vedi tutte a riquadri
-                  </button>
-                )}
+                <div className="testa-blocco-aziende">
+                  <span className="etichetta-tendina">Stai lavorando in</span>
+                  {onCambiaAzienda && (
+                    <button className="link-testo" onClick={onCambiaAzienda}>
+                      Vedi a riquadri
+                    </button>
+                  )}
+                </div>
                 <ul className="lista-aziende">
                   {aziende.filter((a) => !a.invito).map((az) => (
                     <li key={az.id}>

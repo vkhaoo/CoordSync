@@ -54,6 +54,10 @@ export default function Dashboard({ onLogout }) {
   // Vero quando si vuole vedere la schermata dei riquadri: sempre a chi non
   // ha ancora nessuna azienda, a richiesta per gli altri.
   const [scegliAzienda, setScegliAzienda] = useState(false);
+  // Inviti a cui non ho ancora risposto. Chi lavora gia' da qualche parte non
+  // passa dalla schermata dei riquadri, quindi senza questo avviso l'invito
+  // si vedrebbe solo nell'email — e le email si perdono.
+  const [invitiInSospeso, setInvitiInSospeso] = useState([]);
   const [nuovoTitolo, setNuovoTitolo] = useState("");
   const [nuovaPriorita, setNuovaPriorita] = useState("normale");
   const [nuovaScadenza, setNuovaScadenza] = useState("");   // "" = senza scadenza
@@ -101,6 +105,24 @@ export default function Dashboard({ onLogout }) {
   }
 
   useEffect(avvia, []);
+
+  // Gli inviti si guardano all'apertura e quando si torna alla vista lavori:
+  // basta e avanza per una cosa che capita una volta ogni tanto.
+  useEffect(() => {
+    if (!io) return;
+    api.mieAziende()
+      .then((elenco) => setInvitiInSospeso(elenco.filter((a) => a.invito)))
+      .catch(() => setInvitiInSospeso([]));
+  }, [io, vista]);
+
+  async function rispondiInvito(azienda, accetto) {
+    setErrore(null);
+    try {
+      if (accetto) await api.accettaInvito(azienda.id);
+      else await api.rifiutaInvito(azienda.id);
+      setInvitiInSospeso((prec) => prec.filter((a) => a.id !== azienda.id));
+    } catch (err) { setErrore(err.message); }
+  }
 
   // Ogni volta che cambia il progetto selezionato: ricarico i suoi lavori.
   useEffect(() => {
@@ -309,6 +331,23 @@ export default function Dashboard({ onLogout }) {
           )}
         </div>
       )}
+
+      {/* Inviti ricevuti: si accettano o si rifiutano da qui, senza andare a
+          cercare l'email. Uno per riga, perche' ognuno e' una decisione. */}
+      {invitiInSospeso.map((az) => (
+        <div key={az.id} className="banner-verifica banner-invito">
+          <span>
+            <strong>{az.nome}</strong> ti ha invitato a lavorare con loro,
+            come {az.ruolo}.
+          </span>
+          <span className="azioni-invito">
+            <button className="banner-azione"
+                    onClick={() => rispondiInvito(az, true)}>Accetto</button>
+            <button className="banner-azione secondaria"
+                    onClick={() => rispondiInvito(az, false)}>No, grazie</button>
+          </span>
+        </div>
+      ))}
 
       {vista === "utenti" && sonoAdmin ? (
         <div className="corpo-singolo">

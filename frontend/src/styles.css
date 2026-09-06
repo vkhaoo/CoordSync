@@ -529,12 +529,33 @@ input, select, textarea { font-family: var(--sans); }
 .avviso .chip-x { align-self: center; margin-right: 0.6rem; flex: 0 0 auto; }
 
 @media (max-width: 768px) {
-  /* Su telefono la barra va a capo e la campanella finisce a SINISTRA: ancorata
-     a destra, la tendina usciva quasi tutta fuori schermo. Qui la ancoro al
-     lato opposto, cosi' si apre verso il centro seguendo la campanella. */
-  .tendina-avvisi { left: 0; right: auto; width: calc(100vw - 2rem); max-width: 340px; }
-  /* Stessa storia per i risultati della ricerca: ancorati a destra uscivano
-     di 188px dal bordo sinistro (misurato). */
+  /* Su telefono la barra va a capo, e i pulsanti che aprono queste tendine
+     finiscono chi a sinistra chi in mezzo. Ancorarle al pulsante — da una
+     parte o dall'altra — non funziona: dipende da dove il pulsante e'
+     capitato quel giorno, e infatti la tendina della campanella usciva di
+     123px a destra pur essendo "ancorata a sinistra".
+     Qui smettono di seguire il pulsante e si attaccano allo SCHERMO, in
+     basso: e' il posto che si raggiunge meglio col pollice, e soprattutto
+     e' l'unico che non puo' uscire da nessuna parte. */
+  /* Il selettore e' piu' specifico di proposito: la larghezza fissa di
+     .tendina-profilo e' definita PIU' AVANTI nel foglio, e a parita' di
+     specificita' avrebbe vinto lei, lasciando il pannello largo 300px in
+     mezzo allo schermo. */
+  .tendina-avvisi, .mio-profilo .tendina-profilo {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-width: none;
+    max-height: 75vh;
+    overflow-y: auto;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -8px 30px rgba(22, 33, 46, .28);
+  }
+  /* I risultati della ricerca invece stanno gia' dentro (misurato: 14->344 su
+     375), perche' il campo occupa tutta la riga. Basta ancorarli a sinistra. */
   .risultati-ricerca { left: 0; right: auto; width: calc(100vw - 2rem); }
   .ricerca-globale input { width: 100%; max-width: none; }
 }
@@ -954,3 +975,18 @@ input, select, textarea { font-family: var(--sans); }
 .fascia-inviti { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
 .riquadro-invito { width: auto; min-width: 260px; cursor: default; border-color: var(--ambra); }
 .riquadro-invito:hover { transform: none; }
+
+/* L'etichetta e il collegamento sulla stessa riga: senza, si incollavano
+   ("STAI LAVORANDO INVedi tutte a riquadri"). */
+.testa-blocco-aziende { display: flex; align-items: baseline;
+  justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+.testa-blocco-aziende .link-testo { margin: 0; font-size: 0.78rem; }
+
+/* L'avviso di un invito ricevuto: stessa forma di quello dell'email da
+   verificare, ma in ambra — e' una cosa a cui rispondere, non un promemoria. */
+.banner-invito { background: var(--ambra); color: var(--acciaio-900);
+  border-color: var(--ambra-scuro); }
+.banner-invito .banner-azione { background: var(--acciaio-800); color: #fff;
+  border-color: var(--acciaio-800); }
+.banner-invito .banner-azione.secondaria { background: transparent;
+  color: var(--acciaio-900); border-color: var(--acciaio-700); }
