@@ -338,6 +338,30 @@ Dal meno rischioso al piu' impegnativo, cosi' ogni pezzo si puo' provare da solo
 - **Chat in tempo reale.** Richiede websocket. Rimandata: i commenti attaccati
   al singolo lavoro coordinano meglio, perché la conversazione resta legata al
   lavoro.
+- **Rapportini di intervento**: ore, materiali usati, firma del cliente sul
+  telefono, PDF che parte via email. È il pezzo che manca perché l'app copra il
+  lavoro *e* quello che se ne fattura. Grosso, ma è quello che la rende
+  vendibile davvero.
+- **Anagrafica clienti e sedi.** Oggi il cliente è testo dentro il nome del
+  progetto. Con clienti veri diventa il modo per rispondere a "cosa abbiamo
+  fatto da loro negli ultimi due anni".
+- **Ricambi e scorte minime**, legati alle macchine: quali pezzi monta una
+  macchina, quanti ne restano in furgone.
+- **Multilingua (tedesco e francese).** L'obiettivo dichiarato è il mercato
+  svizzero: senza, l'app lì non è mostrabile. Va fatto *prima* che il testo
+  italiano sia sparso in cinquanta file — più tardi si fa, più costa.
+- **Registro attività (chi ha cambiato cosa).** Oggi se qualcuno cancella un
+  lavoro non resta traccia. Con più aziende e più persone diventa necessario, e
+  per un cliente serio è una domanda che arriva.
+- **Allegati veri** (file, non link) con uno storage esterno: costa
+  infrastruttura e soldi, ha senso solo da prodotto maturo.
+- **Piani e pagamenti** (Stripe), iscrizione autonoma, pagina pubblica di
+  presentazione. È il salto da "app che usiamo" a "prodotto che vendiamo", e va
+  fatto tutto insieme o niente.
+- **PWA / uso offline.** In fabbrica il campo spesso non c'è. Grosso: vuol dire
+  ripensare come i dati si sincronizzano.
+- **Test dei componenti del frontend.** Oggi sono coperti `api.js` e `date.js`,
+  ma nessuna schermata: le oltre 4000 righe di JSX non hanno rete.
 - **Qualità e infrastruttura.** Fatti: **registro errori in produzione**
   (Sentry, inerte finché non arriva il DSN), **gestione uniforme dei guasti nel
   frontend** (attesa massima, tentativi ripetuti sulle sole letture, striscia
@@ -369,3 +393,12 @@ in-app · ricerca nei lavori e nello storico · limite ai tentativi di accesso �
 esportazione dei propri dati · tema scuro · cancellazione dell'account con
 anonimizzazione · email di avviso sulle assegnazioni · riordino delle sezioni
 macchina · robustezza al risveglio del server.
+
+**Settembre 2026** — commenti e checklist sulle voci di macchina · correzione
+di una voce dopo averla scritta · campanella che porta anche sulle macchine ·
+ricerca nello storico estesa a commenti e checklist · stato "annullato" sui
+lavori · filtri e ordinamento nell'elenco lavori · correzione ed eliminazione
+dei propri commenti · menzioni @nome · preferenze sulle email · duplicazione
+di un progetto come modello · impegni ricorrenti · viste settimana e giorno in
+agenda · etichetta QR sulla macchina · stampa della scheda macchina ·
+paginazione di lavori e storico.
