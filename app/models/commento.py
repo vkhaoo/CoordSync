@@ -34,6 +34,11 @@ class Commento(Base):
     autore_id = Column(Integer, ForeignKey("utenti.id"), nullable=False)
 
     creato_il = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # Valorizzato solo se il commento e' stato riscritto dopo. Serve a
+    # DICHIARARLO a chi legge: in uno strumento di coordinamento riscrivere
+    # in silenzio quello che si era detto — magari dopo che qualcuno ci ha
+    # gia' risposto — cambia la storia senza che si veda.
+    modificato_il = Column(DateTime, nullable=True)
 
     # Scorciatoie di navigazione: dato un commento, risali all'autore o al posto
     # in cui e' stato scritto.

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "./api.js";
 import Allegati from "./Allegati.jsx";
+import Commenti from "./Commenti.jsx";
 import { dalServer } from "./date.js";
 
 export const ETICHETTA_STATO = {
@@ -40,7 +41,6 @@ function infoScadenza(lavoro) {
 export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazioneCambiata }) {
   const [aperto, setAperto] = useState(false);
   const [commenti, setCommenti] = useState([]);
-  const [nuovoCommento, setNuovoCommento] = useState("");
   const [errore, setErrore] = useState(null);
 
   // Permessi calcolati in base al mio ruolo e all'essere assegnato o meno.
@@ -157,16 +157,6 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
       try { setCommenti(await api.commenti(lavoro.id)); }
       catch (e) { setErrore(e.message); }
     }
-  }
-
-  async function inviaCommento(e) {
-    e.preventDefault();
-    setErrore(null);
-    try {
-      const creato = await api.aggiungiCommento(lavoro.id, { testo: nuovoCommento });
-      setCommenti((prec) => [...prec, creato]);   // aggiungo in fondo alla lista
-      setNuovoCommento("");
-    } catch (err) { setErrore(err.message); }
   }
 
   return (
@@ -331,35 +321,14 @@ export default function Lavoro({ lavoro, utenti, io, onCambiaStato, onAssegnazio
         )}
       </div>
 
+      {errore && <p className="errore">{errore}</p>}
+
       {aperto && (
-        <div className="commenti">
-          {errore && <p className="errore">{errore}</p>}
-          {commenti.length === 0 ? (
-            <p className="vuoto piccolo">Nessun commento.</p>
-          ) : (
-            <ul className="lista-commenti">
-              {commenti.map((c) => (
-                <li key={c.id} className="commento">
-                  <span className="commento-autore">{c.autore.nome}</span>
-                  <span className="commento-testo">{c.testo}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {possoAggiornare ? (
-            <form className="form-commento" onSubmit={inviaCommento}>
-              <input
-                placeholder="Scrivi un commento…"
-                value={nuovoCommento}
-                onChange={(e) => setNuovoCommento(e.target.value)}
-                required
-              />
-              <button type="submit" className="mini">→</button>
-            </form>
-          ) : (
-            <p className="vuoto piccolo">Solo chi è assegnato può commentare.</p>
-          )}
-        </div>
+        <Commenti commenti={commenti} setCommenti={setCommenti}
+                  io={io} gestisco={gestisco}
+                  puoiScrivere={possoAggiornare}
+                  vietato="Solo chi è assegnato può commentare."
+                  onInvia={(testo) => api.aggiungiCommento(lavoro.id, { testo })} />
       )}
     </li>
   );

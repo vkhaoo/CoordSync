@@ -300,6 +300,9 @@ export const api = {
   // Commenti e checklist di una voce di macchina. Spuntare e togliere un passo
   // passano da spuntaSotto/eliminaSotto qui sopra: l'indirizzo
   // /sotto-attivita/{id} e' lo stesso per i lavori e per le macchine.
+  // Correggere e togliere valgono per tutti e due i mondi: l'indirizzo e' uno.
+  correggiCommento: (id, testo) => richiesta("PATCH", `/commenti/${id}`, { testo }),
+  togliCommento: (id) => richiesta("DELETE", `/commenti/${id}`),
   commentiVoce: (id) => richiesta("GET", `/voci/${id}/commenti`),
   commentaVoce: (id, testo) => richiesta("POST", `/voci/${id}/commenti`, { testo }),
   creaSottoVoce: (id, testo) => richiesta("POST", `/voci/${id}/sotto-attivita`, { testo }),

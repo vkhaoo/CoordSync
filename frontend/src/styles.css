@@ -287,6 +287,15 @@ input, select, textarea { font-family: var(--sans); }
 .barra-filtri select { min-width: 0; }
 .barra-filtri .spunta { white-space: nowrap; }
 
+/* Correggi e togli su un commento: compaiono solo passandoci sopra, se no
+   ogni riga della conversazione avrebbe due bottoni fissi che gridano. */
+.commento .azioni-commento { display: flex; gap: 2px; opacity: 0; transition: opacity .12s; }
+.commento:hover .azioni-commento, .commento:focus-within .azioni-commento { opacity: 1; }
+/* Sul telefono il "passarci sopra" non esiste: li' restano sempre visibili. */
+@media (hover: none) {
+  .commento .azioni-commento { opacity: 1; }
+}
+
 .form-sotto { display: flex; gap: 5px; }
 .form-sotto input { flex: 1; min-width: 0; }
 
@@ -300,8 +309,15 @@ input, select, textarea { font-family: var(--sans); }
 /* Commenti */
 .commenti { margin-top: 0.7rem; border-top: 1px solid var(--linea-2); padding-top: 0.7rem; }
 .lista-commenti { list-style: none; padding: 0; margin: 0 0 0.6rem; display: flex; flex-direction: column; gap: 0.45rem; }
-.commento { font-size: 0.86rem; line-height: 1.5; overflow-wrap: anywhere; }
-.commento-autore { font-weight: 600; color: var(--acciaio-800); margin-right: 0.45rem; }
+/* Riga di conversazione: autore, testo, quando, e i comandi spinti a destra.
+   Va a capo da sola, cosi' un commento lungo non schiaccia i comandi fuori. */
+.commento {
+  font-size: 0.86rem; line-height: 1.5; overflow-wrap: anywhere;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.45rem;
+}
+.commento .quando-avviso { margin-left: auto; white-space: nowrap; }
+.commento-autore { font-weight: 600; color: var(--acciaio-800); }
+.commento-testo { flex: 1 1 60%; }
 .commento-testo { color: var(--testo); }
 .form-commento { display: flex; gap: 5px; }
 .form-commento input { flex: 1; min-width: 0; }

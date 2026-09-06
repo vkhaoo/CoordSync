@@ -19,10 +19,16 @@ class CommentoCreate(BaseModel):
     testo: str
 
 
+class CommentoUpdate(BaseModel):
+    """Per correggere un commento serve solo il testo nuovo."""
+    testo: str
+
+
 class CommentoRead(BaseModel):
     id: int
     testo: str
     creato_il: datetime
+    modificato_il: datetime | None = None   # vuoto = non e' mai stato riscritto
     autore: UtenteRead   # <-- schema annidato: l'autore completo, non solo l'id
 
     model_config = ConfigDict(from_attributes=True)

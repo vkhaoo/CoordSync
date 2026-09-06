@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "./api.js";
 import SelettoreReparti from "./SelettoreReparti.jsx";
 import Allegati from "./Allegati.jsx";
+import Commenti from "./Commenti.jsx";
 import CampoRicerca from "./CampoRicerca.jsx";
 import Tendina from "./Tendina.jsx";
 import { dalServer } from "./date.js";
@@ -465,7 +466,6 @@ function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sez
   const [checklistAperta, setChecklistAperta] = useState(false);
   const [commentiAperti, setCommentiAperti] = useState(false);
   const [commenti, setCommenti] = useState([]);
-  const [nuovoCommento, setNuovoCommento] = useState("");
   const [erroreCard, setErroreCard] = useState(null);
 
   const passi = voce.sotto_attivita || [];
@@ -481,16 +481,6 @@ function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sez
       try { setCommenti(await api.commentiVoce(voce.id)); }
       catch (err) { setErroreCard(err.message); }
     }
-  }
-
-  async function inviaCommento(e) {
-    e.preventDefault();
-    setErroreCard(null);
-    try {
-      const creato = await api.commentaVoce(voce.id, nuovoCommento);
-      setCommenti((prec) => [...prec, creato]);
-      setNuovoCommento("");
-    } catch (err) { setErroreCard(err.message); }
   }
 
   async function aggiungiPasso(e) {
@@ -708,25 +698,9 @@ function VoceCard({ voce, io, gestisco, azione, argomenti = [], figlie = [], sez
       </button>
 
       {commentiAperti && (
-        <div className="commenti">
-          {commenti.length === 0 ? (
-            <p className="vuoto piccolo">Nessun commento.</p>
-          ) : (
-            <ul className="lista-commenti">
-              {commenti.map((c) => (
-                <li key={c.id} className="commento">
-                  <span className="commento-autore">{c.autore.nome}</span>
-                  <span className="commento-testo">{c.testo}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <form className="form-commento" onSubmit={inviaCommento}>
-            <input placeholder="Scrivi un commento…" value={nuovoCommento}
-                   onChange={(e) => setNuovoCommento(e.target.value)} required />
-            <button type="submit" className="mini">→</button>
-          </form>
-        </div>
+        <Commenti commenti={commenti} setCommenti={setCommenti}
+                  io={io} gestisco={gestisco}
+                  onInvia={(testo) => api.commentaVoce(voce.id, testo)} />
       )}
 
       {/* Quello che sta sotto questo argomento, in ordine di tempo. */}
