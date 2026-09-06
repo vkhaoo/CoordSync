@@ -7,6 +7,35 @@ Legenda: **[!]** urgente o con una scadenza · **[ ]** da fare · **[?]** serve 
 
 ---
 
+## [ ] Sicurezza: due cose che restano a te
+
+Ho fatto l'attaccante sul sito e chiuso sei buchi (nel codice, gia' online).
+Due cose pero' non posso farle da qui:
+
+### [ ] Le intestazioni di sicurezza sul SITO (non solo sul backend)
+
+Il clickjacking l'ho bloccato sul backend, ma la pagina vera che si vede e' il
+**Static Site** su Render, e le sue intestazioni si impostano nel suo pannello,
+non nel codice. Su Render -> il tuo Static Site -> **Headers**, aggiungi:
+
+- `X-Frame-Options` = `DENY`
+- `Content-Security-Policy` = `frame-ancestors 'none'`
+- `X-Content-Type-Options` = `nosniff`
+
+Senza, qualcuno puo' incorniciare il sito in una pagina-trappola.
+
+### [?] L'enumerazione delle email (decisione tua)
+
+Oggi, iscrivendosi, se l'email e' gia' presa il sito risponde "email gia'
+registrata". E' comodo per chi si iscrive, ma dice a un estraneo se un certo
+indirizzo ha un account. L'ho rallentato con un freno (15 richieste/ora per
+IP), ma non chiuso del tutto: chiuderlo vorrebbe dire cambiare il flusso
+(rispondere sempre "controlla la posta" e mandare un'email diversa a seconda
+dei casi). Dimmi se vale la pena o se lo lasciamo cosi'.
+
+---
+---
+
 ## [x] Controlli fatti — niente da fare qui
 
 ### [x] `SECRET_KEY` su Render: c'è
