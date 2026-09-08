@@ -1,58 +1,63 @@
 # CoordSync
 
-<!-- frase di presentazione -->
-CoordSync, l'applicazione web per coordinare i propri team.
+A web app for coordinating the work of technical teams.
 
-## Il problema
+## The problem
 
-<!-- problema, causa, soluzione -->
-Nell'azienda in cui lavoravo, non avevo un modo diretto per coordinarmi con i miei colleghi. Lavoravamo sugli stessi progetti, ma dovevamo scriverci via chat o utilizzare documenti come word o excel per coordinarci.
-Qui, nasce CoordSync.
+At the company where I work, coordinating shared projects meant scattered chat
+messages and Word or Excel files — no single, up-to-date picture of who had to
+do what. CoordSync was built to give a technical team one place to see projects,
+jobs and their progress.
 
-## Cosa fa
+## What it does
 
-Grazie a quest'applicazione, possiamo coordinare più aziende, più team, su vari progetti e lavori.
-Ma non ci siamo fermati lì, abbiamo integrato un'agenda ed un sistema per differenziare ed organizzare uno storico intervento delle macchine dello stabilimento.
-Avete bisogno di differenziare le utenze? CoordSync ve lo permette. Grazie ad un sistema di permessi e accessi, decidete voi chi può solo visualizzare e chi invece può creare o modificare progetti e lavori.
+- Coordinates teams and departments across projects and jobs, with status,
+  priority, due dates, assignments and comments.
+- Calendar with meetings and recurring events.
+- Machine records with an intervention history, grouped by topic.
+- Role-based permissions: decide who can only view and who can create or edit
+  projects and jobs.
+- Two levels of isolation: each company sees only its own data, and within a
+  company, departments limit visibility by role.
 
-## Stack tecnico
+## Tech stack
 
-- **Backend:** Python 3.12, FastAPI, SQLAlchemy 2, Alembic per le migrazioni
-- **Database:** SQLite (sviluppo) → PostgreSQL (produzione)
-- **Autenticazione:** password con hashing bcrypt, token JWT, limite ai
-  tentativi di accesso
-- **Frontend:** React + Vite, senza librerie di interfaccia: CSS scritto a mano
-- **Test:** pytest (246) e vitest (17) · **CI:** GitHub Actions, che a ogni
-  push esegue i test, prova le migrazioni in salita e in discesa e compila il
+- **Backend:** Python 3.12, FastAPI, SQLAlchemy 2, Alembic for migrations
+- **Database:** SQLite (development) → PostgreSQL (production)
+- **Authentication:** bcrypt password hashing, JWT tokens, login rate limiting
+- **Frontend:** React + Vite, no UI libraries — CSS written by hand
+- **Tests:** pytest (246) and vitest (17) · **CI:** GitHub Actions, which on
+  every push runs the tests, applies migrations up and down, and builds the
   frontend
-- **Osservabilità:** Sentry per gli errori in produzione, log per richiesta
-- **In produzione:** Render (web service + static site + PostgreSQL), email via
-  API HTTP Brevo, backup settimanale cifrato con una GitHub Action
+- **Observability:** Sentry for production errors, per-request logging
+- **In production:** Render (web service + static site + PostgreSQL), email via
+  the Brevo HTTP API, weekly encrypted backup through a GitHub Action
 
-## Architettura in breve
+## Architecture at a glance
 
-Backend a livelli, con una responsabilità per file:
+A layered backend, one responsibility per file:
 
-- **Modelli** (`app/models`): le entità e le loro relazioni — organizzazione,
-  appartenenza (l'utente in un'azienda, con ruolo), reparto, progetto, lavoro,
-  sotto-attività, commento, macchina e voce macchina, allegato, impegno
-  (agenda), notifica. Progetti e macchine possono appartenere a più reparti.
-- **Router** (`app/routers`): gli endpoint HTTP, un modulo per area
-  (auth, progetti, lavori, commenti, assegnazioni, sotto-attività, reparti,
-  macchine, agenda, notifiche, ricerca globale).
-- **Schemi** (`app/schemas`): validazione ingressi/uscite con Pydantic.
-- **Sicurezza** (`app/security`, `app/dependencies`): hashing password, token,
-  controllo di ruolo e appartenenza su ogni richiesta.
-- **Osservabilità** (`app/osservabilita`): log per richiesta e avvisi Sentry.
-- **Configurazione** (`app/config`): impostazioni da variabili d'ambiente, con
-  un controllo che impedisce alla produzione di partire con la chiave d'esempio.
+- **Models** (`app/models`): the entities and their relationships —
+  organization, membership (a user in a company, with a role), department,
+  project, job, subtask, comment, machine and machine entry, attachment, event
+  (calendar), notification. Projects and machines can belong to more than one
+  department.
+- **Routers** (`app/routers`): the HTTP endpoints, one module per area (auth,
+  projects, jobs, comments, assignments, subtasks, departments, machines,
+  calendar, notifications, global search).
+- **Schemas** (`app/schemas`): input/output validation with Pydantic.
+- **Security** (`app/security`, `app/dependencies`): password hashing, tokens,
+  role and membership checks on every request.
+- **Observability** (`app/osservabilita`): per-request logging and Sentry alerts.
+- **Configuration** (`app/config`): settings from environment variables, with a
+  guard that stops production from starting with the example key.
 
-Lo schema del database è gestito dalle migrazioni Alembic (non creato "al volo"),
-così sviluppo e produzione restano allineati e le tabelle evolvono senza perdere
-dati. L'isolamento è a due livelli: ogni azienda vede solo i propri dati, e
-dentro l'azienda i reparti limitano la visibilità di progetti e lavori per ruolo.
+The database schema is managed by Alembic migrations (not created on the fly),
+so development and production stay in sync and tables can evolve without losing
+data. Isolation works on two levels: each company sees only its own data, and
+within a company, departments limit visibility of projects and jobs by role.
 
-## Come avviarlo in locale
+## Running it locally
 
 Backend:
 
@@ -61,11 +66,11 @@ python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
-alembic upgrade head            # crea/aggiorna lo schema del database
+alembic upgrade head            # create/update the database schema
 uvicorn app.main:app --reload
 ```
 
-Frontend, in un secondo terminale:
+Frontend, in a second terminal:
 
 ```bash
 cd frontend
@@ -73,24 +78,23 @@ npm install
 npm run dev
 ```
 
-Documentazione API interattiva: http://127.0.0.1:8000/docs
+Interactive API docs: http://127.0.0.1:8000/docs
 
-## Test
+## Tests
 
 ```bash
 pytest                          # backend
-cd frontend && npm test         # interfaccia
+cd frontend && npm test         # frontend
 ```
 
-## Stato del progetto
+## Project status
 
-In produzione e usato sul campo. Backend e interfaccia sono completi per il
-lavoro quotidiano: progetti e lavori con stato, priorità, scadenze, assegnazioni
-e commenti; reparti con visibilità per diritti; schede macchina con storico
-raggruppato per argomento; agenda con riunioni; notifiche; ricerca unica.
+In production and used in the field. Backend and frontend are complete for
+day-to-day work: projects and jobs with status, priority, due dates,
+assignments and comments; departments with role-based visibility; machine
+records with history grouped by topic; a calendar with meetings; notifications;
+unified search. The project is still under active development.
 
-Il progetto è ancora in fase di sviluppo.
+## License
 
-## Licenza
-
-MIT — vedi il file [LICENSE](LICENSE).
+MIT — see the [LICENSE](LICENSE) file.
