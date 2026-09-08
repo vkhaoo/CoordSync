@@ -31,7 +31,26 @@ Avete bisogno di differenziare le utenze? CoordSync ve lo permette. Grazie ad un
 
 ## Architettura in breve
 
+Backend a livelli, con una responsabilità per file:
 
+- **Modelli** (`app/models`): le entità e le loro relazioni — organizzazione,
+  appartenenza (l'utente in un'azienda, con ruolo), reparto, progetto, lavoro,
+  sotto-attività, commento, macchina e voce macchina, allegato, impegno
+  (agenda), notifica. Progetti e macchine possono appartenere a più reparti.
+- **Router** (`app/routers`): gli endpoint HTTP, un modulo per area
+  (auth, progetti, lavori, commenti, assegnazioni, sotto-attività, reparti,
+  macchine, agenda, notifiche, ricerca globale).
+- **Schemi** (`app/schemas`): validazione ingressi/uscite con Pydantic.
+- **Sicurezza** (`app/security`, `app/dependencies`): hashing password, token,
+  controllo di ruolo e appartenenza su ogni richiesta.
+- **Osservabilità** (`app/osservabilita`): log per richiesta e avvisi Sentry.
+- **Configurazione** (`app/config`): impostazioni da variabili d'ambiente, con
+  un controllo che impedisce alla produzione di partire con la chiave d'esempio.
+
+Lo schema del database è gestito dalle migrazioni Alembic (non creato "al volo"),
+così sviluppo e produzione restano allineati e le tabelle evolvono senza perdere
+dati. L'isolamento è a due livelli: ogni azienda vede solo i propri dati, e
+dentro l'azienda i reparti limitano la visibilità di progetti e lavori per ruolo.
 
 ## Come avviarlo in locale
 
