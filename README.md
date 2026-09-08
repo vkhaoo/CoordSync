@@ -1,14 +1,19 @@
 # CoordSync
 
 <!-- frase di presentazione -->
+CoordSync, l'applicazione web per coordinare i propri team.
 
 ## Il problema
 
 <!-- problema, causa, soluzione -->
+Nell'azienda in cui lavoravo, non avevo un modo diretto per coordinarmi con i miei colleghi. Lavoravamo sugli stessi progetti, ma dovevamo scriverci via chat o utilizzare documenti come word o excel per coordinarci.
+Qui, nasce CoordSync.
 
 ## Cosa fa
 
-
+Grazie a quest'applicazione, possiamo coordinare più aziende, più team, su vari progetti e lavori.
+Ma non ci siamo fermati lì, abbiamo integrato un'agenda ed un sistema per differenziare ed organizzare uno storico intervento delle macchine dello stabilimento.
+Avete bisogno di differenziare le utenze? CoordSync ve lo permette. Grazie ad un sistema di permessi e accessi, decidete voi chi può solo visualizzare e chi invece può creare o modificare progetti e lavori.
 
 ## Stack tecnico
 
@@ -64,6 +69,8 @@ In produzione e usato sul campo. Backend e interfaccia sono completi per il
 lavoro quotidiano: progetti e lavori con stato, priorità, scadenze, assegnazioni
 e commenti; reparti con visibilità per diritti; schede macchina con storico
 raggruppato per argomento; agenda con riunioni; notifiche; ricerca unica.
+
+Il progetto è ancora in fase di sviluppo.
 
 ## Licenza
 
