@@ -1,25 +1,14 @@
 # CoordSync
 
-<!-- UNA FRASE che dice cosa fa l'app. Scrivila tu, tipo:
-     "CoordSync è una web app per coordinare i lavori di un team tecnico:
-      lista lavori con stato e priorità, organizzati per progetto, con
-      commenti per comunicare e isolamento tra aziende diverse." -->
-[ una frase di presentazione — scrivila tu ]
+<!-- frase di presentazione -->
 
 ## Il problema
 
-<!-- 2-3 frasi TUE: qual è il problema reale che risolve?
-     Racconta la cosa vera: Excel condivisi per coordinarsi, chi fa cosa,
-     stato dei lavori... e perché diventa scomodo. È la tua storia, ha valore. -->
-[ il problema che hai vissuto e che l'app risolve ]
+<!-- problema, causa, soluzione -->
 
 ## Cosa fa
 
-<!-- Elenco delle funzionalità principali. Riempi con parole tue. -->
-- Registrazione azienda e login (autenticazione con token JWT)
-- [ ... ]
-- [ ... ]
-- Isolamento multi-azienda: ogni azienda vede solo i propri dati
+
 
 ## Stack tecnico
 
@@ -37,11 +26,7 @@
 
 ## Architettura in breve
 
-<!-- 2-4 frasi TUE su com'è organizzato: models / schemas / routers,
-     il multi-tenancy (dati legati all'organizzazione), la "guardia"
-     che identifica l'utente dal token. Spiegalo come lo spiegheresti
-     a un collega. -->
-[ come è organizzato il progetto, con parole tue ]
+
 
 ## Come avviarlo in locale
 
@@ -79,13 +64,6 @@ In produzione e usato sul campo. Backend e interfaccia sono completi per il
 lavoro quotidiano: progetti e lavori con stato, priorità, scadenze, assegnazioni
 e commenti; reparti con visibilità per diritti; schede macchina con storico
 raggruppato per argomento; agenda con riunioni; notifiche; ricerca unica.
-
-Quello che manca è tracciato in [IDEE_FUTURE.md](IDEE_FUTURE.md). Le cose più
-grosse ancora aperte: un utente che appartiene a più aziende (oggi
-l'appartenenza è singola, ed è l'assunzione su cui poggia tutto l'isolamento) e
-il secondo fattore di autenticazione.
-
-<!-- Se vuoi, aggiungi qui due righe tue su dove vuoi portarlo. -->
 
 ## Licenza
 
